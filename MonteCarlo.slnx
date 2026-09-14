@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MonteCarlo.API/MonteCarlo.API.csproj" />
+  <Project Path="MonteCarlo.WEB/MonteCarlo.WEB.csproj" />
+</Solution>
