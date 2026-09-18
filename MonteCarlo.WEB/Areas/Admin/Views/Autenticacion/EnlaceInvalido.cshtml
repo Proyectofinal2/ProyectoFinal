@@ -1,0 +1,26 @@
+@*
+    HU-AUT-003, escenario 3 — Enlace expirado o ya utilizado.
+
+    Pantalla propia y no una alerta: el criterio de aceptacion pide
+    indicar que hay que solicitar un enlace nuevo, asi que la accion
+    para hacerlo tiene que estar aqui y ser la opcion principal.
+*@
+@{
+    ViewData["Title"] = "El enlace ya no es valido";
+    Layout = "_AuthLayout";
+}
+
+<div class="text-center">
+    <div class="mb-3" style="font-size: 2.5rem; color: var(--mc-warning);">
+        <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
+    </div>
+
+    <p class="mb-4">
+        Este enlace de restablecimiento expiro o ya fue utilizado.
+        Por seguridad, cada enlace sirve una sola vez y por tiempo limitado.
+    </p>
+
+    <a asp-action="Recuperar" class="btn btn-primary w-100">Solicitar un enlace nuevo</a>
+
+    <a asp-action="Login" class="btn btn-link w-100 mt-2 small">Volver al inicio de sesion</a>
+</div>

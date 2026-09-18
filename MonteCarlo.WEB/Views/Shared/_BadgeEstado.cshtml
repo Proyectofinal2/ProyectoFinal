@@ -1,0 +1,8 @@
+@*
+    Uso:
+        <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Cuenta(item.Activa)" />
+*@
+@using MonteCarlo.WEB.Models.UI
+@model BadgeEstadoViewModel
+
+<span class="@Model.ClaseCss">@Model.Texto</span>

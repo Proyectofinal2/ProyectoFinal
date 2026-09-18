@@ -1,0 +1,101 @@
+@*
+    HU-AUT-004 — Mi Cuenta.
+
+    Dos columnas: a la izquierda los datos de la cuenta, solo
+    lectura; a la derecha el cambio de contrasena, que es la unica
+    accion de esta historia. El formulario no compite con nada mas
+    por la atencion.
+*@
+@model CambiarContrasenaViewModel
+@{
+    ViewData["Title"] = "Mi cuenta";
+    ViewData["Subtitle"] = "Consulta tus datos y actualiza tu contrasena.";
+
+    // TODO conectar: reemplazar por los claims de la sesion.
+    var nombreCompleto = "Ana Lopez";
+    var nombreUsuario = "alopez";
+    var correo = "ana.lopez@montecarlo.test";
+    var rol = "Administrador General";
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="fs-6 text-uppercase text-secondary mb-4" style="letter-spacing:.06em;">
+                    Datos de la cuenta
+                </h2>
+
+                <dl class="row mb-0 small">
+                    <dt class="col-5 text-secondary fw-normal">Nombre</dt>
+                    <dd class="col-7 fw-medium">@nombreCompleto</dd>
+
+                    <dt class="col-5 text-secondary fw-normal">Usuario</dt>
+                    <dd class="col-7 fw-medium">@nombreUsuario</dd>
+
+                    <dt class="col-5 text-secondary fw-normal">Correo</dt>
+                    <dd class="col-7 fw-medium text-break">@correo</dd>
+
+                    <dt class="col-5 text-secondary fw-normal">Rol</dt>
+                    <dd class="col-7 mb-0">
+                        <partial name="_BadgeEstado"
+                                 model="new BadgeEstadoViewModel { Texto = rol, Tono = TonoBadge.Informativo }" />
+                    </dd>
+                </dl>
+
+                @* Estos datos no se editan desde aqui: cambiarlos es
+                   competencia del Administrador General (HU-AUT-005). *@
+                <p class="form-text mt-4 mb-0">
+                    Para modificar tu nombre, usuario o correo, solicitalo a un
+                    Administrador General.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card mc-accent-top">
+            <div class="card-body">
+                <h2 class="fs-6 text-uppercase text-secondary mb-1" style="letter-spacing:.06em;">
+                    Cambiar contrasena
+                </h2>
+                <p class="form-text mb-4">
+                    Tu sesion seguira activa despues del cambio.
+                </p>
+
+                <form asp-action="CambiarContrasena" method="post" data-mc-guard-submit novalidate>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="ContrasenaActual" class="form-label mc-required"></label>
+                        @Html.EditorFor(m => m.ContrasenaActual, "Contrasena", new { autocomplete = "current-password" })
+                        @* Escenario 2: el error de contrasena actual
+                           incorrecta aparece aqui, pegado al campo. *@
+                        <span asp-validation-for="ContrasenaActual" class="text-danger small"></span>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="mb-3">
+                        <label asp-for="NuevaContrasena" class="form-label mc-required"></label>
+                        @Html.EditorFor(m => m.NuevaContrasena, "Contrasena", new
+                        {
+                            autocomplete = "new-password",
+                            medidor = true
+                        })
+                        <span asp-validation-for="NuevaContrasena" class="text-danger small"></span>
+                        <div class="form-text">@PoliticaContrasena.Ayuda</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ConfirmacionContrasena" class="form-label mc-required"></label>
+                        @Html.EditorFor(m => m.ConfirmacionContrasena, "Contrasena", new { autocomplete = "new-password" })
+                        <span asp-validation-for="ConfirmacionContrasena" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Actualizar contrasena</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

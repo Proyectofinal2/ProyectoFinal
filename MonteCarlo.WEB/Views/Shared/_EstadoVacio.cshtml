@@ -1,0 +1,32 @@
+@*
+    Uso:
+        <partial name="_EstadoVacio" model="new EstadoVacioViewModel {
+            Icono = "bi-people",
+            Titulo = "Aun no hay cuentas",
+            Descripcion = "...",
+            TextoAccion = "Crear cuenta",
+            UrlAccion = Url.Action("Crear")! }" />
+
+    Para una busqueda sin coincidencias usar la fabrica:
+        EstadoVacioViewModel.SinResultados(Url.Action("Index"))
+*@
+@using MonteCarlo.WEB.Models.UI
+@model EstadoVacioViewModel
+
+<div class="mc-empty">
+    <div class="mc-empty__icon">
+        <i class="bi @Model.Icono" aria-hidden="true"></i>
+    </div>
+
+    <p class="mc-empty__title">@Model.Titulo</p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+    {
+        <p class="mc-empty__text">@Model.Descripcion</p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.TextoAccion) && !string.IsNullOrWhiteSpace(Model.UrlAccion))
+    {
+        <a class="btn btn-primary" href="@Model.UrlAccion">@Model.TextoAccion</a>
+    }
+</div>

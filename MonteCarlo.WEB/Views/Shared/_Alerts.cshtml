@@ -1,0 +1,40 @@
+@*
+    Mensajes de una sola aparicion, tomados de TempData.
+
+    Uso desde un controlador, siempre antes de un redirect
+    (patron POST-Redirect-GET):
+
+        TempData[Alerta.Exito] = "La cuenta fue creada.";
+        return RedirectToAction(nameof(Index));
+
+    Claves disponibles: Alerta.Exito, Alerta.Error, Alerta.Aviso,
+    Alerta.Info (ver Models/Alerta.cs).
+
+    Los mensajes de exito se descartan solos; los de error
+    permanecen hasta que el usuario los cierre.
+*@
+@using MonteCarlo.WEB.Models
+
+@{
+    var alertas = new (string Clave, string Clase, string Icono, bool AutoDescartar)[]
+    {
+        (Alerta.Exito, "alert-success", "bi-check-circle", true),
+        (Alerta.Info,  "alert-info",    "bi-info-circle",  true),
+        (Alerta.Aviso, "alert-warning", "bi-exclamation-triangle", false),
+        (Alerta.Error, "alert-danger",  "bi-x-circle",     false)
+    };
+}
+
+@foreach (var (clave, clase, icono, autoDescartar) in alertas)
+{
+    if (TempData[clave] is string mensaje && !string.IsNullOrWhiteSpace(mensaje))
+    {
+        <div class="alert @clase alert-dismissible d-flex align-items-start gap-2 fade show"
+             role="alert"
+             @(autoDescartar ? "data-mc-autodismiss=6000" : "")>
+            <i class="bi @icono mt-1" aria-hidden="true"></i>
+            <div class="flex-grow-1">@mensaje</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+}

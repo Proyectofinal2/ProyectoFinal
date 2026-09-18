@@ -1,0 +1,43 @@
+@*
+    Dialogo de confirmacion unico por pagina, incluido por
+    _AdminLayout. Los disparadores lo configuran con atributos
+    data-mc-confirm-* (ver site.js).
+
+    Ejemplo de disparador:
+        <button type="button" class="btn btn-ghost-danger"
+                data-mc-confirm
+                data-mc-confirm-title="Desactivar cuenta"
+                data-mc-confirm-body="Ana Lopez no podra iniciar sesion. Su historial se conserva."
+                data-mc-confirm-action="@Url.Action("Desactivar", new { id = item.Id })"
+                data-mc-confirm-label="Desactivar"
+                data-mc-confirm-variant="danger">
+            Desactivar
+        </button>
+
+    El formulario ya incluye el token antiforgery, de modo que
+    ninguna vista tiene que recordar agregarlo para sus acciones
+    destructivas.
+*@
+<div class="modal fade" id="mcConfirmModal" tabindex="-1" aria-labelledby="mcConfirmTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="mcConfirmTitulo" data-mc-confirm-title-target>Confirmar accion</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-0" data-mc-confirm-body-target></p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+
+                <form method="post" data-mc-confirm-form>
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary" data-mc-confirm-submit>Confirmar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

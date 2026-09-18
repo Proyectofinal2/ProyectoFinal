@@ -1,0 +1,34 @@
+@*
+    HU-AUT-003, escenario 2 — Nueva contrasena a partir del enlace.
+*@
+@model RestablecerContrasenaViewModel
+@{
+    ViewData["Title"] = "Crear contrasena nueva";
+    ViewData["Lead"] = "Elige una contrasena que no hayas usado antes en este sistema.";
+    Layout = "_AuthLayout";
+}
+
+<form asp-action="Restablecer" method="post" data-mc-guard-submit novalidate>
+    <input type="hidden" asp-for="Token" />
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="mb-3">
+        <label asp-for="NuevaContrasena" class="form-label mc-required"></label>
+        @Html.EditorFor(m => m.NuevaContrasena, "Contrasena", new
+        {
+            autocomplete = "new-password",
+            medidor = true
+        })
+        <span asp-validation-for="NuevaContrasena" class="text-danger small"></span>
+        <div class="form-text">@PoliticaContrasena.Ayuda</div>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="ConfirmacionContrasena" class="form-label mc-required"></label>
+        @Html.EditorFor(m => m.ConfirmacionContrasena, "Contrasena", new { autocomplete = "new-password" })
+        <span asp-validation-for="ConfirmacionContrasena" class="text-danger small"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Guardar contrasena</button>
+</form>
