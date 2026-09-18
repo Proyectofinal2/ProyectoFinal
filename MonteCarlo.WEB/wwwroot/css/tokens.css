@@ -1,0 +1,126 @@
+/* ============================================================
+   Monte Carlo — Tokens de diseno
+   ------------------------------------------------------------
+   UNICA fuente de verdad del color, el espaciado y la tipografia.
+   Este archivo solo declara variables: no debe contener reglas
+   que apliquen estilo a selectores. El remapeo hacia Bootstrap
+   vive en site.css.
+
+   Antes de agregar un color aqui, lee GUIA-DISENO.md.
+   ============================================================ */
+
+:root {
+    /* --------------------------------------------------------
+       Marca: verde profundo (primario)
+       #1F4D3D sobre blanco = 9.1:1  -> apto para texto AAA
+       -------------------------------------------------------- */
+    --mc-green-50: #F1F6F4;
+    --mc-green-100: #D6E5DE;
+    --mc-green-200: #A9C7BA;
+    --mc-green-300: #6E9C89;
+    --mc-green-400: #3A7360;
+    --mc-green-500: #1F4D3D; /* primario */
+    --mc-green-600: #1A4234; /* hover */
+    --mc-green-700: #15352A; /* active */
+    --mc-green-800: #102820;
+    --mc-green-900: #0A1A15;
+
+    /* --------------------------------------------------------
+       Marca: cobre (acento)
+       ATENCION: #B87333 sobre blanco = 3.3:1. NO alcanza AA
+       para texto. Usar solo en bordes, iconos decorativos y
+       superficies. Para texto y enlaces usar --mc-copper-700.
+       -------------------------------------------------------- */
+    --mc-copper-50: #FBF5EE;
+    --mc-copper-100: #F3E0C9;
+    --mc-copper-300: #D9A26A;
+    --mc-copper-500: #B87333; /* acento decorativo */
+    --mc-copper-600: #9C5F28;
+    --mc-copper-700: #7E4C1F; /* 6.1:1 -> apto para texto */
+
+    /* --------------------------------------------------------
+       Neutros
+       -------------------------------------------------------- */
+    --mc-surface: #F6F5F1; /* fondo de pagina */
+    --mc-elevated: #FFFFFF; /* tarjetas, tablas, modales */
+    --mc-border: #E2E0D9;
+    --mc-border-strong: #CBC8BE;
+    --mc-ink: #1B1F1D; /* texto principal */
+    --mc-ink-muted: #5A615D; /* texto secundario, 6.4:1 */
+    --mc-ink-subtle: #8A918D; /* placeholders, deshabilitado */
+    --mc-ink-inverse: #FFFFFF;
+
+    /* --------------------------------------------------------
+       Semanticos. Cada uno con su par de fondo sutil para
+       alertas y badges.
+       -------------------------------------------------------- */
+    --mc-success: #2E7D52;
+    --mc-success-bg: #E6F2EC;
+    --mc-danger: #B3261E;
+    --mc-danger-bg: #FBEAE9;
+    --mc-warning: #B26A00;
+    --mc-warning-bg: #FDF2E2;
+    --mc-info: #1F6F8B;
+    --mc-info-bg: #E7F1F5;
+
+    /* --------------------------------------------------------
+       Tipografia
+       -------------------------------------------------------- */
+    --mc-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mc-font-display: Georgia, "Times New Roman", serif; /* titulos del sitio publico */
+
+    --mc-text-xs: 0.75rem;
+    --mc-text-sm: 0.875rem;
+    --mc-text-base: 1rem;
+    --mc-text-lg: 1.125rem;
+    --mc-text-xl: 1.375rem;
+    --mc-text-2xl: 1.75rem;
+    --mc-text-3xl: 2.25rem;
+
+    --mc-weight-normal: 400;
+    --mc-weight-medium: 500;
+    --mc-weight-semibold: 600;
+
+    /* --------------------------------------------------------
+       Espaciado (escala de 4px). Usar estos valores en CSS
+       propio; en las vistas preferir utilidades Bootstrap.
+       -------------------------------------------------------- */
+    --mc-space-1: 0.25rem;
+    --mc-space-2: 0.5rem;
+    --mc-space-3: 0.75rem;
+    --mc-space-4: 1rem;
+    --mc-space-5: 1.5rem;
+    --mc-space-6: 2rem;
+    --mc-space-7: 3rem;
+
+    /* --------------------------------------------------------
+       Bordes y sombras
+       -------------------------------------------------------- */
+    --mc-radius-sm: 0.25rem;
+    --mc-radius: 0.5rem;
+    --mc-radius-lg: 0.75rem;
+    --mc-radius-pill: 50rem;
+
+    --mc-shadow-sm: 0 1px 2px rgba(27, 31, 29, 0.06);
+    --mc-shadow: 0 2px 8px rgba(27, 31, 29, 0.08);
+    --mc-shadow-lg: 0 8px 24px rgba(27, 31, 29, 0.12);
+
+    /* --------------------------------------------------------
+       Layout administrativo
+       -------------------------------------------------------- */
+    --mc-sidebar-width: 260px;
+    --mc-sidebar-width-collapsed: 72px;
+    --mc-topbar-height: 60px;
+
+    /* --------------------------------------------------------
+       Movimiento
+       -------------------------------------------------------- */
+    --mc-transition: 150ms ease-in-out;
+}
+
+/* Respeta la preferencia del sistema de reducir movimiento. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --mc-transition: 0ms;
+    }
+}

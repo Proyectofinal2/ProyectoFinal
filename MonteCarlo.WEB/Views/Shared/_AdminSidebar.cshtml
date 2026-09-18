@@ -1,0 +1,97 @@
+@*
+    Navegacion lateral del panel administrativo.
+
+    Como agregar un modulo nuevo: anade un <li> con MenuLink. El
+    estado activo se resuelve solo comparando el controlador de la
+    ruta actual, asi que no hay que tocar ningun otro archivo.
+
+    Los modulos aun no implementados se muestran deshabilitados en
+    lugar de ocultarse: dan contexto del alcance del sistema sin
+    ofrecer enlaces que no llevan a ninguna parte.
+*@
+@{
+    var controladorActual = ViewContext.RouteData.Values["controller"]?.ToString();
+    var esAdministradorGeneral = User.IsInRole("General");
+}
+
+@functions {
+    /// <summary>
+    /// Marca el enlace como activo cuando la ruta actual pertenece
+    /// al mismo controlador.
+    /// </summary>
+    private string ClaseActiva(string? controladorActual, string controlador)
+        => string.Equals(controladorActual, controlador, StringComparison.OrdinalIgnoreCase)
+            ? "mc-sidebar__link is-active"
+            : "mc-sidebar__link";
+}
+
+<nav class="mc-sidebar" data-mc-sidebar aria-label="Navegacion del panel administrativo">
+    <a class="mc-sidebar__brand" asp-area="Admin" asp-controller="Panel" asp-action="Index">
+        <i class="bi bi-cup-hot fs-4" aria-hidden="true"></i>
+        <span class="mc-sidebar__brand-name">
+            Monte Carlo
+            <span class="mc-sidebar__brand-sub">Administracion</span>
+        </span>
+    </a>
+
+    <div class="mc-sidebar__nav">
+        <ul class="list-unstyled mb-0">
+            <li class="mc-sidebar__section">General</li>
+            <li>
+                <a class="@ClaseActiva(controladorActual, "Panel")"
+                   asp-area="Admin" asp-controller="Panel" asp-action="Index">
+                    <i class="bi bi-speedometer2" aria-hidden="true"></i> Inicio
+                </a>
+            </li>
+
+            <li class="mc-sidebar__section">Operacion</li>
+            <li>
+                <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i> Reservas del dia
+                </span>
+            </li>
+            <li>
+                <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Mesas
+                </span>
+            </li>
+            <li>
+                <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                    <i class="bi bi-receipt" aria-hidden="true"></i> Ventas
+                </span>
+            </li>
+
+            @* HU-AUT-005 y HU-AUT-006: exclusivo del Administrador General.
+               El enlace se oculta ademas de protegerse en el controlador;
+               ocultar la interfaz no sustituye a la autorizacion. *@
+
+
+            @if (esAdministradorGeneral)
+            {
+                <li class="mc-sidebar__section">Configuracion</li>
+                <li>
+                    <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                        <i class="bi bi-sliders" aria-hidden="true"></i> Parametros
+                    </span>
+                </li>
+                <li>
+                    <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                        <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
+                    </span>
+                </li>
+
+                <li class="mc-sidebar__section">Seguridad</li>
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "Usuarios")"
+                       asp-area="Admin" asp-controller="Usuarios" asp-action="Index">
+                        <i class="bi bi-people" aria-hidden="true"></i> Cuentas de administrador
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <div class="mc-sidebar__footer">
+        Restaurante Monte Carlo &middot; v1.0
+    </div>
+</nav>

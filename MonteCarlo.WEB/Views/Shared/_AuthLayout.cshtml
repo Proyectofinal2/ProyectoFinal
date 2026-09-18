@@ -1,0 +1,58 @@
+@*
+    Layout de AUTENTICACION — HU-AUT-001 (login) y HU-AUT-003
+    (recuperar / restablecer contrasena).
+
+    Deliberadamente SIN navegacion: quien no inicio sesion no debe
+    ver el mapa del panel administrativo. El unico enlace de salida
+    es el retorno al sitio publico.
+
+    Vistas: tarjeta centrada de 420px como maximo. El titulo y la
+    bajada se pasan por ViewData para no repetir marcado.
+*@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] &middot; Monte Carlo</title>
+    @* Las pantallas de credenciales no deben indexarse ni cachearse. *@
+    <meta name="robots" content="noindex, nofollow" />
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="mc-auth">
+    <main class="mc-auth__shell">
+        <div class="mc-auth__brand">
+            <h1 class="mc-auth__brand-name">Monte Carlo</h1>
+            <p class="mc-auth__brand-tagline">Panel administrativo</p>
+        </div>
+
+        <div class="mc-auth__card">
+            <h2 class="mc-auth__title">@ViewData["Title"]</h2>
+            @if (ViewData["Lead"] is string lead && !string.IsNullOrWhiteSpace(lead))
+            {
+                <p class="mc-auth__lead">@lead</p>
+            }
+
+            <partial name="_Alerts" />
+            @RenderBody()
+        </div>
+
+        <p class="mc-auth__footer">
+            <a asp-area="" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al sitio
+            </a>
+        </p>
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <partial name="_ValidationScriptsPartial" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

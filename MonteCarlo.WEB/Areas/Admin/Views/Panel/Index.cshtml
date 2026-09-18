@@ -1,0 +1,17 @@
+@*
+    Destino tras iniciar sesion (HU-AUT-001, escenario 1).
+    Marcador de posicion hasta que se construyan HU-OPE y HU-REP.
+*@
+@{
+    ViewData["Title"] = "Panel administrativo";
+    ViewData["Subtitle"] = "Bienvenido de vuelta.";
+}
+
+<div class="mc-table-card">
+    <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+             {
+                 Icono = "bi-speedometer2",
+                 Titulo = "El panel operativo aun no esta disponible",
+                 Descripcion = "Aqui se mostraran las reservas del dia y los indicadores del restaurante en una proxima entrega."
+             })" />
+</div>

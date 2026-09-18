@@ -1,0 +1,65 @@
+@*
+    HU-AUT-001 — Inicio de sesion
+
+    Escenario 1  formulario normal
+    Escenario 2  error generico, sin distinguir usuario de
+                 contrasena, con los datos conservados salvo la
+                 contrasena
+    Escenario 3  bloqueo temporal: aviso con cuenta regresiva y
+                 campos deshabilitados
+*@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Iniciar sesion";
+    ViewData["Lead"] = "Ingresa tus credenciales para acceder al panel administrativo.";
+    Layout = "_AuthLayout";
+}
+
+@if (Model.EstaBloqueado)
+{
+    @* Escenario 3. El aviso va antes del formulario para que sea lo
+       primero que se lee, y el bloque completo se marca con
+       data-mc-countdown-scope para que el temporizador de site.js
+       sepa a que formulario pertenece. *@
+    <div class="alert alert-warning d-flex gap-2" role="alert" data-mc-countdown-scope>
+        <i class="bi bi-lock mt-1" aria-hidden="true"></i>
+        <div>
+            <strong class="d-block mb-1">Acceso bloqueado temporalmente</strong>
+            Superaste el numero de intentos permitidos. Podras volver a intentarlo en
+            <strong data-mc-countdown="@Model.SegundosBloqueoRestantes" aria-live="polite">--:--</strong>.
+        </div>
+    </div>
+}
+
+<form asp-action="Login" method="post" data-mc-guard-submit novalidate>
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    @* Errores a nivel de formulario. Aqui aterriza el mensaje
+       generico del escenario 2: no se ancla a ningun campo porque
+       no debemos revelar cual de los dos estaba mal. *@
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <fieldset @(Model.EstaBloqueado ? "disabled" : "")>
+        <div class="mb-3">
+            <label asp-for="Identificador" class="form-label mc-required"></label>
+            <input asp-for="Identificador" class="form-control"
+                   autocomplete="username" autofocus
+                   placeholder="nombre@montecarlo.com" />
+            <span asp-validation-for="Identificador" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <label asp-for="Contrasena" class="form-label mc-required"></label>
+                @* El acceso a la recuperacion vive junto al campo que
+                   el usuario no logra recordar, no escondido al pie. *@
+                <a asp-action="Recuperar" class="small">Olvide mi contrasena</a>
+            </div>
+
+            @Html.EditorFor(m => m.Contrasena, "Contrasena", new { autocomplete = "current-password" })
+            <span asp-validation-for="Contrasena" class="text-danger small"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Iniciar sesion</button>
+    </fieldset>
+</form>

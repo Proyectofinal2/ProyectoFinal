@@ -1,0 +1,56 @@
+@*
+    Barra superior del panel: alterna el sidebar en pantallas
+    chicas y agrupa las acciones de la cuenta.
+
+    HU-AUT-002: el cierre de sesion es un POST con token
+    antiforgery, nunca un enlace GET. Un GET permitiria que un
+    tercero cerrara la sesion con solo incrustar una imagen que
+    apunte a la ruta.
+*@
+@{
+    var nombreCompleto = User.Identity?.Name ?? "Administrador";
+    var rol = User.IsInRole("General") ? "Administrador General" : "Administrador";
+
+    // Iniciales para el avatar: primera letra del nombre y del
+    // primer apellido, si existe.
+    var partes = nombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var iniciales = partes.Length >= 2
+        ? $"{partes[0][0]}{partes[1][0]}"
+        : nombreCompleto.Length > 0 ? nombreCompleto[..1] : "?";
+}
+
+<header class="mc-topbar">
+    <button type="button" class="mc-topbar__toggle" data-mc-sidebar-toggle
+            aria-expanded="false" aria-label="Abrir menu de navegacion">
+        <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+
+    <div class="mc-topbar__spacer"></div>
+
+    <div class="dropdown">
+        <button class="mc-topbar__user" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="mc-avatar" aria-hidden="true">@iniciales.ToUpperInvariant()</span>
+            <span class="mc-topbar__identity d-none d-sm-block">
+                <span class="mc-topbar__name">@nombreCompleto</span>
+                <span class="mc-topbar__role">@rol</span>
+            </span>
+            <i class="bi bi-chevron-down small" aria-hidden="true"></i>
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li>
+                <a class="dropdown-item" asp-area="Admin" asp-controller="MiCuenta" asp-action="Index">
+                    <i class="bi bi-person-gear me-2" aria-hidden="true"></i> Mi cuenta
+                </a>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+                <form asp-area="Admin" asp-controller="Autenticacion" asp-action="Logout" method="post">
+                    <button type="submit" class="dropdown-item text-danger">
+                        <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i> Cerrar sesion
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</header>

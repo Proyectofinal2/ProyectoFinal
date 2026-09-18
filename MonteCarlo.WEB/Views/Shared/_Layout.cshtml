@@ -1,47 +1,75 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@*
+    Layout PUBLICO — visitante y cliente (modulos RES y CHB).
+    Para pantallas de autenticacion usar _AuthLayout.cshtml.
+    Para el panel administrativo usar _AdminLayout.cshtml.
+*@
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - MonteCarlo.WEB</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"] &middot; Restaurante Monte Carlo</title>
+    <meta name="description" content="@(ViewData["Description"] ?? "Reserva tu mesa en el Restaurante Monte Carlo.")" />
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/MonteCarlo.WEB.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    <a class="mc-skip-link" href="#contenido">Saltar al contenido principal</a>
+
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MonteCarlo.WEB</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+        <nav class="navbar navbar-expand-md mc-public-nav" aria-label="Navegacion principal">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    Monte Carlo
+                    <small>Restaurante</small>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navPublico" aria-controls="navPublico"
+                        aria-expanded="false" aria-label="Abrir menu de navegacion">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+
+                <div class="collapse navbar-collapse" id="navPublico">
+                    <ul class="navbar-nav ms-auto align-items-md-center gap-md-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Inicio</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link" href="#">Consultar reserva</a>
+                        </li>
+                        <li class="nav-item ms-md-2">
+                            <a class="btn btn-primary" href="#">Reservar mesa</a>
+                        </li>
+                        <li class="nav-item ms-md-2">
+                            <a class="nav-link text-nowrap" asp-area="Admin" asp-controller="Autenticacion" asp-action="Login">
+                                <i class="bi bi-shield-lock" aria-hidden="true"></i> Administracion
+                            </a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
+    <main id="contenido" class="mc-public-main py-4">
         <div class="container">
-            &copy; 2026 - MonteCarlo.WEB - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <partial name="_Alerts" />
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="mc-footer">
+        <div class="container d-flex flex-wrap justify-content-between gap-3">
+            <span>&copy; @DateTime.Now.Year Restaurante Monte Carlo</span>
+            <a asp-area="" asp-controller="Home" asp-action="Privacy">Aviso de privacidad</a>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

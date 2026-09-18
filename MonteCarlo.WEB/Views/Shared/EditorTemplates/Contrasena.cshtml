@@ -1,0 +1,80 @@
+@*
+    Campo de contrasena reutilizable: input + boton mostrar/ocultar
+    y, opcionalmente, medidor de fortaleza.
+
+    Se implementa como EditorTemplate y no como parcial porque el
+    EditorTemplate conserva el prefijo del nombre y los atributos
+    data-val que genera la validacion no obtrusiva. Un parcial con
+    marcado suelto rompe ambas cosas.
+
+    Uso en una vista:
+
+        <label asp-for="Contrasena" class="form-label mc-required"></label>
+        @Html.EditorFor(m => m.Contrasena, "Contrasena", new {
+            autocomplete = "new-password",
+            medidor = true })
+        <span asp-validation-for="Contrasena" class="text-danger small"></span>
+
+    Parametros de additionalViewData:
+        autocomplete  valor del atributo autocomplete.
+                      Usa "current-password" al iniciar sesion y
+                      "new-password" al crear o cambiar. Ayuda al
+                      gestor de contrasenas a no guardar basura.
+        medidor       true para mostrar la barra de fortaleza.
+                      Solo tiene sentido en campos de contrasena
+                      nueva, no al pedir la vigente.
+        placeholder   texto de ejemplo, opcional.
+*@
+@model string
+
+@{
+    var idCampo = Html.IdForModel().ToString();
+    var mostrarMedidor = ViewData["medidor"] as bool? ?? false;
+    var idMedidor = $"{idCampo}_medidor";
+
+    var atributos = new Dictionary<string, object>
+    {
+        ["class"] = "form-control",
+        ["autocomplete"] = ViewData["autocomplete"] as string ?? "current-password"
+    };
+
+    if (ViewData["placeholder"] is string placeholder)
+    {
+        atributos["placeholder"] = placeholder;
+    }
+
+    if (mostrarMedidor)
+    {
+        atributos["data-mc-strength"] = $"#{idMedidor}";
+        atributos["aria-describedby"] = idMedidor;
+    }
+}
+
+<div class="mc-password">
+    @* PasswordFor nunca reenvia el valor al navegador, incluso
+       cuando el modelo lo trae tras un error de validacion. *@
+    @Html.PasswordFor(m => m, atributos)
+
+    <button type="button"
+            class="mc-password__toggle"
+            data-mc-toggle-password="#@idCampo"
+            aria-pressed="false"
+            aria-label="Mostrar contrasena">
+        <i class="bi bi-eye" aria-hidden="true"></i>
+    </button>
+</div>
+
+@if (mostrarMedidor)
+{
+    <div class="mc-strength" id="@idMedidor">
+        <div class="mc-strength__track" aria-hidden="true">
+            <span class="mc-strength__segment"></span>
+            <span class="mc-strength__segment"></span>
+            <span class="mc-strength__segment"></span>
+            <span class="mc-strength__segment"></span>
+        </div>
+        @* aria-live para que el lector de pantalla anuncie el
+           cambio de nivel sin mover el foco. *@
+        <span class="mc-strength__label" aria-live="polite"></span>
+    </div>
+}

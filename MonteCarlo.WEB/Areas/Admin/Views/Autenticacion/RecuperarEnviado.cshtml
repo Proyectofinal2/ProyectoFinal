@@ -1,0 +1,33 @@
+@*
+    HU-AUT-003, escenario 1 — Confirmacion de la solicitud.
+
+    El texto esta redactado para no confirmar ni negar que el
+    correo exista: dice "si existe una cuenta", nunca "te enviamos
+    un correo". Es el mismo mensaje en ambos casos.
+*@
+@{
+    ViewData["Title"] = "Revisa tu correo";
+    Layout = "_AuthLayout";
+}
+
+<div class="text-center">
+    <div class="mb-3" style="font-size: 2.5rem; color: var(--mc-copper-500);">
+        <i class="bi bi-envelope-check" aria-hidden="true"></i>
+    </div>
+
+    <p class="mb-3">
+        Si existe una cuenta asociada a ese correo, enviamos un enlace para
+        restablecer la contrasena.
+    </p>
+
+    <p class="text-secondary small mb-4">
+        El enlace vence en poco tiempo y solo puede usarse una vez.
+        Revisa tambien la carpeta de correo no deseado.
+    </p>
+
+    <a asp-action="Login" class="btn btn-primary w-100">Volver al inicio de sesion</a>
+
+    <a asp-action="Recuperar" class="btn btn-link w-100 mt-2 small">
+        Escribi mal el correo, intentar de nuevo
+    </a>
+</div>

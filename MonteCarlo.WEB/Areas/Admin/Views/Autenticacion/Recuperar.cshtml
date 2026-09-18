@@ -1,0 +1,26 @@
+@*
+    HU-AUT-003, escenario 1 — Solicitud del enlace de recuperacion.
+*@
+@model RecuperarContrasenaViewModel
+@{
+    ViewData["Title"] = "Recuperar contrasena";
+    ViewData["Lead"] = "Escribe el correo asociado a tu cuenta y te enviaremos un enlace para crear una contrasena nueva.";
+    Layout = "_AuthLayout";
+}
+
+<form asp-action="Recuperar" method="post" data-mc-guard-submit novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="mb-4">
+        <label asp-for="CorreoElectronico" class="form-label mc-required"></label>
+        <input asp-for="CorreoElectronico" class="form-control"
+               type="email" autocomplete="email" autofocus
+               placeholder="nombre@montecarlo.com" />
+        <span asp-validation-for="CorreoElectronico" class="text-danger small"></span>
+        <div class="form-text">El enlace tiene una vigencia limitada.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Enviar enlace</button>
+
+    <a asp-action="Login" class="btn btn-link w-100 mt-2">Volver al inicio de sesion</a>
+</form>

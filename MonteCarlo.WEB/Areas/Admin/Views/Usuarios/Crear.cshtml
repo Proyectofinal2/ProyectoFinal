@@ -1,0 +1,103 @@
+@*
+    HU-AUT-005 — Alta de cuenta de administrador.
+
+    Escenario 1  registro exitoso
+    Escenario 2  correo o usuario duplicado -> error de campo
+*@
+@model NuevaCuentaViewModel
+@{
+    ViewData["Title"] = "Nueva cuenta";
+    ViewData["Subtitle"] = "Da acceso al panel administrativo a un nuevo colaborador.";
+}
+
+<div class="row">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Crear" method="post" data-mc-guard-submit novalidate>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="NombreCompleto" class="form-label mc-required"></label>
+                        <input asp-for="NombreCompleto" class="form-control" autofocus />
+                        <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CorreoElectronico" class="form-label mc-required"></label>
+                            <input asp-for="CorreoElectronico" type="email" class="form-control" autocomplete="off" />
+                            @* Escenario 2: el duplicado aterriza en este
+                               mismo span via ModelState.AddModelError. *@
+                            <span asp-validation-for="CorreoElectronico" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="NombreUsuario" class="form-label mc-required"></label>
+                            <input asp-for="NombreUsuario" class="form-control" autocomplete="off" />
+                            <span asp-validation-for="NombreUsuario" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CorreoPersonal" class="form-label"></label>
+                        <input asp-for="CorreoPersonal" type="email" class="form-control" autocomplete="off" />
+                        <div class="form-text">
+                            Se usa como respaldo para recuperacion de contrasena
+                        </div>
+                        <span asp-validation-for="CorreoPersonal" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ContrasenaInicial" class="form-label mc-required"></label>
+                        @Html.EditorFor(m => m.ContrasenaInicial, "Contrasena", new
+                        {
+                            autocomplete = "new-password",
+                            medidor = true
+                        })
+                        <span asp-validation-for="ContrasenaInicial" class="text-danger small"></span>
+                        <div class="form-text">
+                            @PoliticaContrasena.Ayuda
+                            Se le pedira cambiarla en su primer inicio de sesion.
+                        </div>
+                    </div>
+
+                    <fieldset class="mb-4">
+                        <legend class="form-label mc-required fs-6">Rol</legend>
+
+                        <div class="form-check mb-2 p-3 border rounded-3">
+                            <input asp-for="Rol" class="form-check-input" type="radio"
+                                   id="rolRegular" value="@Roles.Regular" checked="@(Model.Rol == Roles.Regular)" />
+                            <label class="form-check-label d-block" for="rolRegular">
+                                <span class="fw-medium d-block">Administrador Regular</span>
+                                <span class="text-secondary small">
+                                    Gestiona la operacion diaria: reservas, mesas y ventas.
+                                    No puede crear ni administrar otras cuentas.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="form-check p-3 border rounded-3">
+                            <input asp-for="Rol" class="form-check-input" type="radio"
+                                   id="rolGeneral" value="@Roles.General" checked="@(Model.Rol == Roles.General)" />
+                            <label class="form-check-label d-block" for="rolGeneral">
+                                <span class="fw-medium d-block">Administrador General</span>
+                                <span class="text-secondary small">
+                                    Ademas de la operacion diaria, puede crear, desactivar
+                                    y reactivar cuentas de administrador.
+                                </span>
+                            </label>
+                        </div>
+
+                        <span asp-validation-for="Rol" class="text-danger small"></span>
+                    </fieldset>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Crear cuenta</button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
