@@ -121,6 +121,7 @@ CREATE TABLE dbo.Usuario (
     NombreUsuario      NVARCHAR(50)  NOT NULL,
     NombreCompleto     NVARCHAR(120) NOT NULL,
     CorreoElectronico  NVARCHAR(120) NOT NULL,
+    CorreoPersonal     NVARCHAR(120) NULL, -- Backup para recuperacion de contrasena (HU-AUT-003)
     Rol                NVARCHAR(20)  NOT NULL DEFAULT 'Regular', -- 'General' / 'Regular'
     ContrasenaHash     NVARCHAR(255) NOT NULL,
     Activo             BIT           NOT NULL DEFAULT 1,
