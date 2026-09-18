@@ -9,6 +9,8 @@ public class Usuario
     public string NombreUsuario { get; set; } = null!;
     public string NombreCompleto { get; set; } = null!;
     public string CorreoElectronico { get; set; } = null!;
+    /// <summary>Correo personal para recuperación de contraseña (HU-AUT-003). Opcional.</summary>
+    public string? CorreoPersonal { get; set; }
     public string Rol { get; set; } = "Regular";
     public string ContrasenaHash { get; set; } = null!;
     public bool Activo { get; set; } = true;

@@ -109,6 +109,7 @@ public class MonteCarloDbContext : DbContext
             entity.Property(e => e.NombreUsuario).HasMaxLength(50).IsRequired();
             entity.Property(e => e.NombreCompleto).HasMaxLength(120).IsRequired();
             entity.Property(e => e.CorreoElectronico).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.CorreoPersonal).HasMaxLength(120).IsRequired(false);
             entity.Property(e => e.Rol).HasMaxLength(20).IsRequired().HasDefaultValue("Regular");
             entity.Property(e => e.ContrasenaHash).HasMaxLength(255).IsRequired();
             entity.Property(e => e.Activo).HasDefaultValue(true);
