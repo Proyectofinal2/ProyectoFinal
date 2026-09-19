@@ -61,3 +61,4 @@ MonteCarlo.WEB/wwwroot/lib/**/*.map
 .env.*
 secrets.json
 local.settings.json
+/MonteCarlo.API/appsettings.json

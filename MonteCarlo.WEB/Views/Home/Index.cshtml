@@ -1,8 +1,701 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Inicio";
+    ViewData["Description"] = "Mirador Monte Carlo Bar Restaurante en Aserrí, San José. " +
+                              "Reserva tu mesa sin crear cuenta: bocas, cerveza fría y la mejor vista de la ciudad.";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- ============================================================
+     HERO — Layout tipo dashboard moderno
+     ============================================================ -->
+<section class="mc-hero">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <!-- Columna izquierda: mensaje principal -->
+            <div class="col-12 col-lg-7">
+                <span class="mc-hero-badge">
+                    <i class="bi bi-geo-alt-fill me-1" aria-hidden="true"></i>
+                    Aserrí · San José
+                </span>
+
+                <h1 class="mc-hero-titulo">
+                    Reserva tu mesa con<br />
+                    <em>vista a la ciudad</em>
+                </h1>
+
+                <p class="mc-hero-descripcion">
+                    Bar restaurante tradicional en las alturas de Aserrí.
+                    Bocas, cerveza fría y la mejor vista de San José —
+                    sin filas, sin llamadas, sin crear cuenta.
+                </p>
+            </div>
+
+            <!-- Columna derecha: tarjeta de información rápida -->
+            <div class="col-12 col-lg-5">
+                <div class="mc-hero-card">
+                    <div class="mc-hero-card__header">
+                        <span class="mc-hero-card__dot"></span>
+                        <span class="mc-hero-card__label">Abierto hoy</span>
+                    </div>
+
+                    <div class="mc-hero-card__row">
+                        <span class="mc-hero-card__day">Martes – Viernes</span>
+                        <span class="mc-hero-card__time">12:00 – 22:00</span>
+                    </div>
+                    <div class="mc-hero-card__row">
+                        <span class="mc-hero-card__day">Sábado</span>
+                        <span class="mc-hero-card__time">11:30 – 22:30</span>
+                    </div>
+                    <div class="mc-hero-card__row">
+                        <span class="mc-hero-card__day">Domingo</span>
+                        <span class="mc-hero-card__time">11:30 – 20:00</span>
+                    </div>
+                    <div class="mc-hero-card__row mc-hero-card__row--muted">
+                        <span class="mc-hero-card__day">Lunes</span>
+                        <span class="mc-hero-card__time">Cerrado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     ACCIONES DESTACADAS — Tarjetas grandes
+     ============================================================ -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Reservar -->
+            <div class="col-12 col-md-6">
+                <a asp-area=""
+                   asp-controller="Reserva"
+                   asp-action="Create"
+                   class="mc-action-card">
+                    <div class="mc-action-card__icon">
+                        <i class="bi bi-calendar-plus" aria-hidden="true"></i>
+                    </div>
+                    <div class="mc-action-card__body">
+                        <h3 class="mc-action-card__title">Reservar una mesa</h3>
+                        <p class="mc-action-card__text">
+                            Consulta la disponibilidad y agenda tu reserva en
+                            pocos pasos. Solo tu nombre, teléfono y fecha.
+                        </p>
+                        <span class="mc-action-card__cta">
+                            Comenzar
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Consultar -->
+            <div class="col-12 col-md-6">
+                <a asp-area=""
+                   asp-controller="Reserva"
+                   asp-action="Consultar"
+                   class="mc-action-card mc-action-card--accent">
+                    <div class="mc-action-card__icon">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </div>
+                    <div class="mc-action-card__body">
+                        <h3 class="mc-action-card__title">Ya tengo una reserva</h3>
+                        <p class="mc-action-card__text">
+                            Consulta el estado de tu reserva o cancélala con el
+                            código único que te enviamos.
+                        </p>
+                        <span class="mc-action-card__cta">
+                            Consultar
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     SOBRE NOSOTROS
+     ============================================================ -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <!-- Imagen del restaurante -->
+            <div class="col-12 col-sm-6">
+                <div class="mc-about-image">
+                    <img src="~/img/mirador.png"
+                         alt="Fachada del Mirador Monte Carlo Bar Restaurante en Aserrí, San José"
+                         loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Texto descriptivo -->
+            <div class="col-12 col-sm-6">
+                <span class="mc-eyebrow">Sobre nosotros</span>
+                <h2 class="mc-section-title">Un mirador, un ambiente ameno</h2>
+                <p class="text-muted mb-3">
+                    Mirador Monte Carlo es un bar restaurante tradicional en las
+                    alturas de Aserrí, con una de las mejores vistas de San José.
+                    Un lugar sencillo y familiar, ideal para llegar después del
+                    trabajo, un fin de semana con amigos o una tarde de bocas y
+                    cerveza viendo la ciudad desde la montaña.
+                </p>
+                <p class="text-muted mb-0">
+                    Nuestra propuesta es sencilla: buena comida costarricense,
+                    ambiente relajado y esa vista que hace que valga la pena
+                    subir hasta aquí.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     UBICACIÓN
+     ============================================================ -->
+<section class="py-5 bg-body-tertiary">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <!-- Texto + info -->
+            <div class="col-12 col-sm-6">
+                <span class="mc-eyebrow">Cómo llegar</span>
+                <h2 class="mc-section-title">En las alturas de Aserrí</h2>
+                <p class="text-muted mb-4">
+                    Subiendo la montaña se encuentra uno de los miradores más
+                    conocidos de la zona, con vista panorámica a la ciudad de
+                    San José. Especialmente linda al atardecer y de noche, con
+                    las luces de la ciudad iluminando el valle.
+                </p>
+
+                <div class="mc-info-row">
+                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                    <div>
+                        <div class="mc-info-row__label">Ubicación</div>
+                        <div class="mc-info-row__value">Aserrí, San José, Costa Rica</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapa -->
+            <div class="col-12 col-sm-6">
+                <div class="mc-map">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15724.675516296893!2d-84.08340499214395!3d9.836179644823357!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa11d6f1c60ae59%3A0xc54666bdc166ded2!2sMirador%20Monte%20Carlo%20Bar%20Restaurante!5e0!3m2!1ses!2scr!4v1789751723955!5m2!1ses!2scr"
+                            style="border:0;"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            title="Ubicación de Mirador Monte Carlo Bar Restaurante en Google Maps">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     PLATILLOS DESTACADOS — Lista moderna
+     ============================================================ -->
+<section class="py-5">
+    <div class="container">
+        <span class="mc-eyebrow">Un adelanto</span>
+        <h2 class="mc-section-title mb-4">Bocas y algo fresco</h2>
+
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="mc-dish">
+                    <div class="mc-dish__icon"><i class="bi bi-egg-fried"></i></div>
+                    <h3 class="mc-dish__name">Chicharrones Mirador</h3>
+                    <p class="mc-dish__desc">
+                        Crocantes, con tortillas calientes y salsa de la casa.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="mc-dish">
+                    <div class="mc-dish__icon"><i class="bi bi-circle-square"></i></div>
+                    <h3 class="mc-dish__name">Patacones con queso</h3>
+                    <p class="mc-dish__desc">
+                        Dorados y cubiertos de queso derretido, para compartir.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="mc-dish">
+                    <div class="mc-dish__icon"><i class="bi bi-fire"></i></div>
+                    <h3 class="mc-dish__name">Costillas ahumadas</h3>
+                    <p class="mc-dish__desc">
+                        Ahumadas lentamente, acompañadas de yuca frita.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="mc-dish">
+                    <div class="mc-dish__icon"><i class="bi bi-cup-straw"></i></div>
+                    <h3 class="mc-dish__name">Cerveza bien fría</h3>
+                    <p class="mc-dish__desc">
+                        Nacionales y artesanales, para acompañar la vista.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <p class="small text-muted text-center mt-4 mb-0">
+            El menú completo, con más bocas y bebidas, se presenta directamente
+            en el restaurante.
+        </p>
+    </div>
+</section>
+
+<!-- ============================================================
+     CTA FINAL
+     ============================================================ -->
+<section class="pb-5">
+    <div class="container">
+        <div class="mc-cta-final">
+            <h2 class="mc-cta-final__title">¿Listo para reservar?</h2>
+            <p class="mc-cta-final__text">
+                Toma menos de dos minutos y no necesita crear una cuenta.
+            </p>
+            <a asp-area=""
+               asp-controller="Reserva"
+               asp-action="Create"
+               class="btn btn-light btn-lg px-4">
+                Reservar ahora
+                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     ACCESO ADMINISTRATIVO
+     ============================================================ -->
+<div class="container pb-4">
+    <div class="text-center pt-4 border-top">
+        <a asp-area="Admin"
+           asp-controller="Autenticacion"
+           asp-action="Login"
+           class="mc-admin-link">
+            <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+            Acceso administrativo
+        </a>
+    </div>
 </div>
+
+
+@section Styles {
+    <style>
+        /* =========================================================
+                   Vista de inicio (HU-RES-001)
+                   Diseño moderno alineado a tokens.css + site.css del equipo
+                   ========================================================= */
+
+        /* ---------- Tipografía utilitaria ---------- */
+        .mc-eyebrow {
+            display: block;
+            font-size: var(--mc-text-xs);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--mc-copper-700);
+            font-weight: var(--mc-weight-semibold);
+            margin-bottom: var(--mc-space-2);
+        }
+
+        .mc-section-title {
+            font-family: var(--mc-font-display);
+            font-weight: var(--mc-weight-semibold);
+            font-size: var(--mc-text-2xl);
+            color: var(--mc-ink);
+            margin-bottom: var(--mc-space-3);
+        }
+
+        /* ---------- HERO ---------- */
+        .mc-hero {
+            position: relative;
+            padding: var(--mc-space-7) 0;
+            background: linear-gradient(135deg, var(--mc-green-800) 0%, var(--mc-green-600) 100%);
+            color: var(--mc-ink-inverse);
+            margin: calc(-1 * var(--mc-space-4)) calc(-1 * var(--mc-space-4)) 0;
+            overflow: hidden;
+        }
+
+            .mc-hero::after {
+                content: "";
+                position: absolute;
+                top: -50%;
+                right: -10%;
+                width: 500px;
+                height: 500px;
+                background: radial-gradient(circle, rgba(184, 115, 51, 0.25) 0%, transparent 60%);
+                pointer-events: none;
+            }
+
+        .mc-hero-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.85rem;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--mc-radius-pill);
+            font-size: var(--mc-text-xs);
+            font-weight: var(--mc-weight-medium);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--mc-copper-300);
+            margin-bottom: var(--mc-space-5);
+        }
+
+        .mc-hero-titulo {
+            font-family: var(--mc-font-display);
+            font-weight: var(--mc-weight-semibold);
+            font-size: clamp(2.25rem, 5vw, 3.5rem);
+            line-height: 1.08;
+            color: var(--mc-ink-inverse);
+            margin-bottom: var(--mc-space-4);
+            position: relative;
+            z-index: 1;
+        }
+
+            .mc-hero-titulo em {
+                font-style: italic;
+                font-weight: var(--mc-weight-normal);
+                color: var(--mc-copper-300);
+            }
+
+        .mc-hero-descripcion {
+            font-size: var(--mc-text-lg);
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.6;
+            max-width: 540px;
+            margin-bottom: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Tarjeta de horario dentro del hero */
+        .mc-hero-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--mc-radius-lg);
+            padding: var(--mc-space-5);
+            backdrop-filter: blur(8px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .mc-hero-card__header {
+            display: flex;
+            align-items: center;
+            gap: var(--mc-space-2);
+            margin-bottom: var(--mc-space-4);
+            padding-bottom: var(--mc-space-3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .mc-hero-card__dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--mc-success);
+            box-shadow: 0 0 0 4px rgba(46, 125, 82, 0.25);
+        }
+
+        .mc-hero-card__label {
+            font-size: var(--mc-text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: var(--mc-weight-semibold);
+            color: var(--mc-copper-300);
+        }
+
+        .mc-hero-card__row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--mc-space-2) 0;
+            font-size: var(--mc-text-sm);
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .mc-hero-card__row--muted {
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .mc-hero-card__time {
+            font-weight: var(--mc-weight-medium);
+        }
+
+        /* ---------- Tarjetas de acción ---------- */
+        .mc-action-card {
+            display: flex;
+            gap: var(--mc-space-4);
+            padding: var(--mc-space-5);
+            background: var(--mc-elevated);
+            border: 1px solid var(--mc-border);
+            border-radius: var(--mc-radius-lg);
+            text-decoration: none;
+            color: var(--mc-ink);
+            box-shadow: var(--mc-shadow-sm);
+            height: 100%;
+            transition: transform var(--mc-transition), box-shadow var(--mc-transition), border-color var(--mc-transition);
+        }
+
+            .mc-action-card:hover,
+            .mc-action-card:focus-visible {
+                transform: translateY(-3px);
+                box-shadow: var(--mc-shadow-lg);
+                border-color: var(--mc-green-300);
+                color: var(--mc-ink);
+            }
+
+        .mc-action-card__icon {
+            flex-shrink: 0;
+            width: 56px;
+            height: 56px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--mc-radius);
+            background: var(--mc-green-100);
+            color: var(--mc-green-500);
+            font-size: 1.5rem;
+        }
+
+        .mc-action-card--accent .mc-action-card__icon {
+            background: var(--mc-copper-100);
+            color: var(--mc-copper-700);
+        }
+
+        .mc-action-card__body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .mc-action-card__title {
+            font-family: var(--mc-font-display);
+            font-weight: var(--mc-weight-semibold);
+            font-size: var(--mc-text-xl);
+            margin-bottom: var(--mc-space-2);
+        }
+
+        .mc-action-card__text {
+            color: var(--mc-ink-muted);
+            font-size: var(--mc-text-sm);
+            margin-bottom: var(--mc-space-4);
+            flex: 1;
+        }
+
+        .mc-action-card__cta {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--mc-space-2);
+            font-weight: var(--mc-weight-semibold);
+            font-size: var(--mc-text-sm);
+            color: var(--mc-green-500);
+        }
+
+        .mc-action-card--accent .mc-action-card__cta {
+            color: var(--mc-copper-700);
+        }
+
+        .mc-action-card:hover .mc-action-card__cta i {
+            transform: translateX(4px);
+            transition: transform var(--mc-transition);
+        }
+
+        /* ---------- Imagen "Sobre nosotros" ---------- */
+        .mc-about-image {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: var(--mc-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--mc-shadow);
+            border: 1px solid var(--mc-border);
+            background: var(--mc-green-50);
+        }
+
+            .mc-about-image img {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+                transition: transform var(--mc-transition);
+            }
+
+            .mc-about-image:hover img {
+                transform: scale(1.03);
+            }
+
+        /* ---------- Filas de información (Ubicación) ---------- */
+        .mc-info-row {
+            display: flex;
+            gap: var(--mc-space-3);
+            padding: var(--mc-space-3) 0;
+            border-top: 1px solid var(--mc-border);
+        }
+
+            .mc-info-row:last-child {
+                border-bottom: 1px solid var(--mc-border);
+            }
+
+            .mc-info-row i {
+                font-size: 1.25rem;
+                color: var(--mc-green-500);
+                margin-top: 0.15rem;
+                flex-shrink: 0;
+            }
+
+        .mc-info-row__label {
+            font-size: var(--mc-text-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--mc-ink-subtle);
+            font-weight: var(--mc-weight-semibold);
+            margin-bottom: 2px;
+        }
+
+        .mc-info-row__value {
+            font-size: var(--mc-text-sm);
+            color: var(--mc-ink);
+        }
+
+        /* ---------- Mapa ---------- */
+        .mc-map {
+            aspect-ratio: 4 / 3;
+            border-radius: var(--mc-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--mc-shadow);
+            border: 1px solid var(--mc-border);
+            background: var(--mc-green-50);
+        }
+
+            .mc-map iframe {
+                display: block;
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+
+        /* ---------- Platillos ---------- */
+        .mc-dish {
+            padding: var(--mc-space-4);
+            border-left: 3px solid var(--mc-green-500);
+            background: var(--mc-elevated);
+            border-radius: 0 var(--mc-radius) var(--mc-radius) 0;
+            height: 100%;
+            transition: border-color var(--mc-transition), padding-left var(--mc-transition);
+        }
+
+            .mc-dish:hover {
+                border-color: var(--mc-copper-500);
+                padding-left: var(--mc-space-5);
+            }
+
+        .mc-dish__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--mc-radius);
+            background: var(--mc-green-50);
+            color: var(--mc-green-500);
+            font-size: 1.25rem;
+            margin-bottom: var(--mc-space-3);
+        }
+
+        .mc-dish__name {
+            font-family: var(--mc-font-display);
+            font-weight: var(--mc-weight-semibold);
+            font-size: var(--mc-text-base);
+            margin-bottom: var(--mc-space-2);
+            color: var(--mc-ink);
+        }
+
+        .mc-dish__desc {
+            font-size: var(--mc-text-sm);
+            color: var(--mc-ink-muted);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ---------- CTA final ---------- */
+        .mc-cta-final {
+            padding: var(--mc-space-7) var(--mc-space-5);
+            background: linear-gradient(135deg, var(--mc-green-600) 0%, var(--mc-green-800) 100%);
+            color: var(--mc-ink-inverse);
+            border-radius: var(--mc-radius-lg);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--mc-shadow);
+        }
+
+            .mc-cta-final::before {
+                content: "";
+                position: absolute;
+                bottom: -60px;
+                right: -60px;
+                width: 220px;
+                height: 220px;
+                background: radial-gradient(circle, rgba(184, 115, 51, 0.35) 0%, transparent 65%);
+                pointer-events: none;
+            }
+
+        .mc-cta-final__title {
+            font-family: var(--mc-font-display);
+            font-weight: var(--mc-weight-semibold);
+            font-size: var(--mc-text-2xl);
+            margin-bottom: var(--mc-space-2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .mc-cta-final__text {
+            font-size: var(--mc-text-base);
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: var(--mc-space-5);
+            position: relative;
+            z-index: 1;
+        }
+
+        .mc-cta-final .btn {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ---------- Enlace admin discreto ---------- */
+        .mc-admin-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--mc-space-1);
+            font-size: var(--mc-text-sm);
+            color: var(--mc-ink-subtle);
+            text-decoration: none;
+            transition: color var(--mc-transition);
+        }
+
+            .mc-admin-link:hover,
+            .mc-admin-link:focus-visible {
+                color: var(--mc-ink-muted);
+            }
+    </style>
+}
+
+@* Responsive del hero: fuera del @section para evitar conflicto con Razor *@
+<style>
+    @@media (max-width: 576px) {
+        .mc-hero {
+            padding: var(--mc-space-6) 0;
+            margin-left: calc(-1 * var(--mc-space-3));
+            margin-right: calc(-1 * var(--mc-space-3));
+        }
+    }
+</style>
