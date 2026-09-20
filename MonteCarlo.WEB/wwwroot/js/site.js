@@ -253,6 +253,140 @@
         });
     }
 
+    /* --------------------------------------------------------
+       Calendario de nueva reserva (HU-RES-002, andamiaje visual)
+       Solo conserva seleccion y navegacion local. La API sera la
+       unica fuente de fechas y horarios realmente disponibles.
+       -------------------------------------------------------- */
+    function initReservationCalendars() {
+        document.querySelectorAll("[data-mc-reservation-calendar]").forEach(function (calendar) {
+            var peopleOutput = calendar.querySelector("[data-mc-reservation-people]");
+            var decreaseButton = calendar.querySelector("[data-mc-reservation-decrease]");
+            var increaseButton = calendar.querySelector("[data-mc-reservation-increase]");
+            var previousButton = calendar.querySelector("[data-mc-reservation-previous-month]");
+            var nextButton = calendar.querySelector("[data-mc-reservation-next-month]");
+            var monthLabel = calendar.querySelector("[data-mc-reservation-month]");
+            var daysContainer = calendar.querySelector("[data-mc-reservation-days]");
+            var timesEmpty = calendar.querySelector("[data-mc-reservation-times-empty]");
+
+            if (!peopleOutput || !decreaseButton || !increaseButton || !previousButton ||
+                !nextButton || !monthLabel || !daysContainer) {
+                return;
+            }
+
+            var people = parseInt(calendar.dataset.mcInitialPeople, 10);
+            if (isNaN(people) || people < 1) {
+                people = 1;
+            }
+
+            var displayedMonth = new Date();
+            displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+            var selectedDate = null;
+            var monthFormatter = new Intl.DateTimeFormat("es-CR", {
+                month: "long",
+                year: "numeric"
+            });
+
+            function renderPeople() {
+                peopleOutput.textContent = String(people);
+                decreaseButton.disabled = people === 1;
+            }
+
+            function formatDateKey(date) {
+                return date.getFullYear() + "-" +
+                    String(date.getMonth() + 1).padStart(2, "0") + "-" +
+                    String(date.getDate()).padStart(2, "0");
+            }
+
+            function selectDate(button) {
+                selectedDate = button.dataset.mcReservationDate;
+                daysContainer.querySelectorAll("[data-mc-reservation-date]").forEach(function (day) {
+                    var selected = day === button;
+                    day.classList.toggle("is-selected", selected);
+                    day.setAttribute("aria-pressed", String(selected));
+                });
+
+                if (timesEmpty) {
+                    timesEmpty.querySelector("p").textContent =
+                        "Los horarios disponibles aparecerán aquí.";
+                }
+            }
+
+            function renderCalendar() {
+                monthLabel.textContent = monthFormatter.format(displayedMonth);
+                daysContainer.replaceChildren();
+
+                var firstWeekday = displayedMonth.getDay();
+                var daysInMonth = new Date(
+                    displayedMonth.getFullYear(),
+                    displayedMonth.getMonth() + 1,
+                    0
+                ).getDate();
+
+                for (var blank = 0; blank < firstWeekday; blank++) {
+                    var spacer = document.createElement("span");
+                    spacer.setAttribute("aria-hidden", "true");
+                    daysContainer.appendChild(spacer);
+                }
+
+                for (var dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+                    var date = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), dayNumber);
+                    var button = document.createElement("button");
+                    var dateKey = formatDateKey(date);
+
+                    button.type = "button";
+                    button.className = "mc-reservation__day";
+                    button.dataset.mcReservationDate = dateKey;
+                    button.textContent = String(dayNumber);
+                    button.setAttribute("aria-label", date.toLocaleDateString("es-CR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric"
+                    }));
+                    button.setAttribute("aria-pressed", String(dateKey === selectedDate));
+
+                    if (dateKey === selectedDate) {
+                        button.classList.add("is-selected");
+                    }
+
+                    (function (dayButton) {
+                        dayButton.addEventListener("click", function () {
+                            selectDate(dayButton);
+                        });
+                    })(button);
+
+                    daysContainer.appendChild(button);
+                }
+            }
+
+            decreaseButton.addEventListener("click", function () {
+                if (people > 1) {
+                    people--;
+                    renderPeople();
+                }
+            });
+
+            increaseButton.addEventListener("click", function () {
+                people++;
+                renderPeople();
+            });
+
+            previousButton.addEventListener("click", function () {
+                displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() - 1, 1);
+                renderCalendar();
+            });
+
+            nextButton.addEventListener("click", function () {
+                displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 1);
+                renderCalendar();
+            });
+
+            renderPeople();
+            renderCalendar();
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         initPasswordToggles();
         initStrengthMeters();
@@ -261,5 +395,6 @@
         initCountdowns();
         initSubmitGuard();
         initAutoDismiss();
+        initReservationCalendars();
     });
 })();

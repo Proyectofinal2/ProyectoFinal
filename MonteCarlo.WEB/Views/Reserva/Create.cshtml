@@ -1,0 +1,111 @@
+@using MonteCarlo.WEB.Models.Reservas
+@model NuevaReservaDisponibilidadViewModel
+
+@{
+    ViewData["Title"] = "Nueva reserva";
+    ViewData["Description"] = "Selecciona la cantidad de personas, fecha y horario para tu reserva en Monte Carlo.";
+}
+
+<section class="mc-reservation" data-mc-reservation-calendar data-mc-initial-people="@Model.CantidadPersonasInicial">
+    <ol class="mc-reservation__steps" aria-label="Progreso de la reserva">
+        <li class="mc-reservation__step is-current" aria-current="step">
+            <span class="mc-reservation__step-number">1</span>
+            <span>Fecha y hora</span>
+        </li>
+        <li class="mc-reservation__step">
+            <span class="mc-reservation__step-number">2</span>
+            <span>Datos</span>
+        </li>
+        <li class="mc-reservation__step">
+            <span class="mc-reservation__step-number">3</span>
+            <span>Confirmación</span>
+        </li>
+    </ol>
+
+    <div class="mc-reservation__heading">
+        <span class="mc-eyebrow">Nueva reserva</span>
+        <h1 class="mc-reservation__title">¿Cuándo nos visita?</h1>
+        <p class="mc-reservation__lead">
+            Seleccione la cantidad de personas y una fecha para consultar la disponibilidad.
+        </p>
+    </div>
+
+    <div class="row g-4 align-items-start">
+        <div class="col-12 col-lg-7">
+            <article class="mc-reservation__card">
+                <div class="mc-reservation__card-header">
+                    <div>
+                        <h2 class="mc-reservation__card-title">Personas</h2>
+                        <p class="mc-reservation__card-copy">Indique cuántas personas asistirán.</p>
+                    </div>
+                    <div class="mc-reservation__people" aria-label="Cantidad de personas">
+                        <button class="mc-reservation__quantity-button"
+                                type="button"
+                                data-mc-reservation-decrease
+                                aria-label="Disminuir cantidad de personas">
+                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
+                        </button>
+                        <output class="mc-reservation__quantity" data-mc-reservation-people>1</output>
+                        <button class="mc-reservation__quantity-button"
+                                type="button"
+                                data-mc-reservation-increase
+                                aria-label="Aumentar cantidad de personas">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mc-reservation__notice" role="note">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    <span>Las reservas que superen el límite de confirmación automática pueden requerir revisión administrativa.</span>
+                </div>
+            </article>
+
+            <article class="mc-reservation__card mc-reservation__calendar-card">
+                <div class="mc-reservation__calendar-header">
+                    <h2 class="mc-reservation__card-title">Seleccione una fecha</h2>
+                    <div class="mc-reservation__calendar-actions">
+                        <button class="mc-reservation__month-button"
+                                type="button"
+                                data-mc-reservation-previous-month
+                                aria-label="Mes anterior">
+                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <h3 class="mc-reservation__month" data-mc-reservation-month aria-live="polite"></h3>
+                        <button class="mc-reservation__month-button"
+                                type="button"
+                                data-mc-reservation-next-month
+                                aria-label="Mes siguiente">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mc-reservation__weekdays" aria-hidden="true">
+                    <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+                </div>
+                <div class="mc-reservation__days" data-mc-reservation-days aria-label="Días del mes"></div>
+            </article>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <article class="mc-reservation__card mc-reservation__times" aria-labelledby="horarios-title">
+                <h2 id="horarios-title" class="mc-reservation__card-title">Horarios disponibles</h2>
+                <div class="mc-reservation__times-empty" data-mc-reservation-times-empty aria-live="polite">
+                    <i class="bi bi-clock" aria-hidden="true"></i>
+                    <p>Seleccione una fecha para consultar los horarios disponibles.</p>
+                </div>
+            </article>
+
+            <div class="mc-reservation__continue">
+                <button class="btn btn-primary w-100" type="button" disabled aria-describedby="continue-help">
+                    Continuar
+                    <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                </button>
+                <p id="continue-help" class="mc-reservation__continue-help">
+                    Seleccione una fecha y un horario para continuar.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
