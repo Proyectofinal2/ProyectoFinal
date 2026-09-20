@@ -62,31 +62,33 @@
             </li>
 
             @* HU-AUT-005 y HU-AUT-006: exclusivo del Administrador General.
-               El enlace se oculta ademas de protegerse en el controlador;
-               ocultar la interfaz no sustituye a la autorizacion. *@
+                El enlace se oculta ademas de protegerse en el controlador;
+                ocultar la interfaz no sustituye a la autorizacion. *@
 
 
             @if (esAdministradorGeneral)
             {
-                <li class="mc-sidebar__section">Configuracion</li>
-                <li>
-                    <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
-                        <i class="bi bi-sliders" aria-hidden="true"></i> Parametros
-                    </span>
-                </li>
-                <li>
-                    <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
-                        <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
-                    </span>
-                </li>
+            <li class="mc-sidebar__section">Configuracion</li>
+            <li>
+                <a class="@ClaseActiva(controladorActual, "Parametros")"
+                   asp-area="Admin" asp-controller="Parametros" asp-action="Index">
+                    <i class="bi bi-sliders" aria-hidden="true"></i> Parametros
+                </a>
+            </li>
+            <li>
+                <a class="@ClaseActiva(controladorActual, "Cierres")"
+                   asp-area="Admin" asp-controller="Cierres" asp-action="Index">
+                    <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
+                </a>
+            </li>
 
-                <li class="mc-sidebar__section">Seguridad</li>
-                <li>
-                    <a class="@ClaseActiva(controladorActual, "Usuarios")"
-                       asp-area="Admin" asp-controller="Usuarios" asp-action="Index">
-                        <i class="bi bi-people" aria-hidden="true"></i> Cuentas de administrador
-                    </a>
-                </li>
+            <li class="mc-sidebar__section">Seguridad</li>
+            <li>
+                <a class="@ClaseActiva(controladorActual, "Usuarios")"
+                   asp-area="Admin" asp-controller="Usuarios" asp-action="Index">
+                    <i class="bi bi-people" aria-hidden="true"></i> Cuentas de administrador
+                </a>
+            </li>
             }
         </ul>
     </div>

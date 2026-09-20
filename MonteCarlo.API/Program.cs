@@ -25,6 +25,18 @@ builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
 
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 
+// HU-RES-005: cancelación de reservas por el cliente
+builder.Services.AddScoped<IReservasRepository, ReservasRepository>();
+builder.Services.AddScoped<IReservasService, ReservasService>();
+
+// HU-CFG-001: umbral de confirmación automática
+builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
+
+// HU-CFG-002: cierres fijos semanales
+builder.Services.AddScoped<ICierresFijosRepository, CierresFijosRepository>();
+builder.Services.AddScoped<ICierresFijosService, CierresFijosService>();
+
 // Configurar JWT
 var jwtSecret = builder.Configuration["Jwt:Secret"];
 if (string.IsNullOrWhiteSpace(jwtSecret))

@@ -1,0 +1,45 @@
+@*
+    HU-CFG-002 — Días fijos de cierre semanal.
+
+    Escenario 1  marcar uno o más días y confirmar: se cierran de forma recurrente
+                 y se registra en el historial de auditoría.
+    Escenario 2  desmarcar un día y confirmar: deja de aplicarse desde ahora;
+                 no afecta reservas confirmadas ni cierres eventuales.
+*@
+@using MonteCarlo.WEB.Models.Configuracion
+@model CierresFijosViewModel
+@{
+    ViewData["Title"] = "Cierres";
+    ViewData["Subtitle"] = "Dias de la semana en que el restaurante permanece cerrado.";
+}
+
+<div class="row">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Index" method="post" data-mc-guard-submit>
+                    <fieldset class="mb-3">
+                        <legend class="fs-6 fw-semibold">Cierres fijos semanales</legend>
+
+                        @foreach (var (valor, nombre) in CierresFijosViewModel.DiasSemana)
+                        {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   id="dia-@valor" name="Dias" value="@valor"
+                                   checked="@Model.Dias.Contains(valor)" />
+                            <label class="form-check-label" for="dia-@valor">@nombre</label>
+                        </div>
+                        }
+
+                        <div class="form-text mt-2">
+                            Los dias marcados no se ofreceran en el calendario de reservas, cada semana.
+                            Desmarcar un dia no afecta reservas ya confirmadas ni cierres eventuales.
+                        </div>
+                    </fieldset>
+
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

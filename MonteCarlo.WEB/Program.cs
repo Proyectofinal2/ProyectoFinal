@@ -43,6 +43,23 @@ builder.Services
     })
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+// HU-CFG-001 y HU-CFG-002: configuración (umbral y cierres fijos), requiere token.
+builder.Services
+    .AddHttpClient<IConfiguracionApiService, ConfiguracionApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
+// HU-RES-005: consulta y cancelación pública de reservas (sin token).
+builder.Services
+    .AddHttpClient<IReservasApiService, ReservasApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

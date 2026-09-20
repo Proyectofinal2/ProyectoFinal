@@ -1,0 +1,105 @@
+@*
+    HU-RES-005 — Consultar y cancelar una reserva con su código único.
+
+    Escenario 1  código válido de una reserva Pendiente o Confirmada:
+                 se muestra el detalle y el botón "Cancelar reserva". Al
+                 confirmar, la API la pasa a Cancelada y libera la mesa;
+                 el controlador redirige aquí y _Alerts muestra la confirmación.
+*@
+@using MonteCarlo.WEB.Models.Reservas
+@using MonteCarlo.WEB.Models.UI
+@model ConsultarReservaViewModel
+
+@{
+    ViewData["Title"] = "Mi reserva";
+    ViewData["Description"] = "Consulta o cancela tu reserva en Monte Carlo con el código único.";
+}
+
+<section class="container py-5" style="max-width: 640px;">
+    <span class="mc-eyebrow">Mi reserva</span>
+    <h1 class="mb-2">Consulta o cancela tu reserva</h1>
+    <p class="text-muted mb-4">Ingresa el código único que recibiste al reservar.</p>
+
+    <form asp-action="Consultar" method="get" class="card mb-4" novalidate>
+        <div class="card-body">
+            <label asp-for="Codigo" class="form-label"></label>
+            <div class="input-group">
+                <input asp-for="Codigo" class="form-control text-uppercase" maxlength="10"
+                       autocomplete="off" autofocus />
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </div>
+            <span asp-validation-for="Codigo" class="text-danger small"></span>
+        </div>
+    </form>
+
+    @if (Model.Reserva is { } reserva)
+    {
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="text-muted small">Código</div>
+                    <div class="fs-5 fw-semibold">@reserva.CodigoReserva</div>
+                </div>
+                <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Reserva(reserva.Estado)" />
+            </div>
+
+            <dl class="row mb-0">
+                <dt class="col-sm-4">A nombre de</dt>
+                <dd class="col-sm-8">@reserva.NombreCliente</dd>
+
+                <dt class="col-sm-4">Fecha</dt>
+                <dd class="col-sm-8">@reserva.FechaReserva.ToString("dddd d 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-CR"))</dd>
+
+                <dt class="col-sm-4">Hora</dt>
+                <dd class="col-sm-8">@reserva.HoraReserva.ToString("HH:mm")</dd>
+
+                <dt class="col-sm-4">Personas</dt>
+                <dd class="col-sm-8">@reserva.CantidadPersonas</dd>
+            </dl>
+        </div>
+
+        @if (reserva.PuedeCancelarse)
+            {
+        <div class="card-footer d-flex justify-content-end">
+            <button type="button" class="btn btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#modalCancelarReserva">
+                Cancelar reserva
+            </button>
+        </div>
+            }
+            else
+            {
+        <div class="card-footer text-muted small">
+            Esta reserva está en estado "@reserva.Estado" y ya no puede cancelarse.
+        </div>
+            }
+    </div>
+
+    @if (reserva.PuedeCancelarse)
+        {
+    <div class="modal fade" id="modalCancelarReserva" tabindex="-1"
+         aria-labelledby="tituloCancelarReserva" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="tituloCancelarReserva">Cancelar reserva</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Seguro que deseas cancelar la reserva <strong>@reserva.CodigoReserva</strong>?
+                    La mesa se liberará y esta acción no se puede deshacer.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
+                    <form asp-action="Cancelar" method="post">
+                        <input type="hidden" name="codigo" value="@reserva.CodigoReserva" />
+                        <button type="submit" class="btn btn-danger">Sí, cancelar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+        }
+    }
+</section>

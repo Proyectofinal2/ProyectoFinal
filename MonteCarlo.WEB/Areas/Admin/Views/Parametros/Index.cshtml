@@ -1,0 +1,49 @@
+@*
+    HU-CFG-001 — Umbral de confirmación automática de reservas.
+
+    Escenario 1  muestra el valor vigente (4 por defecto)
+    Escenario 2  guarda un entero positivo; la API registra fecha y usuario
+                 y solo aplica a reservas creadas de ahí en adelante.
+*@
+@using MonteCarlo.WEB.Models.Configuracion
+@model UmbralViewModel
+@{
+    ViewData["Title"] = "Parametros";
+    ViewData["Subtitle"] = "Ajusta la operacion del sistema sin cambiar codigo.";
+}
+
+<div class="row">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Index" method="post" data-mc-guard-submit novalidate>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Umbral" class="form-label mc-required"></label>
+                        <input asp-for="Umbral" type="number" min="1" step="1" class="form-control" />
+                        <div class="form-text">
+                            Las reservas para este numero de personas o menos se confirman solas;
+                            las de mas personas quedan pendientes de revision. El cambio aplica
+                            solo a las reservas nuevas, no a las ya existentes.
+                        </div>
+                        <span asp-validation-for="Umbral" class="text-danger small"></span>
+                    </div>
+
+                    @if (Model.FechaModificacion is { } fecha)
+                    {
+                    <p class="text-secondary small">
+                        Ultimo cambio: @fecha.ToString("dd/MM/yyyy HH:mm")
+                        @if (!string.IsNullOrWhiteSpace(Model.UsuarioModificacion))
+                            {
+                        <text>por @Model.UsuarioModificacion</text>
+                            }
+                    </p>
+                    }
+
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
