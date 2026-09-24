@@ -11,4 +11,9 @@ public interface IConfiguracionApiService
     Task<(bool Success, string Message, CierresFijosApiResponse? Data)> ObtenerCierresFijosAsync();
 
     Task<(bool Success, string Message, CierresFijosApiResponse? Data)> ActualizarCierresFijosAsync(IEnumerable<int> dias);
+
+    Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> ObtenerHorariosOperacionAsync();
+
+    Task<(bool Success, string Message, HorarioOperacionApiResponse? Data)> GuardarHorarioOperacionAsync(
+        int diaSemana, TimeOnly horaApertura, TimeOnly horaCierre);
 }

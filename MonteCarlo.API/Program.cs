@@ -37,6 +37,10 @@ builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<ICierresFijosRepository, CierresFijosRepository>();
 builder.Services.AddScoped<ICierresFijosService, CierresFijosService>();
 
+// HU-CFG-005: horarios regulares de operación
+builder.Services.AddScoped<IHorariosOperacionRepository, HorariosOperacionRepository>();
+builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>();
+
 // Configurar JWT
 var jwtSecret = builder.Configuration["Jwt:Secret"];
 if (string.IsNullOrWhiteSpace(jwtSecret))

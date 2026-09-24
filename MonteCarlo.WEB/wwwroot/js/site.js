@@ -387,6 +387,178 @@
         });
     }
 
+    /* --------------------------------------------------------
+       Selector de horarios de operacion
+       Uso: contenedor [data-mc-time-picker] con valor oculto,
+       boton disparador y lista. El valor enviado siempre es HH:mm.
+       -------------------------------------------------------- */
+    function initTimePickers() {
+        function formatTime(value) {
+            var parts = value.split(":");
+            var hours = parseInt(parts[0], 10);
+            var minutes = parseInt(parts[1], 10);
+
+            if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                return "Selecciona una hora";
+            }
+
+            var period = hours < 12 ? "a. m." : "p. m.";
+            var displayHour = hours % 12 || 12;
+            return String(displayHour).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + " " + period;
+        }
+
+        function createStandardValues() {
+            var values = [];
+            for (var hour = 0; hour < 24; hour++) {
+                [0, 30].forEach(function (minute) {
+                    values.push(String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0"));
+                });
+            }
+            return values;
+        }
+
+        document.querySelectorAll("[data-mc-time-picker]").forEach(function (picker) {
+            var valueInput = picker.querySelector("[data-mc-time-picker-value]");
+            var trigger = picker.querySelector("[data-mc-time-picker-trigger]");
+            var label = picker.querySelector("[data-mc-time-picker-label]");
+            var menu = picker.querySelector("[data-mc-time-picker-menu]");
+
+            if (!valueInput || !trigger || !label || !menu || trigger.disabled) {
+                return;
+            }
+
+            var values = createStandardValues();
+            // Los datos anteriores pueden contener una hora valida fuera de
+            // los intervalos nuevos. Se muestran sin habilitar minutos libres.
+            if (valueInput.value && values.indexOf(valueInput.value) === -1 && formatTime(valueInput.value) !== "Selecciona una hora") {
+                values.push(valueInput.value);
+                values.sort();
+            }
+
+            values.forEach(function (value) {
+                var option = document.createElement("button");
+                option.type = "button";
+                option.className = "mc-time-picker__option";
+                option.dataset.mcTimePickerOption = value;
+                option.setAttribute("role", "option");
+                option.setAttribute("aria-selected", "false");
+                option.tabIndex = -1;
+                option.textContent = formatTime(value);
+                menu.appendChild(option);
+            });
+
+            function options() {
+                return Array.prototype.slice.call(menu.querySelectorAll("[data-mc-time-picker-option]"));
+            }
+
+            function selectedOption() {
+                return menu.querySelector("[data-mc-time-picker-option='" + valueInput.value + "']");
+            }
+
+            function updateSelection(value) {
+                valueInput.value = value;
+                label.textContent = formatTime(value);
+                options().forEach(function (option) {
+                    var selected = option.dataset.mcTimePickerOption === value;
+                    option.classList.toggle("is-selected", selected);
+                    option.setAttribute("aria-selected", String(selected));
+                    option.tabIndex = selected ? 0 : -1;
+                });
+            }
+
+            function close() {
+                menu.hidden = true;
+                trigger.setAttribute("aria-expanded", "false");
+            }
+
+            function open(focusOption) {
+                menu.hidden = false;
+                trigger.setAttribute("aria-expanded", "true");
+
+                if (focusOption) {
+                    var option = selectedOption() || options()[0];
+                    if (option) {
+                        option.focus();
+                        option.scrollIntoView({ block: "nearest" });
+                    }
+                }
+            }
+
+            function choose(option) {
+                updateSelection(option.dataset.mcTimePickerOption);
+                close();
+                trigger.focus();
+            }
+
+            updateSelection(valueInput.value);
+
+            trigger.addEventListener("click", function () {
+                if (menu.hidden) {
+                    open(false);
+                } else {
+                    close();
+                }
+            });
+
+            trigger.addEventListener("keydown", function (event) {
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                    event.preventDefault();
+                    open(true);
+                } else if (event.key === "Escape") {
+                    close();
+                }
+            });
+
+            menu.addEventListener("click", function (event) {
+                var option = event.target.closest("[data-mc-time-picker-option]");
+                if (option) {
+                    choose(option);
+                }
+            });
+
+            menu.addEventListener("keydown", function (event) {
+                var option = event.target.closest("[data-mc-time-picker-option]");
+                if (!option) {
+                    return;
+                }
+
+                var allOptions = options();
+                var index = allOptions.indexOf(option);
+                var nextIndex = index;
+
+                if (event.key === "ArrowDown") nextIndex = Math.min(index + 1, allOptions.length - 1);
+                else if (event.key === "ArrowUp") nextIndex = Math.max(index - 1, 0);
+                else if (event.key === "Home") nextIndex = 0;
+                else if (event.key === "End") nextIndex = allOptions.length - 1;
+                else if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    choose(option);
+                    return;
+                } else if (event.key === "Escape") {
+                    event.preventDefault();
+                    close();
+                    trigger.focus();
+                    return;
+                } else if (event.key === "Tab") {
+                    close();
+                    return;
+                } else {
+                    return;
+                }
+
+                event.preventDefault();
+                allOptions[nextIndex].focus();
+                allOptions[nextIndex].scrollIntoView({ block: "nearest" });
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!picker.contains(event.target)) {
+                    close();
+                }
+            });
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         initPasswordToggles();
         initStrengthMeters();
@@ -396,5 +568,6 @@
         initSubmitGuard();
         initAutoDismiss();
         initReservationCalendars();
+        initTimePickers();
     });
 })();
