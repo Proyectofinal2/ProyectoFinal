@@ -10,33 +10,76 @@ public class UmbralApiResponse
     public string? UsuarioModificacion { get; set; }
 }
 
-///HU-CFG-001: formulario del umbral de confirmaciÛn autom·tica.
+///HU-CFG-001: formulario del umbral de confirmaci√≥n autom√°tica.
 public class UmbralViewModel
 {
-    [Display(Name = "Umbral de confirmaciÛn autom·tica (personas)")]
+    [Display(Name = "Umbral de confirmaci√≥n autom√°tica (personas)")]
     [Required(ErrorMessage = "Ingresa un valor para el umbral.")]
-    [Range(1, 1000, ErrorMessage = "El umbral debe ser un n˙mero entero positivo.")]
+    [Range(1, 1000, ErrorMessage = "El umbral debe ser un n√∫mero entero positivo.")]
     public int? Umbral { get; set; }
 
     public DateTime? FechaModificacion { get; set; }
     public string? UsuarioModificacion { get; set; }
 }
 
-/// Respuesta de GET api/cierres-fijos (0=Domingo ... 6=S·bado).
+/// Respuesta de GET api/cierres-fijos (0=Domingo ... 6=S√°bado).
 public class CierresFijosApiResponse
 {
     public List<int> Dias { get; set; } = [];
 }
 
-/// HU-CFG-002: dÌas de la semana seleccionados como cierre fijo.
+/// HU-CFG-002: d√≠as de la semana seleccionados como cierre fijo.
 public class CierresFijosViewModel
 {
     public List<int> Dias { get; set; } = [];
 
-    /// Orden de presentaciÛn: la semana empieza el lunes (valor 0 = domingo).
+    /// Orden de presentaci√≥n: la semana empieza el lunes (valor 0 = domingo).
     public static readonly IReadOnlyList<(int Valor, string Nombre)> DiasSemana =
     [
-        (1, "Lunes"), (2, "Martes"), (3, "MiÈrcoles"), (4, "Jueves"),
-        (5, "Viernes"), (6, "S·bado"), (0, "Domingo")
+        (1, "Lunes"), (2, "Martes"), (3, "Mi√©rcoles"), (4, "Jueves"),
+        (5, "Viernes"), (6, "S√°bado"), (0, "Domingo")
     ];
+}
+
+/// Respuesta de GET/PUT api/horarios-operacion.
+public class HorarioOperacionApiResponse
+{
+    public int DiaSemana { get; set; }
+    public TimeOnly HoraApertura { get; set; }
+    public TimeOnly HoraCierre { get; set; }
+    public bool Activo { get; set; }
+}
+
+/// HU-CFG-005: datos de un d√≠a mostrados en la configuraci√≥n de horarios.
+public class HorarioOperacionDiaViewModel
+{
+    public int DiaSemana { get; set; }
+    public string NombreDia { get; set; } = string.Empty;
+    public TimeOnly? HoraApertura { get; set; }
+    public TimeOnly? HoraCierre { get; set; }
+    public bool EsCierreFijo { get; set; }
+}
+
+public class HorariosOperacionViewModel
+{
+    public List<HorarioOperacionDiaViewModel> Dias { get; set; } = [];
+    public static readonly IReadOnlyList<(int Valor, string Nombre)> DiasSemana = CierresFijosViewModel.DiasSemana;
+}
+
+public class GuardarHorarioOperacionViewModel : IValidatableObject
+{
+    [Range(0, 6, ErrorMessage = "El d√≠a debe estar entre 0 (domingo) y 6 (s√°bado).")]
+    public int DiaSemana { get; set; }
+
+    [Required(ErrorMessage = "La hora de apertura es obligatoria.")]
+    public TimeOnly? HoraApertura { get; set; }
+
+    [Required(ErrorMessage = "La hora de cierre es obligatoria.")]
+    public TimeOnly? HoraCierre { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (HoraApertura.HasValue && HoraCierre.HasValue && HoraCierre <= HoraApertura)
+            yield return new ValidationResult("La hora de cierre debe ser posterior a la hora de apertura.", [nameof(HoraCierre)]);
+    }
 }

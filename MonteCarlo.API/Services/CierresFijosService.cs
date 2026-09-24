@@ -7,6 +7,12 @@ namespace MonteCarlo.API.Services;
 
 public class CierresFijosService(ICierresFijosRepository cierresFijosRepository) : ICierresFijosService
 {
+    public async Task<bool> EsCierreFijoAsync(byte diaSemana)
+    {
+        var cierres = await cierresFijosRepository.ObtenerTodosAsync();
+        return cierres.Any(c => c.DiaSemana == diaSemana);
+    }
+
     public async Task<Result<CierresFijosResponse>> ObtenerAsync()
     {
         var actuales = await cierresFijosRepository.ObtenerTodosAsync();
@@ -19,12 +25,12 @@ public class CierresFijosService(ICierresFijosRepository cierresFijosRepository)
 
         if (seleccion.Any(d => d is < 0 or > 6))
         {
-            return Result<CierresFijosResponse>.BadRequest("Los días deben estar entre 0 (domingo) y 6 (sábado).");
+            return Result<CierresFijosResponse>.BadRequest("Los dÃ­as deben estar entre 0 (domingo) y 6 (sÃ¡bado).");
         }
 
         var actuales = await cierresFijosRepository.ObtenerTodosAsync();
 
-        // Diferencia entre lo guardado y lo seleccionado: solo se toca lo que cambió.
+        // Diferencia entre lo guardado y lo seleccionado: solo se toca lo que cambiÃ³.
         var aEliminar = actuales.Where(c => !seleccion.Contains(c.DiaSemana)).ToList();
         var aAgregar = seleccion
             .Where(d => actuales.All(c => c.DiaSemana != d))
@@ -36,13 +42,13 @@ public class CierresFijosService(ICierresFijosRepository cierresFijosRepository)
             return Result<CierresFijosResponse>.Ok(Mapear(actuales), "No hubo cambios en los cierres fijos.");
         }
 
-        // Auditoría (HU-CFG-004): una fila por día agregado o quitado.
+        // AuditorÃ­a (HU-CFG-004): una fila por dÃ­a agregado o quitado.
         var historial = aAgregar
             .Select(c => NuevoHistorial("Registrado", c.DiaSemana, idUsuario))
             .Concat(aEliminar.Select(c => NuevoHistorial("Eliminado", c.DiaSemana, idUsuario)))
             .ToList();
 
-        // No se tocan reservas ni cierres eventuales: el cierre fijo solo excluye días
+        // No se tocan reservas ni cierres eventuales: el cierre fijo solo excluye dÃ­as
         // del calendario a partir de ahora.
         await cierresFijosRepository.GuardarCambiosAsync(aAgregar, aEliminar, historial);
 

@@ -4,8 +4,8 @@ using MonteCarlo.WEB.Services.Interfaces;
 namespace MonteCarlo.WEB.Services;
 
 
-/// Consume los endpoints de configuraci髇 de la API (solo rol General).
-/// HU-CFG-001: umbral de confirmaci髇 autom醫ica.
+/// Consume los endpoints de configuraci贸n de la API (solo rol General).
+/// HU-CFG-001: umbral de confirmaci贸n autom谩tica.
 /// HU-CFG-002: cierres fijos semanales.
 /// El Bearer token lo agrega AuthTokenHandler.
 
@@ -36,6 +36,19 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
             "Los cierres fijos fueron actualizados.",
             "No se pudieron actualizar los cierres fijos. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> ObtenerHorariosOperacionAsync() =>
+        EjecutarAsync<List<HorarioOperacionApiResponse>>(
+            () => httpClient.GetAsync("horarios-operacion"),
+            "Horarios de operaci贸n obtenidos.",
+            "No se pudieron obtener los horarios de operaci贸n. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, HorarioOperacionApiResponse? Data)> GuardarHorarioOperacionAsync(
+        int diaSemana, TimeOnly horaApertura, TimeOnly horaCierre) =>
+        EjecutarAsync<HorarioOperacionApiResponse>(
+            () => httpClient.PutAsJsonAsync("horarios-operacion", new { diaSemana, horaApertura, horaCierre }),
+            "El horario de operaci贸n fue guardado.",
+            "No se pudo guardar el horario de operaci贸n. Intenta de nuevo.");
+
     private async Task<(bool Success, string Message, T? Data)> EjecutarAsync<T>(
         Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)
     {
@@ -50,12 +63,12 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError($"Error de conexi髇 con la API: {ex.Message}");
+            logger.LogError($"Error de conexi贸n con la API: {ex.Message}");
             return (false, "No se pudo conectar con el servidor. Intenta de nuevo.", default);
         }
         catch (Exception ex)
         {
-            logger.LogError($"Error inesperado en configuraci髇: {ex.Message}");
+            logger.LogError($"Error inesperado en configuraci贸n: {ex.Message}");
             return (false, "Error inesperado. Intenta de nuevo.", default);
         }
     }
