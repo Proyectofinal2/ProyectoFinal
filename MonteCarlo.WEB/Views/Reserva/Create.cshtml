@@ -6,7 +6,7 @@
     ViewData["Description"] = "Selecciona la cantidad de personas, fecha y horario para tu reserva en Monte Carlo.";
 }
 
-<section class="mc-reservation" data-mc-reservation-calendar data-mc-initial-people="@Model.CantidadPersonasInicial">
+<section class="mc-reservation" data-mc-reservation-calendar data-mc-initial-people="@Model.CantidadPersonasInicial" data-mc-availability-url="@Url.Action("Disponibilidad", "Reserva")" data-mc-availability-month-url="@Url.Action("DisponibilidadMes", "Reserva")">
     <ol class="mc-reservation__steps" aria-label="Progreso de la reserva">
         <li class="mc-reservation__step is-current" aria-current="step">
             <span class="mc-reservation__step-number">1</span>
@@ -55,10 +55,6 @@
                     </div>
                 </div>
 
-                <div class="mc-reservation__notice" role="note">
-                    <i class="bi bi-info-circle" aria-hidden="true"></i>
-                    <span>Las reservas que superen el límite de confirmación automática pueden requerir revisión administrativa.</span>
-                </div>
             </article>
 
             <article class="mc-reservation__card mc-reservation__calendar-card">
@@ -95,10 +91,11 @@
                     <i class="bi bi-clock" aria-hidden="true"></i>
                     <p>Seleccione una fecha para consultar los horarios disponibles.</p>
                 </div>
+                <div class="mc-reservation__time-list" data-mc-reservation-time-list hidden aria-label="Horarios disponibles"></div>
             </article>
 
             <div class="mc-reservation__continue">
-                <button class="btn btn-primary w-100" type="button" disabled aria-describedby="continue-help">
+                <button class="btn btn-primary w-100" type="button" disabled data-mc-reservation-continue aria-describedby="continue-help">
                     Continuar
                     <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
                 </button>
@@ -108,4 +105,7 @@
             </div>
         </div>
     </div>
+    <input type="hidden" data-mc-reservation-selected-people />
+    <input type="hidden" data-mc-reservation-selected-date />
+    <input type="hidden" data-mc-reservation-selected-time />
 </section>

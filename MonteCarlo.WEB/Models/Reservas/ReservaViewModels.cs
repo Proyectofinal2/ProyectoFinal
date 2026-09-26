@@ -26,3 +26,19 @@ public class ConsultarReservaViewModel
     /// Reserva encontrada; null si aún no se buscó o el código no existe.
     public ReservaApiResponse? Reserva { get; set; }
 }
+
+public class DisponibilidadFechaApiResponse
+{
+    public DateOnly Fecha { get; set; }
+    public bool Disponible { get; set; }
+    public string? MotivoNoDisponible { get; set; }
+    public List<TimeOnly> HorariosDisponibles { get; set; } = [];
+}
+
+public class DisponibilidadMesApiResponse
+{
+    public int CantidadPersonas { get; set; }
+    public int Anio { get; set; }
+    public int Mes { get; set; }
+    public List<DisponibilidadFechaApiResponse> Fechas { get; set; } = [];
+}

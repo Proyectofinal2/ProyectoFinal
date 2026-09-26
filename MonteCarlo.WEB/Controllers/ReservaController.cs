@@ -25,6 +25,20 @@ public class ReservaController(IReservasApiService reservasApiService) : Control
     /// si se puede cancelar, ofrece el botón de cancelación.
     
     [HttpGet]
+    public async Task<IActionResult> Disponibilidad(int cantidadPersonas, DateOnly fecha)
+    {
+        var (success, message, data) = await reservasApiService.ObtenerDisponibilidadAsync(cantidadPersonas, fecha);
+        return Json(new { success, message, data });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DisponibilidadMes(int cantidadPersonas, int anio, int mes)
+    {
+        var (success, message, data) = await reservasApiService.ObtenerDisponibilidadMesAsync(cantidadPersonas, anio, mes);
+        return Json(new { success, message, data });
+    }
+
+    [HttpGet]
     public async Task<IActionResult> Consultar(string? codigo)
     {
         var modelo = new ConsultarReservaViewModel { Codigo = codigo?.Trim() };

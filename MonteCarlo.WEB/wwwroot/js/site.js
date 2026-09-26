@@ -268,9 +268,17 @@
             var monthLabel = calendar.querySelector("[data-mc-reservation-month]");
             var daysContainer = calendar.querySelector("[data-mc-reservation-days]");
             var timesEmpty = calendar.querySelector("[data-mc-reservation-times-empty]");
+            var timeList = calendar.querySelector("[data-mc-reservation-time-list]");
+            var continueButton = calendar.querySelector("[data-mc-reservation-continue]");
+            var selectedPeople = calendar.querySelector("[data-mc-reservation-selected-people]");
+            var selectedDateInput = calendar.querySelector("[data-mc-reservation-selected-date]");
+            var selectedTimeInput = calendar.querySelector("[data-mc-reservation-selected-time]");
+            var availabilityUrl = calendar.dataset.mcAvailabilityUrl;
+            var availabilityMonthUrl = calendar.dataset.mcAvailabilityMonthUrl;
 
-            if (!peopleOutput || !decreaseButton || !increaseButton || !previousButton ||
-                !nextButton || !monthLabel || !daysContainer) {
+            if (!peopleOutput || !decreaseButton || !increaseButton || !previousButton || !nextButton ||
+                !monthLabel || !daysContainer || !timesEmpty || !timeList || !continueButton ||
+                !availabilityUrl || !availabilityMonthUrl) {
                 return;
             }
 
@@ -282,46 +290,75 @@
             var displayedMonth = new Date();
             displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
             var selectedDate = null;
-            var monthFormatter = new Intl.DateTimeFormat("es-CR", {
-                month: "long",
-                year: "numeric"
-            });
+            var selectedTime = null;
+            var availabilityByDate = {};
+            var monthRequestVersion = 0;
+            var dateRequestVersion = 0;
+            var monthFormatter = new Intl.DateTimeFormat("es-CR", { month: "long", year: "numeric" });
+
+            function formatDateKey(date) {
+                return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+            }
+
+            function formatTime(time) {
+                var parts = time.split(":");
+                return parts[0] + ":" + parts[1];
+            }
+
+            function updateContinue() {
+                var valid = people > 0 && selectedDate && selectedTime;
+                continueButton.disabled = !valid;
+                if (selectedPeople) { selectedPeople.value = String(people); }
+                if (selectedDateInput) { selectedDateInput.value = selectedDate || ""; }
+                if (selectedTimeInput) { selectedTimeInput.value = selectedTime || ""; }
+            }
 
             function renderPeople() {
                 peopleOutput.textContent = String(people);
                 decreaseButton.disabled = people === 1;
+                updateContinue();
             }
 
-            function formatDateKey(date) {
-                return date.getFullYear() + "-" +
-                    String(date.getMonth() + 1).padStart(2, "0") + "-" +
-                    String(date.getDate()).padStart(2, "0");
+            function clearTimes(message) {
+                selectedTime = null;
+                timeList.replaceChildren();
+                timeList.hidden = true;
+                timesEmpty.hidden = false;
+                timesEmpty.querySelector("p").textContent = message;
+                updateContinue();
             }
 
-            function selectDate(button) {
-                selectedDate = button.dataset.mcReservationDate;
-                daysContainer.querySelectorAll("[data-mc-reservation-date]").forEach(function (day) {
-                    var selected = day === button;
-                    day.classList.toggle("is-selected", selected);
-                    day.setAttribute("aria-pressed", String(selected));
+            function renderTimes(horarios) {
+                selectedTime = null;
+                timeList.replaceChildren();
+                horarios.forEach(function (hora) {
+                    var button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "mc-reservation__time is-available";
+                    button.textContent = formatTime(hora);
+                    button.dataset.mcReservationTime = hora;
+                    button.setAttribute("aria-pressed", "false");
+                    button.addEventListener("click", function () {
+                        selectedTime = hora;
+                        timeList.querySelectorAll("[data-mc-reservation-time]").forEach(function (timeButton) {
+                            var selected = timeButton === button;
+                            timeButton.classList.toggle("is-selected", selected);
+                            timeButton.setAttribute("aria-pressed", String(selected));
+                        });
+                        updateContinue();
+                    });
+                    timeList.appendChild(button);
                 });
-
-                if (timesEmpty) {
-                    timesEmpty.querySelector("p").textContent =
-                        "Los horarios disponibles aparecerán aquí.";
-                }
+                timesEmpty.hidden = true;
+                timeList.hidden = false;
+                updateContinue();
             }
 
             function renderCalendar() {
                 monthLabel.textContent = monthFormatter.format(displayedMonth);
                 daysContainer.replaceChildren();
-
                 var firstWeekday = displayedMonth.getDay();
-                var daysInMonth = new Date(
-                    displayedMonth.getFullYear(),
-                    displayedMonth.getMonth() + 1,
-                    0
-                ).getDate();
+                var daysInMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 0).getDate();
 
                 for (var blank = 0; blank < firstWeekday; blank++) {
                     var spacer = document.createElement("span");
@@ -331,62 +368,122 @@
 
                 for (var dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
                     var date = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), dayNumber);
-                    var button = document.createElement("button");
                     var dateKey = formatDateKey(date);
-
+                    var available = availabilityByDate[dateKey] === true;
+                    var button = document.createElement("button");
                     button.type = "button";
                     button.className = "mc-reservation__day";
                     button.dataset.mcReservationDate = dateKey;
                     button.textContent = String(dayNumber);
-                    button.setAttribute("aria-label", date.toLocaleDateString("es-CR", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric"
-                    }));
-                    button.setAttribute("aria-pressed", String(dateKey === selectedDate));
-
-                    if (dateKey === selectedDate) {
-                        button.classList.add("is-selected");
-                    }
-
-                    (function (dayButton) {
+                    button.disabled = !available;
+                    button.classList.toggle("is-unavailable", !available);
+                    button.classList.toggle("is-selected", dateKey === selectedDate && available);
+                    button.setAttribute("aria-pressed", String(dateKey === selectedDate && available));
+                    button.setAttribute("aria-label", date.toLocaleDateString("es-CR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+                    (function (dayButton, dayKey) {
                         dayButton.addEventListener("click", function () {
-                            selectDate(dayButton);
+                            if (dayButton.disabled) { return; }
+                            selectedDate = dayKey;
+                            clearTimes("Consultando los horarios disponibles...");
+                            renderCalendar();
+                            loadDateAvailability();
                         });
-                    })(button);
-
+                    })(button, dateKey);
                     daysContainer.appendChild(button);
                 }
+            }
+
+            function loadDateAvailability() {
+                if (!selectedDate) { return; }
+                var requestVersion = ++dateRequestVersion;
+                var fechaSolicitada = selectedDate;
+                fetch(availabilityUrl + "?" + new URLSearchParams({ cantidadPersonas: String(people), fecha: fechaSolicitada }))
+                    .then(function (response) { return response.json(); })
+                    .then(function (payload) {
+                        if (requestVersion !== dateRequestVersion || fechaSolicitada !== selectedDate) { return; }
+                        if (!payload.success || !payload.data || !payload.data.disponible) {
+                            selectedDate = null;
+                            clearTimes(payload.message || (payload.data && payload.data.motivoNoDisponible) || "La fecha ya no tiene disponibilidad.");
+                            renderCalendar();
+                            return;
+                        }
+                        renderTimes(payload.data.horariosDisponibles || []);
+                    })
+                    .catch(function () {
+                        if (requestVersion !== dateRequestVersion || fechaSolicitada !== selectedDate) { return; }
+                        clearTimes("No se pudo consultar la disponibilidad. Intente de nuevo.");
+                    });
+            }
+
+            function loadMonthAvailability() {
+                var requestVersion = ++monthRequestVersion;
+                availabilityByDate = {};
+                clearTimes(selectedDate ? "Actualizando disponibilidad..." : "Seleccione una fecha para consultar los horarios disponibles.");
+                renderCalendar();
+                fetch(availabilityMonthUrl + "?" + new URLSearchParams({
+                    cantidadPersonas: String(people),
+                    anio: String(displayedMonth.getFullYear()),
+                    mes: String(displayedMonth.getMonth() + 1)
+                }))
+                    .then(function (response) { return response.json(); })
+                    .then(function (payload) {
+                        if (requestVersion !== monthRequestVersion) { return; }
+                        if (!payload.success || !payload.data) {
+                            clearTimes(payload.message || "No se pudo consultar la disponibilidad.");
+                            renderCalendar();
+                            return;
+                        }
+                        (payload.data.fechas || []).forEach(function (fecha) {
+                            availabilityByDate[fecha.fecha] = fecha.disponible === true;
+                        });
+                        if (selectedDate && availabilityByDate[selectedDate] !== true) {
+                            selectedDate = null;
+                            clearTimes("Seleccione una fecha para consultar los horarios disponibles.");
+                        }
+                        renderCalendar();
+                        if (selectedDate) { loadDateAvailability(); }
+                    })
+                    .catch(function () {
+                        if (requestVersion !== monthRequestVersion) { return; }
+                        clearTimes("No se pudo consultar la disponibilidad. Intente de nuevo.");
+                        renderCalendar();
+                    });
             }
 
             decreaseButton.addEventListener("click", function () {
                 if (people > 1) {
                     people--;
+                    selectedTime = null;
                     renderPeople();
+                    loadMonthAvailability();
                 }
             });
 
             increaseButton.addEventListener("click", function () {
                 people++;
+                selectedTime = null;
                 renderPeople();
+                loadMonthAvailability();
             });
 
             previousButton.addEventListener("click", function () {
                 displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() - 1, 1);
-                renderCalendar();
+                selectedDate = null;
+                selectedTime = null;
+                loadMonthAvailability();
             });
 
             nextButton.addEventListener("click", function () {
                 displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 1);
-                renderCalendar();
+                selectedDate = null;
+                selectedTime = null;
+                loadMonthAvailability();
             });
 
             renderPeople();
-            renderCalendar();
+            loadMonthAvailability();
         });
     }
-
     /* --------------------------------------------------------
        Selector de horarios de operacion
        Uso: contenedor [data-mc-time-picker] con valor oculto,

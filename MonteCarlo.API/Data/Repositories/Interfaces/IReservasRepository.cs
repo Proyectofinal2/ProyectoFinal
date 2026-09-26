@@ -9,5 +9,8 @@ public interface IReservasRepository
 
     Task<EstadoReserva?> ObtenerEstadoAsync(string nombre);
 
+    Task<List<byte>> ObtenerDiasCierreFijoAsync();
+    Task<List<HorarioOperacion>> ObtenerHorariosOperacionAsync();
+
     Task GuardarCambiosAsync();
 }
