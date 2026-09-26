@@ -16,5 +16,12 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
 	public Task<EstadoReserva?> ObtenerEstadoAsync(string nombre) =>
 		context.EstadosReserva.FirstOrDefaultAsync(e => e.Nombre == nombre);
 
+    public Task<List<byte>> ObtenerDiasCierreFijoAsync() =>
+        context.CierresFijos.AsNoTracking().Select(c => c.DiaSemana).ToListAsync();
+
+    public Task<List<HorarioOperacion>> ObtenerHorariosOperacionAsync() =>
+        context.HorariosOperacion.AsNoTracking().ToListAsync();
+
+
 	public Task GuardarCambiosAsync() => context.SaveChangesAsync();
 }

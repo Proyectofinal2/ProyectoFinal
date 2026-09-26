@@ -14,3 +14,19 @@ public class ReservaResponse
     /// <summary>Solo Pendiente y Confirmada pueden cancelarse (HU-RES-005).</summary>
     public bool PuedeCancelarse { get; set; }
 }
+
+public class DisponibilidadFechaResponse
+{
+    public DateOnly Fecha { get; set; }
+    public bool Disponible { get; set; }
+    public string? MotivoNoDisponible { get; set; }
+    public List<TimeOnly> HorariosDisponibles { get; set; } = [];
+}
+
+public class DisponibilidadMesResponse
+{
+    public int CantidadPersonas { get; set; }
+    public int Anio { get; set; }
+    public int Mes { get; set; }
+    public List<DisponibilidadFechaResponse> Fechas { get; set; } = [];
+}
