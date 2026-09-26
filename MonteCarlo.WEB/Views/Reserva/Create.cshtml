@@ -6,7 +6,12 @@
     ViewData["Description"] = "Selecciona la cantidad de personas, fecha y horario para tu reserva en Monte Carlo.";
 }
 
-<section class="mc-reservation" data-mc-reservation-calendar data-mc-initial-people="@Model.CantidadPersonasInicial" data-mc-availability-url="@Url.Action("Disponibilidad", "Reserva")" data-mc-availability-month-url="@Url.Action("DisponibilidadMes", "Reserva")">
+<section class="mc-reservation"
+         data-mc-reservation-calendar
+         data-mc-initial-people="@Model.CantidadPersonasInicial"
+         data-mc-availability-url="@Url.Action("Disponibilidad", "Reserva")"
+         data-mc-availability-month-url="@Url.Action("DisponibilidadMes", "Reserva")"
+         data-mc-datos-url="@Url.Action("Datos", "Reserva")">
     <ol class="mc-reservation__steps" aria-label="Progreso de la reserva">
         <li class="mc-reservation__step is-current" aria-current="step">
             <span class="mc-reservation__step-number">1</span>

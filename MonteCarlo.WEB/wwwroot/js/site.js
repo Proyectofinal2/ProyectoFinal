@@ -257,6 +257,10 @@
        Calendario de nueva reserva (HU-RES-002, andamiaje visual)
        Solo conserva seleccion y navegacion local. La API sera la
        unica fuente de fechas y horarios realmente disponibles.
+
+       HU-RES-003: al pulsar "Continuar", navega al paso 2
+       (/Reserva/Datos) enviando fecha, hora y cantidad de personas
+       como parametros de consulta.
        -------------------------------------------------------- */
     function initReservationCalendars() {
         document.querySelectorAll("[data-mc-reservation-calendar]").forEach(function (calendar) {
@@ -275,6 +279,7 @@
             var selectedTimeInput = calendar.querySelector("[data-mc-reservation-selected-time]");
             var availabilityUrl = calendar.dataset.mcAvailabilityUrl;
             var availabilityMonthUrl = calendar.dataset.mcAvailabilityMonthUrl;
+            var datosUrl = calendar.dataset.mcDatosUrl; // HU-RES-003
 
             if (!peopleOutput || !decreaseButton || !increaseButton || !previousButton || !nextButton ||
                 !monthLabel || !daysContainer || !timesEmpty || !timeList || !continueButton ||
@@ -478,6 +483,20 @@
                 selectedDate = null;
                 selectedTime = null;
                 loadMonthAvailability();
+            });
+
+            // HU-RES-003: navega al paso 2 con la seleccion actual.
+            continueButton.addEventListener("click", function () {
+                if (continueButton.disabled || !selectedDate || !selectedTime || !datosUrl) {
+                    return;
+                }
+
+                var url = new URL(datosUrl, window.location.origin);
+                url.searchParams.set("fechaReserva", selectedDate);
+                url.searchParams.set("horaReserva", selectedTime);
+                url.searchParams.set("cantidadPersonas", String(people));
+
+                window.location.href = url.toString();
             });
 
             renderPeople();

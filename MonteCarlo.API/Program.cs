@@ -29,6 +29,9 @@ builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 builder.Services.AddScoped<IReservasRepository, ReservasRepository>();
 builder.Services.AddScoped<IReservasService, ReservasService>();
 
+// HU-RES-003: repositorios para crear reservas
+builder.Services.AddScoped<IMesasRepository, MesasRepository>();
+builder.Services.AddScoped<IClientesRepository, ClientesRepository>();
 // HU-CFG-001: umbral de confirmación automática
 builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();

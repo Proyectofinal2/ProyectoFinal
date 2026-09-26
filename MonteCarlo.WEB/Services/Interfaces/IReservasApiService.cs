@@ -9,4 +9,7 @@ public interface IReservasApiService
     Task<(bool Success, string Message, ReservaApiResponse? Data)> ObtenerPorCodigoAsync(string codigo);
 
     Task<(bool Success, string Message, ReservaApiResponse? Data)> CancelarAsync(string codigo);
+
+    Task<(bool Success, string Message, ReservaApiResponse? Data)> CrearAsync(DatosReservaViewModel modelo);
+
 }

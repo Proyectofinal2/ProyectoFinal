@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Http.Json;
 using MonteCarlo.WEB.Models.Reservas;
 using MonteCarlo.WEB.Services.Interfaces;
 
@@ -32,6 +33,26 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
             () => httpClient.PostAsync($"reservas/{Uri.EscapeDataString(codigo)}/cancelar", null),
             "Tu reserva fue cancelada.",
             "No se pudo cancelar la reserva. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, ReservaApiResponse? Data)> CrearAsync(DatosReservaViewModel modelo)
+    {
+        var payload = new
+        {
+            nombre = modelo.Nombre,
+            apellido = modelo.Apellido,
+            telefono = modelo.Telefono,
+            correoElectronico = modelo.CorreoElectronico,
+            fechaReserva = modelo.FechaReserva.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            horaReserva = modelo.HoraReserva.ToString("HH:mm", CultureInfo.InvariantCulture),
+            cantidadPersonas = modelo.CantidadPersonas,
+            observaciones = modelo.Observaciones
+        };
+
+        return EjecutarAsync<ReservaApiResponse>(
+            () => httpClient.PostAsJsonAsync("reservas", payload),
+            "Reserva registrada exitosamente.",
+            "No se pudo registrar la reserva. Intenta de nuevo.");
+    }
 
     private async Task<(bool Success, string Message, T? Data)> EjecutarAsync<T>(
         Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)

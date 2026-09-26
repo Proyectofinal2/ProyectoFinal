@@ -38,6 +38,16 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
+    /// <summary>
+    /// HU-RES-003: registra una reserva nueva desde el formulario público.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Crear([FromBody] CrearReservaRequest request)
+    {
+        var result = await reservasService.CrearAsync(request);
+        return Responder(result);
+    }
+
     private IActionResult Responder<T>(Result<T> result) =>
         StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)

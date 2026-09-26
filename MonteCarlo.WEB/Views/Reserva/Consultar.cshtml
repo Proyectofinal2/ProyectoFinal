@@ -2,9 +2,14 @@
     HU-RES-005 — Consultar y cancelar una reserva con su código único.
 
     Escenario 1  código válido de una reserva Pendiente o Confirmada:
-                 se muestra el detalle y el botón "Cancelar reserva". Al
-                 confirmar, la API la pasa a Cancelada y libera la mesa;
-                 el controlador redirige aquí y _Alerts muestra la confirmación.
+                 se muestra el detalle y el botón "Cancelar reserva".
+    Escenario 2  código inexistente: mensaje bajo el campo.
+    Escenario 3  reserva Cancelada, Finalizada o No Show: solo lectura.
+
+    HU-RES-004 — Consulta de reserva por código:
+    Escenario 1  consulta exitosa.
+    Escenario 2  código no encontrado.
+    Escenario 3  consulta de reserva cancelada o finalizada.
 *@
 @using MonteCarlo.WEB.Models.Reservas
 @using MonteCarlo.WEB.Models.UI
@@ -13,6 +18,7 @@
 @{
     ViewData["Title"] = "Mi reserva";
     ViewData["Description"] = "Consulta o cancela tu reserva en Monte Carlo con el código único.";
+    var cultura = new System.Globalization.CultureInfo("es-CR");
 }
 
 <section class="container py-5" style="max-width: 640px;">
@@ -34,72 +40,97 @@
 
     @if (Model.Reserva is { } reserva)
     {
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <div class="text-muted small">Código</div>
-                    <div class="fs-5 fw-semibold">@reserva.CodigoReserva</div>
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <div class="text-muted small">Código</div>
+                        <div class="fs-5 fw-semibold">@reserva.CodigoReserva</div>
+                    </div>
+                    <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Reserva(reserva.Estado)" />
                 </div>
-                <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Reserva(reserva.Estado)" />
+
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">A nombre de</dt>
+                    <dd class="col-sm-8">@reserva.NombreCliente</dd>
+
+                    <dt class="col-sm-4">Fecha</dt>
+                    <dd class="col-sm-8">@reserva.FechaReserva.ToString("dddd d 'de' MMMM 'de' yyyy", cultura)</dd>
+
+                    <dt class="col-sm-4">Hora</dt>
+                    <dd class="col-sm-8">@reserva.HoraReserva.ToString("HH:mm")</dd>
+
+                    <dt class="col-sm-4">Personas</dt>
+                    <dd class="col-sm-8">@reserva.CantidadPersonas</dd>
+
+                    @if (reserva.NumeroMesa is not null)
+                    {
+                        <dt class="col-sm-4">Mesa</dt>
+                        <dd class="col-sm-8">Mesa @reserva.NumeroMesa</dd>
+                    }
+                </dl>
             </div>
 
-            <dl class="row mb-0">
-                <dt class="col-sm-4">A nombre de</dt>
-                <dd class="col-sm-8">@reserva.NombreCliente</dd>
-
-                <dt class="col-sm-4">Fecha</dt>
-                <dd class="col-sm-8">@reserva.FechaReserva.ToString("dddd d 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-CR"))</dd>
-
-                <dt class="col-sm-4">Hora</dt>
-                <dd class="col-sm-8">@reserva.HoraReserva.ToString("HH:mm")</dd>
-
-                <dt class="col-sm-4">Personas</dt>
-                <dd class="col-sm-8">@reserva.CantidadPersonas</dd>
-            </dl>
-        </div>
-
-        @if (reserva.PuedeCancelarse)
+            @if (reserva.PuedeCancelarse)
             {
-        <div class="card-footer d-flex justify-content-end">
-            <button type="button" class="btn btn-outline-danger"
-                    data-bs-toggle="modal" data-bs-target="#modalCancelarReserva">
-                Cancelar reserva
-            </button>
-        </div>
+                <div class="card-footer d-flex justify-content-end gap-2">
+                    <a asp-action="Create" class="btn btn-outline-secondary">
+                        Hacer otra reserva
+                    </a>
+                    <button type="button" class="btn btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#modalCancelarReserva">
+                        Cancelar reserva
+                    </button>
+                </div>
             }
             else
             {
-        <div class="card-footer text-muted small">
-            Esta reserva está en estado "@reserva.Estado" y ya no puede cancelarse.
-        </div>
+                <div class="card-footer text-muted small d-flex justify-content-between align-items-center">
+                    <span>Esta reserva está en estado "<strong>@reserva.Estado</strong>" y ya no puede cancelarse.</span>
+                    <a asp-action="Create" class="btn btn-sm btn-outline-secondary">Hacer otra reserva</a>
+                </div>
             }
-    </div>
+        </div>
 
-    @if (reserva.PuedeCancelarse)
+        @if (reserva.PuedeCancelarse)
         {
-    <div class="modal fade" id="modalCancelarReserva" tabindex="-1"
-         aria-labelledby="tituloCancelarReserva" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="tituloCancelarReserva">Cancelar reserva</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    ¿Seguro que deseas cancelar la reserva <strong>@reserva.CodigoReserva</strong>?
-                    La mesa se liberará y esta acción no se puede deshacer.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
-                    <form asp-action="Cancelar" method="post">
-                        <input type="hidden" name="codigo" value="@reserva.CodigoReserva" />
-                        <button type="submit" class="btn btn-danger">Sí, cancelar</button>
-                    </form>
+            <div class="modal fade" id="modalCancelarReserva" tabindex="-1"
+                 aria-labelledby="tituloCancelarReserva" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title fs-5" id="tituloCancelarReserva">Cancelar reserva</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            ¿Seguro que deseas cancelar la reserva <strong>@reserva.CodigoReserva</strong>?
+                            La mesa se liberará y esta acción no se puede deshacer.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
+                            <form asp-action="Cancelar" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="codigo" value="@reserva.CodigoReserva" />
+                                <button type="submit" class="btn btn-danger">Sí, cancelar</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
         }
     }
 </section>
+
+@section Styles {
+    <style>
+        .mc-eyebrow {
+            display: block;
+            font-size: var(--mc-text-xs);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--mc-ink-subtle);
+            font-weight: var(--mc-weight-semibold);
+            margin-bottom: var(--mc-space-2);
+        }
+    </style>
+}

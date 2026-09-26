@@ -1,0 +1,217 @@
+﻿@using MonteCarlo.WEB.Models.Reservas
+@model ReservaApiResponse
+
+@{
+    ViewData["Title"] = "Reserva confirmada";
+    ViewData["Description"] = "Tu reserva en Mirador Monte Carlo fue registrada.";
+    var cultura = new System.Globalization.CultureInfo("es-CR");
+    var esConfirmada = Model.Estado.Equals("Confirmada", StringComparison.OrdinalIgnoreCase);
+}
+
+<section class="mc-reservation">
+
+    <ol class="mc-reservation__steps" aria-label="Progreso de la reserva">
+        <li class="mc-reservation__step is-done">
+            <span class="mc-reservation__step-number">✓</span>
+            <span>Fecha y hora</span>
+        </li>
+        <li class="mc-reservation__step is-done">
+            <span class="mc-reservation__step-number">✓</span>
+            <span>Datos</span>
+        </li>
+        <li class="mc-reservation__step is-current" aria-current="step">
+            <span class="mc-reservation__step-number">3</span>
+            <span>Confirmación</span>
+        </li>
+    </ol>
+
+    <div class="mc-confirmacion">
+
+        <div class="mc-confirmacion__check" aria-hidden="true">✓</div>
+
+        <span class="mc-eyebrow">Reserva registrada</span>
+        <h1 class="mc-confirmacion__title">
+            @(esConfirmada ? "Su mesa está reservada" : "Su solicitud fue registrada")
+        </h1>
+        <p class="mc-confirmacion__subtitle">
+            Guarde este código: lo necesitará para consultar o cancelar su reserva.
+        </p>
+
+        <div class="mc-confirmacion__code-box">
+            <div class="mc-confirmacion__code-label">Código de reserva</div>
+            <div class="mc-confirmacion__code-value">@Model.CodigoReserva</div>
+        </div>
+
+        <div class="mc-confirmacion__summary">
+            <div class="mc-summary-row">
+                <span>Cliente</span><span>@Model.NombreCliente</span>
+            </div>
+            <div class="mc-summary-row">
+                <span>Fecha</span>
+                <span>@Model.FechaReserva.ToString("dddd d 'de' MMMM 'de' yyyy", cultura)</span>
+            </div>
+            <div class="mc-summary-row">
+                <span>Hora</span><span>@Model.HoraReserva.ToString("HH:mm")</span>
+            </div>
+            <div class="mc-summary-row">
+                <span>Personas</span><span>@Model.CantidadPersonas</span>
+            </div>
+            @if (Model.NumeroMesa is not null)
+            {
+                <div class="mc-summary-row">
+                    <span>Mesa</span><span>Mesa @Model.NumeroMesa</span>
+                </div>
+            }
+        </div>
+
+        @if (esConfirmada)
+        {
+            <div class="mc-confirmacion__status mc-confirmacion__status--ok">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                <span>
+                    Como la reserva es de <strong>@Model.CantidadPersonas personas o menos</strong>,
+                    quedó <strong>confirmada automáticamente</strong>@(Model.NumeroMesa is not null ? " con mesa asignada" : ""). Le enviaremos un mensaje de confirmación en breve.
+                </span>
+            </div>
+        }
+        else
+        {
+            <div class="mc-confirmacion__status mc-confirmacion__status--info">
+                <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                <span>
+                    Su solicitud excede el umbral de confirmación automática y quedó
+                    <strong>pendiente de revisión administrativa</strong>. Le contactaremos al teléfono indicado para confirmar la disponibilidad.
+                </span>
+            </div>
+        }
+
+        <div class="mc-confirmacion__actions">
+            <a asp-action="Consultar" asp-route-codigo="@Model.CodigoReserva" class="btn btn-primary">
+                Ver mi reserva
+            </a>
+            <a asp-action="Create" class="btn btn-outline-secondary">
+                Hacer otra reserva
+            </a>
+        </div>
+
+    </div>
+</section>
+
+@section Styles {
+    <style>
+        .mc-confirmacion {
+            max-width: 560px;
+            margin: 0 auto;
+            background: var(--mc-elevated);
+            border: 1px solid var(--mc-border);
+            border-radius: var(--mc-radius-lg);
+            box-shadow: var(--mc-shadow);
+            padding: var(--mc-space-6);
+            text-align: center;
+        }
+
+        .mc-confirmacion__check {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--mc-green-100);
+            color: var(--mc-green-500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--mc-space-4);
+            font-size: 1.5rem;
+            font-weight: var(--mc-weight-bold);
+        }
+
+        .mc-confirmacion__title {
+            font-family: var(--mc-font-display);
+            font-size: var(--mc-text-2xl);
+            margin-bottom: var(--mc-space-2);
+        }
+
+        .mc-confirmacion__subtitle {
+            color: var(--mc-ink-muted);
+            font-size: var(--mc-text-sm);
+            margin-bottom: var(--mc-space-5);
+        }
+
+        .mc-confirmacion__code-box {
+            background: var(--mc-green-50);
+            border: 1px dashed var(--mc-green-300);
+            border-radius: var(--mc-radius);
+            padding: var(--mc-space-4);
+            margin-bottom: var(--mc-space-5);
+        }
+
+        .mc-confirmacion__code-label {
+            font-size: var(--mc-text-xs);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--mc-ink-subtle);
+            font-weight: var(--mc-weight-semibold);
+            margin-bottom: var(--mc-space-2);
+        }
+
+        .mc-confirmacion__code-value {
+            font-family: monospace;
+            font-size: var(--mc-text-2xl);
+            font-weight: var(--mc-weight-semibold);
+            letter-spacing: 0.1em;
+            color: var(--mc-green-700);
+        }
+
+        .mc-confirmacion__summary {
+            text-align: left;
+            border-top: 1px solid var(--mc-border);
+            padding-top: var(--mc-space-4);
+            margin-bottom: var(--mc-space-5);
+        }
+
+        .mc-summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: var(--mc-text-sm);
+            padding: var(--mc-space-2) 0;
+        }
+
+            .mc-summary-row span:first-child {
+                color: var(--mc-ink-muted);
+            }
+
+            .mc-summary-row span:last-child {
+                font-weight: var(--mc-weight-semibold);
+            }
+
+        .mc-confirmacion__status {
+            display: flex;
+            gap: var(--mc-space-3);
+            text-align: left;
+            border-radius: var(--mc-radius);
+            padding: var(--mc-space-3) var(--mc-space-4);
+            font-size: var(--mc-text-sm);
+            line-height: 1.5;
+            margin-bottom: var(--mc-space-5);
+        }
+
+        .mc-confirmacion__status--ok {
+            background: var(--mc-success-bg);
+            color: #1D5234;
+        }
+
+        .mc-confirmacion__status--info {
+            background: var(--mc-info-bg);
+            color: #174F63;
+        }
+
+        .mc-confirmacion__actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--mc-space-2);
+        }
+
+        .mc-reservation__card--summary {
+            background: var(--mc-green-50);
+        }
+    </style>
+}
