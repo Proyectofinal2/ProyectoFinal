@@ -1,5 +1,5 @@
 /* ============================================================
-   Monte Carlo — Capa de aplicacion sobre Bootstrap 5.3
+   MonteCarlo — Capa de aplicacion sobre Bootstrap 5.3
    ------------------------------------------------------------
    Estrategia: remapear las variables CSS de Bootstrap hacia los
    tokens de tokens.css. Asi las vistas usan clases Bootstrap
@@ -15,53 +15,53 @@
    ------------------------------------------------------------ */
 :root,
 [data-bs-theme="light"] {
-    --bs-primary: var(--mc-green-500);
-    --bs-primary-rgb: 31, 77, 61;
-    --bs-secondary: var(--mc-ink-muted);
-    --bs-secondary-rgb: 90, 97, 93;
-    --bs-success: var(--mc-success);
-    --bs-success-rgb: 46, 125, 82;
-    --bs-danger: var(--mc-danger);
-    --bs-danger-rgb: 179, 38, 30;
-    --bs-warning: var(--mc-warning);
-    --bs-warning-rgb: 178, 106, 0;
-    --bs-info: var(--mc-info);
-    --bs-info-rgb: 31, 111, 139;
+  --bs-primary: var(--mc-green-500);
+  --bs-primary-rgb: 31, 77, 61;
+  --bs-secondary: var(--mc-ink-muted);
+  --bs-secondary-rgb: 90, 97, 93;
+  --bs-success: var(--mc-success);
+  --bs-success-rgb: 46, 125, 82;
+  --bs-danger: var(--mc-danger);
+  --bs-danger-rgb: 179, 38, 30;
+  --bs-warning: var(--mc-warning);
+  --bs-warning-rgb: 178, 106, 0;
+  --bs-info: var(--mc-info);
+  --bs-info-rgb: 31, 111, 139;
 
-    --bs-body-bg: var(--mc-surface);
-    --bs-body-color: var(--mc-ink);
-    --bs-body-font-family: var(--mc-font-sans);
-    --bs-emphasis-color: var(--mc-ink);
-    --bs-secondary-color: var(--mc-ink-muted);
-    --bs-tertiary-color: var(--mc-ink-subtle);
-    --bs-border-color: var(--mc-border);
-    --bs-border-radius: var(--mc-radius);
-    --bs-border-radius-sm: var(--mc-radius-sm);
-    --bs-border-radius-lg: var(--mc-radius-lg);
+  --bs-body-bg: var(--mc-surface);
+  --bs-body-color: var(--mc-ink);
+  --bs-body-font-family: var(--mc-font-sans);
+  --bs-emphasis-color: var(--mc-ink);
+  --bs-secondary-color: var(--mc-ink-muted);
+  --bs-tertiary-color: var(--mc-ink-subtle);
+  --bs-border-color: var(--mc-border);
+  --bs-border-radius: var(--mc-radius);
+  --bs-border-radius-sm: var(--mc-radius-sm);
+  --bs-border-radius-lg: var(--mc-radius-lg);
 
-    /* Enlaces: cobre oscurecido, el unico tono de cobre con
+  /* Enlaces: cobre oscurecido, el unico tono de cobre con
        contraste suficiente para texto. */
-    --bs-link-color: var(--mc-copper-700);
-    --bs-link-color-rgb: 126, 76, 31;
-    --bs-link-hover-color: var(--mc-copper-600);
-    --bs-link-hover-color-rgb: 156, 95, 40;
+  --bs-link-color: var(--mc-copper-700);
+  --bs-link-color-rgb: 126, 76, 31;
+  --bs-link-hover-color: var(--mc-copper-600);
+  --bs-link-hover-color-rgb: 156, 95, 40;
 
-    --bs-focus-ring-color: rgba(31, 77, 61, 0.3);
-    --bs-focus-ring-width: 3px;
+  --bs-focus-ring-color: rgba(31, 77, 61, 0.3);
+  --bs-focus-ring-width: 3px;
 }
 
 html {
-    font-size: 15px;
+  font-size: 15px;
 }
 
 @media (min-width: 768px) {
-    html {
-        font-size: 16px;
-    }
+  html {
+    font-size: 16px;
+  }
 }
 
 body {
-    min-height: 100vh;
+  min-height: 100vh;
 }
 
 /* ------------------------------------------------------------
@@ -73,323 +73,323 @@ body {
    reemplazo.
    ------------------------------------------------------------ */
 :focus-visible {
-    outline: var(--bs-focus-ring-width) solid var(--bs-focus-ring-color);
-    outline-offset: 2px;
+  outline: var(--bs-focus-ring-width) solid var(--bs-focus-ring-color);
+  outline-offset: 2px;
 }
 
 .form-control:focus,
 .form-select:focus,
 .form-check-input:focus {
-    border-color: var(--mc-green-400);
-    box-shadow: 0 0 0 var(--bs-focus-ring-width) var(--bs-focus-ring-color);
+  border-color: var(--mc-green-400);
+  box-shadow: 0 0 0 var(--bs-focus-ring-width) var(--bs-focus-ring-color);
 }
 
 /* Enlace de salto: invisible hasta recibir foco por teclado. */
 .mc-skip-link {
-    position: absolute;
-    top: -100px;
-    left: var(--mc-space-4);
-    z-index: 1080;
-    padding: var(--mc-space-2) var(--mc-space-4);
-    background-color: var(--mc-green-500);
-    color: var(--mc-ink-inverse);
-    border-radius: 0 0 var(--mc-radius) var(--mc-radius);
-    text-decoration: none;
-    transition: top var(--mc-transition);
+  position: absolute;
+  top: -100px;
+  left: var(--mc-space-4);
+  z-index: 1080;
+  padding: var(--mc-space-2) var(--mc-space-4);
+  background-color: var(--mc-green-500);
+  color: var(--mc-ink-inverse);
+  border-radius: 0 0 var(--mc-radius) var(--mc-radius);
+  text-decoration: none;
+  transition: top var(--mc-transition);
 }
 
 .mc-skip-link:focus {
-    top: 0;
-    color: var(--mc-ink-inverse);
+  top: 0;
+  color: var(--mc-ink-inverse);
 }
 
 /* ------------------------------------------------------------
    3. Botones
    ------------------------------------------------------------ */
 .btn {
-    --bs-btn-font-weight: var(--mc-weight-medium);
-    --bs-btn-padding-y: 0.5rem;
-    --bs-btn-padding-x: 1.125rem;
+  --bs-btn-font-weight: var(--mc-weight-medium);
+  --bs-btn-padding-y: 0.5rem;
+  --bs-btn-padding-x: 1.125rem;
 }
 
 .btn-primary {
-    --bs-btn-bg: var(--mc-green-500);
-    --bs-btn-border-color: var(--mc-green-500);
-    --bs-btn-hover-bg: var(--mc-green-600);
-    --bs-btn-hover-border-color: var(--mc-green-600);
-    --bs-btn-active-bg: var(--mc-green-700);
-    --bs-btn-active-border-color: var(--mc-green-700);
-    --bs-btn-disabled-bg: var(--mc-green-300);
-    --bs-btn-disabled-border-color: var(--mc-green-300);
+  --bs-btn-bg: var(--mc-green-500);
+  --bs-btn-border-color: var(--mc-green-500);
+  --bs-btn-hover-bg: var(--mc-green-600);
+  --bs-btn-hover-border-color: var(--mc-green-600);
+  --bs-btn-active-bg: var(--mc-green-700);
+  --bs-btn-active-border-color: var(--mc-green-700);
+  --bs-btn-disabled-bg: var(--mc-green-300);
+  --bs-btn-disabled-border-color: var(--mc-green-300);
 }
 
 .btn-outline-primary {
-    --bs-btn-color: var(--mc-green-500);
-    --bs-btn-border-color: var(--mc-green-500);
-    --bs-btn-hover-bg: var(--mc-green-500);
-    --bs-btn-hover-border-color: var(--mc-green-500);
-    --bs-btn-active-bg: var(--mc-green-600);
-    --bs-btn-active-border-color: var(--mc-green-600);
+  --bs-btn-color: var(--mc-green-500);
+  --bs-btn-border-color: var(--mc-green-500);
+  --bs-btn-hover-bg: var(--mc-green-500);
+  --bs-btn-hover-border-color: var(--mc-green-500);
+  --bs-btn-active-bg: var(--mc-green-600);
+  --bs-btn-active-border-color: var(--mc-green-600);
 }
 
 /* Acento de marca. El cobre solo alcanza contraste suficiente
    con texto blanco en su tono 600 o mas oscuro. */
 .btn-accent {
-    --bs-btn-color: var(--mc-ink-inverse);
-    --bs-btn-bg: var(--mc-copper-600);
-    --bs-btn-border-color: var(--mc-copper-600);
-    --bs-btn-hover-color: var(--mc-ink-inverse);
-    --bs-btn-hover-bg: var(--mc-copper-700);
-    --bs-btn-hover-border-color: var(--mc-copper-700);
-    --bs-btn-active-color: var(--mc-ink-inverse);
-    --bs-btn-active-bg: var(--mc-copper-700);
-    --bs-btn-focus-shadow-rgb: 126, 76, 31;
+  --bs-btn-color: var(--mc-ink-inverse);
+  --bs-btn-bg: var(--mc-copper-600);
+  --bs-btn-border-color: var(--mc-copper-600);
+  --bs-btn-hover-color: var(--mc-ink-inverse);
+  --bs-btn-hover-bg: var(--mc-copper-700);
+  --bs-btn-hover-border-color: var(--mc-copper-700);
+  --bs-btn-active-color: var(--mc-ink-inverse);
+  --bs-btn-active-bg: var(--mc-copper-700);
+  --bs-btn-focus-shadow-rgb: 126, 76, 31;
 }
 
 /* Boton que envuelve una accion destructiva dentro de una tabla
    o menu, sin el peso visual de un .btn-danger solido. */
 .btn-ghost-danger {
-    --bs-btn-color: var(--mc-danger);
-    --bs-btn-bg: transparent;
-    --bs-btn-border-color: transparent;
-    --bs-btn-hover-color: var(--mc-danger);
-    --bs-btn-hover-bg: var(--mc-danger-bg);
-    --bs-btn-hover-border-color: transparent;
-    --bs-btn-disabled-color: var(--mc-ink-subtle);
-    --bs-btn-disabled-bg: transparent;
-    --bs-btn-disabled-border-color: transparent;
+  --bs-btn-color: var(--mc-danger);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: var(--mc-danger);
+  --bs-btn-hover-bg: var(--mc-danger-bg);
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-disabled-color: var(--mc-ink-subtle);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: transparent;
 }
 
 /* ------------------------------------------------------------
    4. Superficies
    ------------------------------------------------------------ */
 .card {
-    --bs-card-bg: var(--mc-elevated);
-    --bs-card-border-color: var(--mc-border);
-    --bs-card-border-radius: var(--mc-radius-lg);
-    --bs-card-cap-bg: transparent;
-    box-shadow: var(--mc-shadow-sm);
+  --bs-card-bg: var(--mc-elevated);
+  --bs-card-border-color: var(--mc-border);
+  --bs-card-border-radius: var(--mc-radius-lg);
+  --bs-card-cap-bg: transparent;
+  box-shadow: var(--mc-shadow-sm);
 }
 
 .mc-page-title {
-    font-size: var(--mc-text-2xl);
-    font-weight: var(--mc-weight-semibold);
-    color: var(--mc-ink);
-    margin: 0;
+  font-size: var(--mc-text-2xl);
+  font-weight: var(--mc-weight-semibold);
+  color: var(--mc-ink);
+  margin: 0;
 }
 
 .mc-page-subtitle {
-    font-size: var(--mc-text-sm);
-    color: var(--mc-ink-muted);
-    margin: var(--mc-space-1) 0 0;
+  font-size: var(--mc-text-sm);
+  color: var(--mc-ink-muted);
+  margin: var(--mc-space-1) 0 0;
 }
 
 /* Filete de cobre: firma visual de la marca. Se usa con
    moderacion, en el borde superior de tarjetas destacadas. */
 .mc-accent-top {
-    border-top: 3px solid var(--mc-copper-500);
+  border-top: 3px solid var(--mc-copper-500);
 }
 
 /* ------------------------------------------------------------
    5. Formularios
    ------------------------------------------------------------ */
 .form-label {
-    font-size: var(--mc-text-sm);
-    font-weight: var(--mc-weight-medium);
-    color: var(--mc-ink);
-    margin-bottom: var(--mc-space-2);
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-medium);
+  color: var(--mc-ink);
+  margin-bottom: var(--mc-space-2);
 }
 
 .form-control,
 .form-select {
-    padding: 0.5rem 0.75rem;
-    border-color: var(--mc-border-strong);
+  padding: 0.5rem 0.75rem;
+  border-color: var(--mc-border-strong);
 }
 
 .form-control::placeholder {
-    color: var(--mc-ink-subtle);
+  color: var(--mc-ink-subtle);
 }
 
 .form-text {
-    font-size: var(--mc-text-xs);
-    color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  color: var(--mc-ink-muted);
 }
 
 /* Selector de horarios: conserva un valor HH:mm para el formulario,
    pero evita el selector nativo inconsistente entre navegadores. */
 .mc-time-picker {
-    position: relative;
+  position: relative;
 }
 
 .mc-time-picker__trigger {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    background-color: var(--mc-elevated);
-    color: var(--mc-ink);
-    text-align: left;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background-color: var(--mc-elevated);
+  color: var(--mc-ink);
+  text-align: left;
+  cursor: pointer;
 }
 
 .mc-time-picker__trigger:not(:disabled):hover {
-    border-color: var(--mc-green-400);
+  border-color: var(--mc-green-400);
 }
 
 .mc-time-picker__trigger i {
-    color: var(--mc-ink-muted);
-    transition: transform var(--mc-transition);
+  color: var(--mc-ink-muted);
+  transition: transform var(--mc-transition);
 }
 
 .mc-time-picker__trigger[aria-expanded="true"] i {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 .mc-time-picker__menu {
-    position: absolute;
-    z-index: 20;
-    top: calc(100% + var(--mc-space-1));
-    left: 0;
-    width: 100%;
-    max-height: 18rem;
-    overflow-y: auto;
-    padding: var(--mc-space-1);
-    background-color: var(--mc-elevated);
-    border: 1px solid var(--mc-border-strong);
-    border-radius: var(--mc-radius);
-    box-shadow: var(--mc-shadow);
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--mc-space-1));
+  left: 0;
+  width: 100%;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: var(--mc-space-1);
+  background-color: var(--mc-elevated);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  box-shadow: var(--mc-shadow);
 }
 
 .mc-time-picker__option {
-    display: block;
-    width: 100%;
-    padding: var(--mc-space-2) var(--mc-space-3);
-    color: var(--mc-ink);
-    background: transparent;
-    border: 0;
-    border-radius: var(--mc-radius-sm);
-    text-align: left;
-    cursor: pointer;
+  display: block;
+  width: 100%;
+  padding: var(--mc-space-2) var(--mc-space-3);
+  color: var(--mc-ink);
+  background: transparent;
+  border: 0;
+  border-radius: var(--mc-radius-sm);
+  text-align: left;
+  cursor: pointer;
 }
 
 .mc-time-picker__option:hover,
 .mc-time-picker__option:focus-visible {
-    background-color: var(--mc-green-50);
+  background-color: var(--mc-green-50);
 }
 
 .mc-time-picker__option.is-selected,
 .mc-time-picker__option.is-selected:hover,
 .mc-time-picker__option.is-selected:focus-visible {
-    color: var(--mc-ink-inverse);
-    background-color: var(--mc-green-500);
+  color: var(--mc-ink-inverse);
+  background-color: var(--mc-green-500);
 }
 
 /* Marca de campo obligatorio. Se aplica en la etiqueta, no con
    un asterisco suelto en el texto, para que el lector de
    pantalla anuncie el motivo. */
 .mc-required::after {
-    content: " *";
-    color: var(--mc-danger);
+  content: " *";
+  color: var(--mc-danger);
 }
 
 /* Campo de contrasena con boton mostrar/ocultar integrado. */
 .mc-password {
-    position: relative;
+  position: relative;
 }
 
 .mc-password .form-control {
-    padding-right: 2.75rem;
+  padding-right: 2.75rem;
 }
 
 .mc-password__toggle {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 2.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: 0;
-    border-radius: 0 var(--mc-radius) var(--mc-radius) 0;
-    color: var(--mc-ink-muted);
-    cursor: pointer;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-radius: 0 var(--mc-radius) var(--mc-radius) 0;
+  color: var(--mc-ink-muted);
+  cursor: pointer;
 }
 
 .mc-password__toggle:hover {
-    color: var(--mc-ink);
+  color: var(--mc-ink);
 }
 
 /* Medidor de fortaleza. El color nunca es el unico indicador:
    siempre va acompanado de una etiqueta de texto. */
 .mc-strength {
-    margin-top: var(--mc-space-2);
+  margin-top: var(--mc-space-2);
 }
 
 .mc-strength__track {
-    display: flex;
-    gap: var(--mc-space-1);
-    height: 4px;
+  display: flex;
+  gap: var(--mc-space-1);
+  height: 4px;
 }
 
 .mc-strength__segment {
-    flex: 1;
-    background-color: var(--mc-border);
-    border-radius: var(--mc-radius-pill);
-    transition: background-color var(--mc-transition);
+  flex: 1;
+  background-color: var(--mc-border);
+  border-radius: var(--mc-radius-pill);
+  transition: background-color var(--mc-transition);
 }
 
 .mc-strength__segment.is-weak {
-    background-color: var(--mc-danger);
+  background-color: var(--mc-danger);
 }
 
 .mc-strength__segment.is-fair {
-    background-color: var(--mc-warning);
+  background-color: var(--mc-warning);
 }
 
 .mc-strength__segment.is-strong {
-    background-color: var(--mc-success);
+  background-color: var(--mc-success);
 }
 
 .mc-strength__label {
-    display: block;
-    margin-top: var(--mc-space-1);
-    font-size: var(--mc-text-xs);
-    color: var(--mc-ink-muted);
+  display: block;
+  margin-top: var(--mc-space-1);
+  font-size: var(--mc-text-xs);
+  color: var(--mc-ink-muted);
 }
 
 /* ------------------------------------------------------------
    6. Alertas
    ------------------------------------------------------------ */
 .alert {
-    --bs-alert-border-radius: var(--mc-radius);
-    border-left-width: 4px;
-    font-size: var(--mc-text-sm);
+  --bs-alert-border-radius: var(--mc-radius);
+  border-left-width: 4px;
+  font-size: var(--mc-text-sm);
 }
 
 .alert-success {
-    --bs-alert-bg: var(--mc-success-bg);
-    --bs-alert-color: #1D5234;
-    --bs-alert-border-color: var(--mc-success);
+  --bs-alert-bg: var(--mc-success-bg);
+  --bs-alert-color: #1d5234;
+  --bs-alert-border-color: var(--mc-success);
 }
 
 .alert-danger {
-    --bs-alert-bg: var(--mc-danger-bg);
-    --bs-alert-color: #8A1D17;
-    --bs-alert-border-color: var(--mc-danger);
+  --bs-alert-bg: var(--mc-danger-bg);
+  --bs-alert-color: #8a1d17;
+  --bs-alert-border-color: var(--mc-danger);
 }
 
 .alert-warning {
-    --bs-alert-bg: var(--mc-warning-bg);
-    --bs-alert-color: #7A4900;
-    --bs-alert-border-color: var(--mc-warning);
+  --bs-alert-bg: var(--mc-warning-bg);
+  --bs-alert-color: #7a4900;
+  --bs-alert-border-color: var(--mc-warning);
 }
 
 .alert-info {
-    --bs-alert-bg: var(--mc-info-bg);
-    --bs-alert-color: #174F63;
-    --bs-alert-border-color: var(--mc-info);
+  --bs-alert-bg: var(--mc-info-bg);
+  --bs-alert-color: #174f63;
+  --bs-alert-border-color: var(--mc-info);
 }
 
 /* Resumen de validacion (asp-validation-summary). El tag helper agrega
@@ -398,89 +398,89 @@ body {
    icono va sobre esa clase y el reseteo de la lista apunta al <ul> y
    <li> reales para quitarles el bullet y el padding por defecto. */
 .validation-summary-valid {
-    display: none;
+  display: none;
 }
 
 .validation-summary-errors {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--mc-space-2);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mc-space-2);
 }
 
 .validation-summary-errors::before {
-    content: "!";
-    flex: 0 0 auto;
-    width: 1.1rem;
-    height: 1.1rem;
-    margin-top: 0.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background-color: currentColor;
-    color: var(--bs-alert-bg);
-    font-size: var(--mc-text-xs);
-    font-weight: 700;
-    line-height: 1;
+  content: "!";
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: currentColor;
+  color: var(--bs-alert-bg);
+  font-size: var(--mc-text-xs);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .validation-summary-errors ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    flex: 1 1 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
 }
 
 .validation-summary-errors li + li {
-    margin-top: var(--mc-space-1);
+  margin-top: var(--mc-space-1);
 }
 
 /* ------------------------------------------------------------
    7. Tablas
    ------------------------------------------------------------ */
 .mc-table-card {
-    background-color: var(--mc-elevated);
-    border: 1px solid var(--mc-border);
-    border-radius: var(--mc-radius-lg);
-    overflow: hidden;
-    box-shadow: var(--mc-shadow-sm);
+  background-color: var(--mc-elevated);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--mc-shadow-sm);
 }
 
 .mc-table {
-    --bs-table-bg: transparent;
-    margin-bottom: 0;
+  --bs-table-bg: transparent;
+  margin-bottom: 0;
 }
 
 .mc-table > thead > tr > th {
-    background-color: var(--mc-green-50);
-    color: var(--mc-ink-muted);
-    font-size: var(--mc-text-xs);
-    font-weight: var(--mc-weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--mc-border);
-    padding: var(--mc-space-3) var(--mc-space-4);
-    white-space: nowrap;
+  background-color: var(--mc-green-50);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  font-weight: var(--mc-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--mc-border);
+  padding: var(--mc-space-3) var(--mc-space-4);
+  white-space: nowrap;
 }
 
 .mc-table > tbody > tr > td {
-    padding: var(--mc-space-4);
-    vertical-align: middle;
-    border-bottom: 1px solid var(--mc-border);
+  padding: var(--mc-space-4);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--mc-border);
 }
 
 .mc-table > tbody > tr:last-child > td {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 
 .mc-table > tbody > tr:hover {
-    background-color: var(--mc-green-50);
+  background-color: var(--mc-green-50);
 }
 
 /* Fila correspondiente a la cuenta con la sesion activa
    (HU-AUT-006, escenario 4). */
 .mc-table > tbody > tr.mc-row-self {
-    background-color: var(--mc-copper-50);
+  background-color: var(--mc-copper-50);
 }
 
 /* ------------------------------------------------------------
@@ -489,127 +489,131 @@ body {
    Nunca comunican solo con color: el texto lleva el significado.
    ------------------------------------------------------------ */
 .mc-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--mc-space-2);
-    padding: 0.2rem 0.6rem;
-    border-radius: var(--mc-radius-pill);
-    font-size: var(--mc-text-xs);
-    font-weight: var(--mc-weight-medium);
-    white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--mc-radius-pill);
+  font-size: var(--mc-text-xs);
+  font-weight: var(--mc-weight-medium);
+  white-space: nowrap;
 }
 
 .mc-badge::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: currentColor;
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
 }
 
 .mc-badge--success {
-    background-color: var(--mc-success-bg);
-    color: #1D5234;
+  background-color: var(--mc-success-bg);
+  color: #1d5234;
 }
 
 .mc-badge--neutral {
-    background-color: #ECEBE6;
-    color: var(--mc-ink-muted);
+  background-color: #ecebe6;
+  color: var(--mc-ink-muted);
 }
 
 .mc-badge--danger {
-    background-color: var(--mc-danger-bg);
-    color: #8A1D17;
+  background-color: var(--mc-danger-bg);
+  color: #8a1d17;
 }
 
 .mc-badge--warning {
-    background-color: var(--mc-warning-bg);
-    color: #7A4900;
+  background-color: var(--mc-warning-bg);
+  color: #7a4900;
 }
 
 .mc-badge--info {
-    background-color: var(--mc-info-bg);
-    color: #174F63;
+  background-color: var(--mc-info-bg);
+  color: #174f63;
 }
 
 /* ------------------------------------------------------------
    9. Estado vacio
    ------------------------------------------------------------ */
 .mc-empty {
-    padding: var(--mc-space-7) var(--mc-space-4);
-    text-align: center;
-    color: var(--mc-ink-muted);
+  padding: var(--mc-space-7) var(--mc-space-4);
+  text-align: center;
+  color: var(--mc-ink-muted);
 }
 
 .mc-empty__icon {
-    font-size: 2.5rem;
-    color: var(--mc-copper-300);
-    margin-bottom: var(--mc-space-3);
+  font-size: 2.5rem;
+  color: var(--mc-copper-300);
+  margin-bottom: var(--mc-space-3);
 }
 
 .mc-empty__title {
-    font-size: var(--mc-text-lg);
-    font-weight: var(--mc-weight-semibold);
-    color: var(--mc-ink);
-    margin-bottom: var(--mc-space-2);
+  font-size: var(--mc-text-lg);
+  font-weight: var(--mc-weight-semibold);
+  color: var(--mc-ink);
+  margin-bottom: var(--mc-space-2);
 }
 
 .mc-empty__text {
-    font-size: var(--mc-text-sm);
-    max-width: 38ch;
-    margin: 0 auto var(--mc-space-4);
+  font-size: var(--mc-text-sm);
+  max-width: 38ch;
+  margin: 0 auto var(--mc-space-4);
 }
 
 /* ------------------------------------------------------------
    10. Layout de autenticacion
    ------------------------------------------------------------ */
 .mc-auth {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--mc-space-5) var(--mc-space-4);
-    background-color: var(--mc-green-800);
-    background-image: linear-gradient(160deg, var(--mc-green-700) 0%, var(--mc-green-900) 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mc-space-5) var(--mc-space-4);
+  background-color: var(--mc-green-800);
+  background-image: linear-gradient(
+    160deg,
+    var(--mc-green-700) 0%,
+    var(--mc-green-900) 100%
+  );
 }
 
 .mc-auth__shell {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .mc-auth__brand {
-    text-align: center;
-    margin-bottom: var(--mc-space-5);
-    color: var(--mc-ink-inverse);
+  text-align: center;
+  margin-bottom: var(--mc-space-5);
+  color: var(--mc-ink-inverse);
 }
 
 .mc-auth__brand-name {
-    font-family: var(--mc-font-display);
-    font-size: var(--mc-text-3xl);
-    letter-spacing: 0.02em;
-    margin: 0;
+  font-family: var(--mc-font-display);
+  font-size: var(--mc-text-3xl);
+  letter-spacing: 0.02em;
+  margin: 0;
 }
 
 .mc-auth__brand-tagline {
-    font-size: var(--mc-text-sm);
-    color: var(--mc-copper-300);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    margin: var(--mc-space-1) 0 0;
+  font-size: var(--mc-text-sm);
+  color: var(--mc-copper-300);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: var(--mc-space-1) 0 0;
 }
 
 .mc-auth__card {
-    background-color: var(--mc-elevated);
-    border-radius: var(--mc-radius-lg);
-    box-shadow: var(--mc-shadow-lg);
-    padding: var(--mc-space-6);
-    width: 100%;
+  background-color: var(--mc-elevated);
+  border-radius: var(--mc-radius-lg);
+  box-shadow: var(--mc-shadow-lg);
+  padding: var(--mc-space-6);
+  width: 100%;
 }
 
 .mc-auth__card .form-control,
@@ -617,660 +621,661 @@ body {
 .mc-auth__card input[type="text"],
 .mc-auth__card input[type="email"],
 .mc-auth__card input[type="password"] {
-    width: 100%;
+  width: 100%;
 }
 
 .mc-auth__card form {
-    width: 100%;
+  width: 100%;
 }
 
 .mc-auth__title {
-    font-size: var(--mc-text-xl);
-    font-weight: var(--mc-weight-semibold);
-    margin-bottom: var(--mc-space-2);
+  font-size: var(--mc-text-xl);
+  font-weight: var(--mc-weight-semibold);
+  margin-bottom: var(--mc-space-2);
+  justify-self: center;
 }
 
 .mc-auth__lead {
-    font-size: var(--mc-text-sm);
-    color: var(--mc-ink-muted);
-    margin-bottom: var(--mc-space-5);
+  font-size: var(--mc-text-sm);
+  color: var(--mc-ink-muted);
+  margin-bottom: var(--mc-space-5);
 }
 
 .mc-auth__footer {
-    margin-top: var(--mc-space-5);
-    text-align: center;
-    font-size: var(--mc-text-sm);
-    color: rgba(255, 255, 255, 0.75);
+  margin-top: var(--mc-space-5);
+  text-align: center;
+  font-size: var(--mc-text-sm);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .mc-auth__footer a {
-    color: var(--mc-copper-300);
+  color: var(--mc-copper-300);
 }
 
 /* ------------------------------------------------------------
    11. Layout administrativo
    ------------------------------------------------------------ */
 .mc-admin {
-    display: flex;
-    min-height: 100vh;
+  display: flex;
+  min-height: 100vh;
 }
 
 .mc-sidebar {
-    width: var(--mc-sidebar-width);
-    flex-shrink: 0;
-    background-color: var(--mc-green-800);
-    color: rgba(255, 255, 255, 0.85);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 1040;
-    transition: transform var(--mc-transition);
+  width: var(--mc-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--mc-green-800);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1040;
+  transition: transform var(--mc-transition);
 }
 
 .mc-sidebar__brand {
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-3);
-    height: var(--mc-topbar-height);
-    padding: 0 var(--mc-space-4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--mc-ink-inverse);
-    text-decoration: none;
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  height: var(--mc-topbar-height);
+  padding: 0 var(--mc-space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--mc-ink-inverse);
+  text-decoration: none;
+  flex-shrink: 0;
 }
 
 .mc-sidebar__brand:hover {
-    color: var(--mc-ink-inverse);
+  color: var(--mc-ink-inverse);
 }
 
 .mc-sidebar__brand-name {
-    font-family: var(--mc-font-display);
-    font-size: var(--mc-text-lg);
-    line-height: 1.1;
+  font-family: var(--mc-font-display);
+  font-size: var(--mc-text-lg);
+  line-height: 1.1;
 }
 
 .mc-sidebar__brand-sub {
-    display: block;
-    font-family: var(--mc-font-sans);
-    font-size: 0.625rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--mc-copper-300);
+  display: block;
+  font-family: var(--mc-font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mc-copper-300);
 }
 
 .mc-sidebar__nav {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--mc-space-4) var(--mc-space-3);
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--mc-space-4) var(--mc-space-3);
 }
 
 .mc-sidebar__section {
-    font-size: 0.625rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
-    padding: var(--mc-space-4) var(--mc-space-3) var(--mc-space-2);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  padding: var(--mc-space-4) var(--mc-space-3) var(--mc-space-2);
 }
 
 .mc-sidebar__section:first-child {
-    padding-top: 0;
+  padding-top: 0;
 }
 
 .mc-sidebar__link {
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-3);
-    padding: var(--mc-space-3);
-    border-radius: var(--mc-radius);
-    color: rgba(255, 255, 255, 0.85);
-    font-size: var(--mc-text-sm);
-    text-decoration: none;
-    transition: background-color var(--mc-transition);
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3);
+  border-radius: var(--mc-radius);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: var(--mc-text-sm);
+  text-decoration: none;
+  transition: background-color var(--mc-transition);
 }
 
 .mc-sidebar__link:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: var(--mc-ink-inverse);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--mc-ink-inverse);
 }
 
 /* El elemento activo se marca con fondo y con un filete de
    cobre, no solo con color de texto. */
 .mc-sidebar__link.is-active {
-    background-color: var(--mc-green-600);
-    color: var(--mc-ink-inverse);
-    font-weight: var(--mc-weight-medium);
-    box-shadow: inset 3px 0 0 var(--mc-copper-500);
+  background-color: var(--mc-green-600);
+  color: var(--mc-ink-inverse);
+  font-weight: var(--mc-weight-medium);
+  box-shadow: inset 3px 0 0 var(--mc-copper-500);
 }
 
 .mc-sidebar__footer {
-    padding: var(--mc-space-4);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: var(--mc-text-xs);
-    color: rgba(255, 255, 255, 0.5);
+  padding: var(--mc-space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: var(--mc-text-xs);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .mc-admin__main {
-    flex: 1;
-    min-width: 0;
-    margin-left: var(--mc-sidebar-width);
-    display: flex;
-    flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--mc-sidebar-width);
+  display: flex;
+  flex-direction: column;
 }
 
 .mc-topbar {
-    height: var(--mc-topbar-height);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-4);
-    padding: 0 var(--mc-space-5);
-    background-color: var(--mc-elevated);
-    border-bottom: 1px solid var(--mc-border);
-    position: sticky;
-    top: 0;
-    z-index: 1030;
+  height: var(--mc-topbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-4);
+  padding: 0 var(--mc-space-5);
+  background-color: var(--mc-elevated);
+  border-bottom: 1px solid var(--mc-border);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
 }
 
 .mc-topbar__toggle {
-    display: none;
-    background: none;
-    border: 0;
-    font-size: var(--mc-text-xl);
-    color: var(--mc-ink);
-    line-height: 1;
+  display: none;
+  background: none;
+  border: 0;
+  font-size: var(--mc-text-xl);
+  color: var(--mc-ink);
+  line-height: 1;
 }
 
 .mc-topbar__spacer {
-    flex: 1;
+  flex: 1;
 }
 
 .mc-topbar__user {
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-3);
-    background: none;
-    border: 0;
-    padding: var(--mc-space-2);
-    border-radius: var(--mc-radius);
-    color: var(--mc-ink);
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  background: none;
+  border: 0;
+  padding: var(--mc-space-2);
+  border-radius: var(--mc-radius);
+  color: var(--mc-ink);
 }
 
 .mc-topbar__user:hover {
-    background-color: var(--mc-green-50);
+  background-color: var(--mc-green-50);
 }
 
 .mc-avatar {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background-color: var(--mc-green-500);
-    color: var(--mc-ink-inverse);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--mc-text-sm);
-    font-weight: var(--mc-weight-semibold);
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--mc-green-500);
+  color: var(--mc-ink-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-semibold);
 }
 
 .mc-topbar__identity {
-    text-align: left;
-    line-height: 1.2;
+  text-align: left;
+  line-height: 1.2;
 }
 
 .mc-topbar__name {
-    display: block;
-    font-size: var(--mc-text-sm);
-    font-weight: var(--mc-weight-medium);
+  display: block;
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-medium);
 }
 
 .mc-topbar__role {
-    display: block;
-    font-size: var(--mc-text-xs);
-    color: var(--mc-ink-muted);
+  display: block;
+  font-size: var(--mc-text-xs);
+  color: var(--mc-ink-muted);
 }
 
 .mc-admin__content {
-    flex: 1;
-    padding: var(--mc-space-5);
-    max-width: 1280px;
-    width: 100%;
-    margin: 0 auto;
+  flex: 1;
+  padding: var(--mc-space-5);
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .mc-page-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--mc-space-4);
-    margin-bottom: var(--mc-space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mc-space-4);
+  margin-bottom: var(--mc-space-5);
 }
 
 .mc-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background-color: rgba(10, 26, 21, 0.5);
-    z-index: 1035;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 26, 21, 0.5);
+  z-index: 1035;
 }
 
 .mc-backdrop.is-visible {
-    display: block;
+  display: block;
 }
 
 /* En pantallas chicas el sidebar se convierte en un panel
    deslizante sobre el contenido. */
 @media (max-width: 991.98px) {
-    .mc-sidebar {
-        transform: translateX(-100%);
-    }
+  .mc-sidebar {
+    transform: translateX(-100%);
+  }
 
-    .mc-sidebar.is-open {
-        transform: translateX(0);
-        box-shadow: var(--mc-shadow-lg);
-    }
+  .mc-sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: var(--mc-shadow-lg);
+  }
 
-    .mc-admin__main {
-        margin-left: 0;
-    }
+  .mc-admin__main {
+    margin-left: 0;
+  }
 
-    .mc-topbar__toggle {
-        display: block;
-    }
+  .mc-topbar__toggle {
+    display: block;
+  }
 
-    .mc-admin__content {
-        padding: var(--mc-space-4);
-    }
+  .mc-admin__content {
+    padding: var(--mc-space-4);
+  }
 }
 
 /* ------------------------------------------------------------
    12. Sitio publico
    ------------------------------------------------------------ */
 .mc-public-nav {
-    background-color: var(--mc-elevated);
-    border-bottom: 1px solid var(--mc-border);
+  background-color: var(--mc-elevated);
+  border-bottom: 1px solid var(--mc-border);
 }
 
 .mc-public-nav .navbar-brand {
-    font-family: var(--mc-font-display);
-    font-size: var(--mc-text-xl);
-    color: var(--mc-green-500);
-    line-height: 1.1;
+  font-family: var(--mc-font-display);
+  font-size: var(--mc-text-xl);
+  color: var(--mc-green-500);
+  line-height: 1.1;
 }
 
 .mc-public-nav .navbar-brand small {
-    display: block;
-    font-family: var(--mc-font-sans);
-    font-size: 0.625rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--mc-copper-600);
+  display: block;
+  font-family: var(--mc-font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mc-copper-600);
 }
 
 .mc-public-main {
-    min-height: calc(100vh - var(--mc-topbar-height) - 80px);
+  min-height: calc(100vh - var(--mc-topbar-height) - 80px);
 }
 
 .mc-footer {
-    background-color: var(--mc-green-800);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: var(--mc-text-sm);
-    padding: var(--mc-space-5) 0;
+  background-color: var(--mc-green-800);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: var(--mc-text-sm);
+  padding: var(--mc-space-5) 0;
 }
 
 .mc-footer a {
-    color: var(--mc-copper-300);
+  color: var(--mc-copper-300);
 }
 
 /* ------------------------------------------------------------
    13. Nueva reserva (HU-RES-002 - andamiaje visual)
    ------------------------------------------------------------ */
 .mc-reservation {
-    max-width: 1200px;
-    margin: 0 auto;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .mc-reservation__steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--mc-space-2);
-    list-style: none;
-    padding: 0;
-    margin: 0 0 var(--mc-space-6);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--mc-space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--mc-space-6);
 }
 
 .mc-reservation__step {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--mc-space-2);
-    padding: var(--mc-space-3);
-    border-bottom: 2px solid var(--mc-border);
-    color: var(--mc-ink-muted);
-    font-size: var(--mc-text-sm);
-    font-weight: var(--mc-weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mc-space-2);
+  padding: var(--mc-space-3);
+  border-bottom: 2px solid var(--mc-border);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-medium);
 }
 
 .mc-reservation__step-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    background: var(--mc-border);
-    font-size: var(--mc-text-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--mc-border);
+  font-size: var(--mc-text-xs);
 }
 
 .mc-reservation__step.is-current {
-    border-bottom-color: var(--mc-copper-500);
-    color: var(--mc-green-700);
+  border-bottom-color: var(--mc-copper-500);
+  color: var(--mc-green-700);
 }
 
 .mc-reservation__step.is-current .mc-reservation__step-number {
-    background: var(--mc-copper-600);
-    color: var(--mc-ink-inverse);
+  background: var(--mc-copper-600);
+  color: var(--mc-ink-inverse);
 }
 
 .mc-reservation__heading {
-    max-width: 44rem;
-    margin-bottom: var(--mc-space-5);
+  max-width: 44rem;
+  margin-bottom: var(--mc-space-5);
 }
 
 .mc-reservation__title {
-    margin: 0 0 var(--mc-space-2);
-    font-family: var(--mc-font-display);
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    font-weight: var(--mc-weight-semibold);
-    color: var(--mc-ink);
+  margin: 0 0 var(--mc-space-2);
+  font-family: var(--mc-font-display);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: var(--mc-weight-semibold);
+  color: var(--mc-ink);
 }
 
 .mc-reservation__lead,
 .mc-reservation__card-copy,
 .mc-reservation__continue-help {
-    color: var(--mc-ink-muted);
+  color: var(--mc-ink-muted);
 }
 
 .mc-reservation__lead {
-    margin: 0;
-    font-size: var(--mc-text-lg);
+  margin: 0;
+  font-size: var(--mc-text-lg);
 }
 
 .mc-reservation__card {
-    padding: var(--mc-space-5);
-    border: 1px solid var(--mc-border);
-    border-radius: var(--mc-radius-lg);
-    background: var(--mc-elevated);
-    box-shadow: var(--mc-shadow-sm);
+  padding: var(--mc-space-5);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
 }
 
 .mc-reservation__card + .mc-reservation__card {
-    margin-top: var(--mc-space-4);
+  margin-top: var(--mc-space-4);
 }
 
 .mc-reservation__card-header,
 .mc-reservation__calendar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--mc-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-4);
 }
 
 .mc-reservation__card-title {
-    margin: 0;
-    font-size: var(--mc-text-lg);
-    font-weight: var(--mc-weight-semibold);
-    color: var(--mc-ink);
+  margin: 0;
+  font-size: var(--mc-text-lg);
+  font-weight: var(--mc-weight-semibold);
+  color: var(--mc-ink);
 }
 
 .mc-reservation__card-copy {
-    margin: var(--mc-space-1) 0 0;
-    font-size: var(--mc-text-sm);
+  margin: var(--mc-space-1) 0 0;
+  font-size: var(--mc-text-sm);
 }
 
 .mc-reservation__people {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid var(--mc-border-strong);
-    border-radius: var(--mc-radius);
-    overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  overflow: hidden;
 }
 
 .mc-reservation__quantity-button,
 .mc-reservation__month-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    color: var(--mc-green-600);
-    cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--mc-green-600);
+  cursor: pointer;
 }
 
 .mc-reservation__quantity-button {
-    width: 2.5rem;
-    height: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .mc-reservation__quantity-button:hover:not(:disabled),
 .mc-reservation__month-button:hover {
-    background: var(--mc-green-50);
+  background: var(--mc-green-50);
 }
 
 .mc-reservation__quantity-button:disabled {
-    color: var(--mc-ink-subtle);
-    cursor: not-allowed;
+  color: var(--mc-ink-subtle);
+  cursor: not-allowed;
 }
 
 .mc-reservation__quantity {
-    min-width: 2.25rem;
-    text-align: center;
-    font-size: var(--mc-text-lg);
-    font-weight: var(--mc-weight-semibold);
-    color: var(--mc-ink);
+  min-width: 2.25rem;
+  text-align: center;
+  font-size: var(--mc-text-lg);
+  font-weight: var(--mc-weight-semibold);
+  color: var(--mc-ink);
 }
 
 .mc-reservation__notice {
-    display: flex;
-    gap: var(--mc-space-2);
-    margin-top: var(--mc-space-4);
-    padding: var(--mc-space-3);
-    border-radius: var(--mc-radius);
-    background: var(--mc-info-bg);
-    color: #174F63;
-    font-size: var(--mc-text-sm);
+  display: flex;
+  gap: var(--mc-space-2);
+  margin-top: var(--mc-space-4);
+  padding: var(--mc-space-3);
+  border-radius: var(--mc-radius);
+  background: var(--mc-info-bg);
+  color: #174f63;
+  font-size: var(--mc-text-sm);
 }
 
 .mc-reservation__notice i {
-    flex: 0 0 auto;
-    margin-top: 0.125rem;
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
 }
 
 .mc-reservation__calendar-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--mc-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-2);
 }
 
 .mc-reservation__month {
-    min-width: 10.5rem;
-    margin: 0;
-    text-align: center;
-    font-size: var(--mc-text-base);
-    font-weight: var(--mc-weight-semibold);
-    text-transform: capitalize;
+  min-width: 10.5rem;
+  margin: 0;
+  text-align: center;
+  font-size: var(--mc-text-base);
+  font-weight: var(--mc-weight-semibold);
+  text-transform: capitalize;
 }
 
 .mc-reservation__month-button {
-    width: 2.25rem;
-    height: 2.25rem;
-    border: 1px solid var(--mc-border);
-    border-radius: var(--mc-radius);
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
 }
 
 .mc-reservation__weekdays,
 .mc-reservation__days {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: var(--mc-space-1);
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--mc-space-1);
 }
 
 .mc-reservation__weekdays {
-    margin-top: var(--mc-space-5);
-    color: var(--mc-ink-muted);
-    font-size: var(--mc-text-xs);
-    font-weight: var(--mc-weight-semibold);
-    text-align: center;
-    text-transform: uppercase;
+  margin-top: var(--mc-space-5);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  font-weight: var(--mc-weight-semibold);
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .mc-reservation__days {
-    margin-top: var(--mc-space-2);
+  margin-top: var(--mc-space-2);
 }
 
 .mc-reservation__day {
-    min-height: 2.5rem;
-    border: 1px solid transparent;
-    border-radius: var(--mc-radius);
-    background: transparent;
-    color: var(--mc-ink);
-    font-size: var(--mc-text-sm);
-    cursor: pointer;
+  min-height: 2.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--mc-radius);
+  background: transparent;
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
+  cursor: pointer;
 }
 
 .mc-reservation__day:hover:not(:disabled) {
-    border-color: var(--mc-green-300);
-    background: var(--mc-green-50);
+  border-color: var(--mc-green-300);
+  background: var(--mc-green-50);
 }
 
 /* Estados reservados para la futura respuesta de disponibilidad. */
 .mc-reservation__day.is-unavailable,
 .mc-reservation__time.is-unavailable {
-    color: var(--mc-ink-subtle);
-    background: #F1F0EC;
-    text-decoration: line-through;
-    cursor: not-allowed;
+  color: var(--mc-ink-subtle);
+  background: #f1f0ec;
+  text-decoration: line-through;
+  cursor: not-allowed;
 }
 
 .mc-reservation__day.is-selected,
 .mc-reservation__time.is-selected {
-    border-color: var(--mc-green-600);
-    background: var(--mc-green-600);
-    color: var(--mc-ink-inverse);
-    font-weight: var(--mc-weight-semibold);
+  border-color: var(--mc-green-600);
+  background: var(--mc-green-600);
+  color: var(--mc-ink-inverse);
+  font-weight: var(--mc-weight-semibold);
 }
 
 .mc-reservation__times {
-    min-height: 100%;
+  min-height: 100%;
 }
 
 .mc-reservation__times-empty {
-    display: flex;
-    min-height: 12rem;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: var(--mc-space-4);
-    padding: var(--mc-space-4);
-    border: 1px dashed var(--mc-border-strong);
-    border-radius: var(--mc-radius);
-    color: var(--mc-ink-muted);
-    text-align: center;
+  display: flex;
+  min-height: 12rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--mc-space-4);
+  padding: var(--mc-space-4);
+  border: 1px dashed var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  color: var(--mc-ink-muted);
+  text-align: center;
 }
 
 .mc-reservation__times-empty i {
-    margin-bottom: var(--mc-space-2);
-    color: var(--mc-copper-500);
-    font-size: 1.75rem;
+  margin-bottom: var(--mc-space-2);
+  color: var(--mc-copper-500);
+  font-size: 1.75rem;
 }
 
 .mc-reservation__times-empty p {
-    margin: 0 0 var(--mc-space-1);
-    font-size: var(--mc-text-sm);
+  margin: 0 0 var(--mc-space-1);
+  font-size: var(--mc-text-sm);
 }
 
 /* Contenedor y variantes para los horarios que proveera la API. */
 .mc-reservation__time-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
-    gap: var(--mc-space-2);
-    margin-top: var(--mc-space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: var(--mc-space-2);
+  margin-top: var(--mc-space-4);
 }
 
 .mc-reservation__time {
-    min-height: 2.5rem;
-    border: 1px solid var(--mc-border-strong);
-    border-radius: var(--mc-radius);
-    background: var(--mc-elevated);
-    color: var(--mc-ink);
-    font-size: var(--mc-text-sm);
+  min-height: 2.5rem;
+  border: 1px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  background: var(--mc-elevated);
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
 }
 
 .mc-reservation__time.is-available {
-    border-color: var(--mc-green-400);
-    color: var(--mc-green-700);
+  border-color: var(--mc-green-400);
+  color: var(--mc-green-700);
 }
 
 .mc-reservation__continue {
-    margin-top: var(--mc-space-4);
+  margin-top: var(--mc-space-4);
 }
 
 .mc-reservation__continue-help {
-    margin: var(--mc-space-2) 0 0;
-    font-size: var(--mc-text-xs);
-    text-align: center;
+  margin: var(--mc-space-2) 0 0;
+  font-size: var(--mc-text-xs);
+  text-align: center;
 }
 
 @media (max-width: 575.98px) {
-    .mc-reservation__steps {
-        gap: 0;
-    }
+  .mc-reservation__steps {
+    gap: 0;
+  }
 
-    .mc-reservation__step {
-        flex-direction: column;
-        gap: var(--mc-space-1);
-        padding: var(--mc-space-2);
-        font-size: var(--mc-text-xs);
-        text-align: center;
-    }
+  .mc-reservation__step {
+    flex-direction: column;
+    gap: var(--mc-space-1);
+    padding: var(--mc-space-2);
+    font-size: var(--mc-text-xs);
+    text-align: center;
+  }
 
-    .mc-reservation__card {
-        padding: var(--mc-space-4);
-    }
+  .mc-reservation__card {
+    padding: var(--mc-space-4);
+  }
 
-    .mc-reservation__card-header,
-    .mc-reservation__calendar-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+  .mc-reservation__card-header,
+  .mc-reservation__calendar-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-    .mc-reservation__calendar-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
+  .mc-reservation__calendar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
 
-    .mc-reservation__month {
-        min-width: 0;
-    }
+  .mc-reservation__month {
+    min-width: 0;
+  }
 }
 
 /* ------------------------------------------------------------
    14. Impresion
    ------------------------------------------------------------ */
 @media print {
-    .mc-sidebar,
-    .mc-topbar,
-    .mc-footer,
-    .mc-skip-link,
-    .btn {
-        display: none !important;
-    }
+  .mc-sidebar,
+  .mc-topbar,
+  .mc-footer,
+  .mc-skip-link,
+  .btn {
+    display: none !important;
+  }
 
-    .mc-admin__main {
-        margin-left: 0;
-    }
+  .mc-admin__main {
+    margin-left: 0;
+  }
 }
