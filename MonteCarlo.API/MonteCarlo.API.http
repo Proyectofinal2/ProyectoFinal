@@ -1,6 +1,59 @@
 @MonteCarlo.API_HostAddress = http://localhost:5054
 
-GET {{MonteCarlo.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Login
+POST {{MonteCarlo.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usuario": "marcela.pozo@montecarlo.com",
+  "contrasena": "Test@123"
+}
+
+###
+
+### HU-AUT-003: Solicitar recuperación de contraseña (usuario existente y activo)
+# Debe responder 200 con el mensaje genérico y, si el SMTP está configurado,
+# enviar un correo con el link de reset (revisar el inbox de Mailtrap).
+POST {{MonteCarlo.API_HostAddress}}/api/auth/recuperar-contrasena
+Content-Type: application/json
+
+{
+  "usuarioOCorreo": "marcela.pozo@montecarlo.com"
+}
+
+###
+
+### HU-AUT-003: Solicitar recuperación de contraseña (usuario inexistente)
+# Debe responder 200 con el MISMO mensaje genérico (no debe revelar que no existe).
+POST {{MonteCarlo.API_HostAddress}}/api/auth/recuperar-contrasena
+Content-Type: application/json
+
+{
+  "usuarioOCorreo": "usuario-que-no-existe"
+}
+
+###
+
+### HU-AUT-003: Restablecer contraseña con el token recibido por correo
+# Reemplazar TOKEN_DEL_CORREO por el valor del query string "token" del link recibido.
+POST {{MonteCarlo.API_HostAddress}}/api/auth/restablecer-contrasena
+Content-Type: application/json
+
+{
+  "token": "TOKEN_DEL_CORREO",
+  "nuevaContrasena": "NuevaContrasena123"
+}
+
+###
+
+### HU-AUT-003: Restablecer contraseña con un token inválido/expirado
+# Debe responder 400.
+POST {{MonteCarlo.API_HostAddress}}/api/auth/restablecer-contrasena
+Content-Type: application/json
+
+{
+  "token": "token-invalido",
+  "nuevaContrasena": "NuevaContrasena123"
+}
 
 ###
