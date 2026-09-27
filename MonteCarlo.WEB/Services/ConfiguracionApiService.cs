@@ -56,10 +56,10 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
         {
             var response = await llamada();
 
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<T>(
+            var resultado = await ApiResponseHelper.ParseAsync<T>(
                 response, mensajeExito, mensajeError);
 
-            return (success, message, data);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {

@@ -60,8 +60,8 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
         try
         {
             var response = await llamada();
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<T>(response, mensajeExito, mensajeError);
-            return (success, message, data);
+            var resultado = await ApiResponseHelper.ParseAsync<T>(response, mensajeExito, mensajeError);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {

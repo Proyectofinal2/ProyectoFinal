@@ -1,4 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using MonteCarlo.API.Data.Entities;
@@ -10,12 +12,17 @@ namespace MonteCarlo.API.Services;
 
 /// <summary>
 /// Servicio de autenticación.
-/// Maneja login, generación de tokens JWT y validación de credenciales.
-/// HU-AUT-001: inicio de sesión seguro.
+/// Maneja login, generación de tokens JWT, validación de credenciales y
+/// recuperación de contraseña.
+/// HU-AUT-001: inicio de sesión seguro. HU-AUT-003: recuperación de contraseña.
 /// </summary>
-public class AuthService(IAuthRepository authRepository, IConfiguration configuration): IAuthService
+public class AuthService(
+    IAuthRepository authRepository,
+    IConfiguration configuration,
+    IEmailService emailService,
+    IWebHostEnvironment env,
+    ILogger<AuthService> logger) : IAuthService
 {
-
     /// <summary>
     /// Intenta autenticar un usuario con sus credenciales.
     /// Retorna un Result con LoginResponse si es exitoso.
@@ -144,5 +151,174 @@ public class AuthService(IAuthRepository authRepository, IConfiguration configur
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Solicita la recuperación de contraseña. HU-AUT-003.
+    /// Si el usuario no existe o está inactivo, retorna el mismo mensaje genérico de
+    /// éxito que un envío real, para no filtrar información sobre las cuentas del
+    /// sistema. Esta ambigüedad aplica únicamente a la existencia/estado de la cuenta:
+    /// un error real de infraestructura (ej. SMTP inalcanzable) sí retorna un error
+    /// explícito, ya que en ese caso no hay información de cuentas que proteger y el
+    /// administrador necesita saber que la solicitud no se pudo procesar.
+    /// </summary>
+    public async Task<Result> SolicitarRecuperacionAsync(ForgotPasswordRequest request)
+    {
+        var usuario = await authRepository.ObtenerPorNombreOCorreoAsync(request.UsuarioOCorreo);
+
+        if (usuario == null)
+        {
+            logger.LogInformation(
+                "Solicitud de recuperación de contraseña para usuario/correo inexistente: {UsuarioOCorreo}",
+                request.UsuarioOCorreo);
+            return ResultadoGenericoRecuperacion();
+        }
+
+        if (!usuario.Activo)
+        {
+            logger.LogWarning(
+                "Solicitud de recuperación de contraseña para cuenta inactiva: IdUsuario={IdUsuario}",
+                usuario.IdUsuario);
+            return ResultadoGenericoRecuperacion();
+        }
+
+        await authRepository.InvalidarTokensActivosAsync(usuario.IdUsuario);
+
+        var minutosExpiracion = ObtenerMinutosExpiracionRecuperacion();
+        var tokenPlano = GenerarTokenAleatorio();
+        var tokenHash = HashearToken(tokenPlano);
+        var fechaExpiracion = DateTime.UtcNow.AddMinutes(minutosExpiracion);
+
+        await authRepository.CrearTokenRecuperacionAsync(usuario.IdUsuario, tokenHash, fechaExpiracion);
+
+        var destinatario = !string.IsNullOrWhiteSpace(usuario.CorreoPersonal)
+            ? usuario.CorreoPersonal
+            : usuario.CorreoElectronico;
+
+        var baseUrl = configuration["Frontend:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            throw new InvalidOperationException("Frontend:BaseUrl no está configurado en appsettings.");
+        }
+
+        var linkReset = $"{baseUrl.TrimEnd('/')}/admin/restablecer?token={Uri.EscapeDataString(tokenPlano)}";
+
+        try
+        {
+            var cuerpoHtml = await RenderizarTemplateRecuperacionAsync(usuario.NombreCompleto, linkReset, minutosExpiracion);
+            await emailService.EnviarCorreoAsync(destinatario, "Recuperación de contraseña - MonteCarlo", cuerpoHtml);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "No se pudo enviar el correo de recuperación de contraseña para IdUsuario={IdUsuario}",
+                usuario.IdUsuario);
+            return Result.InternalError();
+        }
+
+        return ResultadoGenericoRecuperacion();
+    }
+
+    /// <summary>
+    /// Restablece la contraseña de un usuario usando un token de recuperación válido. HU-AUT-003.
+    /// </summary>
+    public async Task<Result> RestablecerContrasenaAsync(ResetPasswordRequest request)
+    {
+        var token = await BuscarTokenValidoAsync(request.Token);
+
+        if (token == null)
+        {
+            return Result.BadRequest(MensajeTokenInvalido);
+        }
+
+        var nuevoHash = BCrypt.Net.BCrypt.HashPassword(request.NuevaContrasena);
+
+        await authRepository.RestablecerContrasenaAsync(token.Usuario, token, nuevoHash);
+
+        return Result.Ok("Contraseña actualizada correctamente.");
+    }
+
+    /// <summary>
+    /// Verifica si un token de recuperación es válido, sin consumirlo. HU-AUT-003.
+    /// </summary>
+    public async Task<Result> ValidarTokenRecuperacionAsync(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Result.BadRequest(MensajeTokenInvalido);
+        }
+
+        var tokenValido = await BuscarTokenValidoAsync(token);
+
+        return tokenValido != null
+            ? Result.Ok("Token válido.")
+            : Result.BadRequest(MensajeTokenInvalido);
+    }
+
+    private const string MensajeTokenInvalido = "El enlace de recuperación no es válido o ha expirado.";
+
+    /// <summary>
+    /// Hashea un token en texto plano y busca el token de recuperación válido
+    /// (no usado, no expirado) correspondiente. Compartido por
+    /// <see cref="RestablecerContrasenaAsync"/> y <see cref="ValidarTokenRecuperacionAsync"/>.
+    /// </summary>
+    private async Task<TokenRecuperacionContrasena?> BuscarTokenValidoAsync(string token)
+    {
+        var tokenHash = HashearToken(token);
+        return await authRepository.ObtenerTokenValidoAsync(tokenHash);
+    }
+
+    /// <summary>
+    /// Construye el resultado genérico de éxito de <see cref="SolicitarRecuperacionAsync"/>,
+    /// idéntico exista o no la cuenta, para no revelar información sobre las cuentas del sistema.
+    /// </summary>
+    private static Result ResultadoGenericoRecuperacion()
+        => Result.Ok("Si el usuario existe, se enviará un correo con instrucciones para restablecer la contraseña.");
+
+    /// <summary>
+    /// Lee "PasswordRecovery:ExpirationMinutes" de la configuración. Si no está definido o
+    /// no es un número válido, usa 15 minutos como valor por defecto.
+    /// </summary>
+    private int ObtenerMinutosExpiracionRecuperacion()
+    {
+        var minutos = configuration.GetValue<int?>("PasswordRecovery:ExpirationMinutes");
+        return minutos is > 0 ? minutos.Value : 15;
+    }
+
+    /// <summary>
+    /// Genera un token de recuperación aleatorio criptográficamente seguro,
+    /// codificado en Base64Url para uso seguro en URLs.
+    /// </summary>
+    private static string GenerarTokenAleatorio()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        return Convert.ToBase64String(bytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+    }
+
+    /// <summary>
+    /// Calcula el hash determinista (SHA-256) de un token en texto plano, para
+    /// poder buscarlo por igualdad en la base de datos sin almacenarlo en claro.
+    /// </summary>
+    private static string HashearToken(string tokenPlano)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(tokenPlano));
+        return Convert.ToBase64String(bytes);
+    }
+
+    /// <summary>
+    /// Carga el template HTML de recuperación de contraseña y reemplaza sus placeholders.
+    /// </summary>
+    private async Task<string> RenderizarTemplateRecuperacionAsync(string nombre, string linkReset, int minutosExpiracion)
+    {
+        var rutaTemplate = Path.Combine(env.ContentRootPath, "Templates", "RecuperacionContrasenaTemplate.html");
+        var template = await File.ReadAllTextAsync(rutaTemplate);
+
+        return template
+            .Replace("{{NOMBRE}}", WebUtility.HtmlEncode(nombre))
+            .Replace("{{LINK_RESET}}", linkReset)
+            .Replace("{{MINUTOS_EXPIRACION}}", minutosExpiracion.ToString());
     }
 }

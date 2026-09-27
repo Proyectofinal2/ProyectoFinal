@@ -21,6 +21,8 @@ builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
 builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
 
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
@@ -122,9 +124,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Monte Carlo API v1.0.0");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MonteCarlo API v1.0.0");
         options.RoutePrefix = string.Empty;
-        options.DocumentTitle = "Monte Carlo API - Documentación";
+        options.DocumentTitle = "MonteCarlo API - Documentación";
 
         // Expandir todos los endpoints por defecto
         options.DefaultModelsExpandDepth(2);

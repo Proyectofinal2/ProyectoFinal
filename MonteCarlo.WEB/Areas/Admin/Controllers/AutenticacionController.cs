@@ -137,15 +137,20 @@ public class AutenticacionController(IAuthApiService authApiService, ILogger<Aut
 
     [HttpPost("recuperar")]
     [ValidateAntiForgeryToken]
-    public IActionResult Recuperar(RecuperarContrasenaViewModel modelo)
+    public async Task<IActionResult> Recuperar(RecuperarContrasenaViewModel modelo)
     {
         if (!ModelState.IsValid)
         {
             return View(modelo);
         }
 
-        // TODO conectar: solicitar envio del enlace a la API. No confirmar ni negar
-        // si el correo existe: siempre terminar aqui, con tiempo de respuesta similar.
+        var (success, message) = await authApiService.RecuperarContrasenaAsync(modelo.CorreoElectronico);
+
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, message);
+            return View(modelo);
+        }
 
         return RedirectToAction(nameof(RecuperarEnviado));
     }
@@ -161,30 +166,45 @@ public class AutenticacionController(IAuthApiService authApiService, ILogger<Aut
 
     /// <param name="token">Llega en el enlace enviado por correo.</param>
     [HttpGet("restablecer")]
-    public IActionResult Restablecer(string? token)
+    public async Task<IActionResult> Restablecer(string? token)
     {
         if (string.IsNullOrWhiteSpace(token))
         {
             return RedirectToAction(nameof(EnlaceInvalido));
         }
 
-        // TODO conectar: validar el token antes de mostrar el formulario;
-        // si expiro o ya se uso, redirigir a EnlaceInvalido.
+        var esValido = await authApiService.ValidarTokenRecuperacionAsync(token);
+        if (!esValido)
+        {
+            return RedirectToAction(nameof(EnlaceInvalido));
+        }
 
         return View(new RestablecerContrasenaViewModel { Token = token });
     }
 
     [HttpPost("restablecer")]
     [ValidateAntiForgeryToken]
-    public IActionResult Restablecer(RestablecerContrasenaViewModel modelo)
+    public async Task<IActionResult> Restablecer(RestablecerContrasenaViewModel modelo)
     {
         if (!ModelState.IsValid)
         {
             return View(modelo);
         }
 
-        // TODO conectar: aplicar contrasena nueva e invalidar token.
-        // Si la API rechaza el token, redirigir a EnlaceInvalido.
+        var (success, message, tokenInvalido) = await authApiService.RestablecerContrasenaAsync(
+            modelo.Token, modelo.NuevaContrasena);
+
+        if (!success)
+        {
+            if (tokenInvalido)
+            {
+                return RedirectToAction(nameof(EnlaceInvalido));
+            }
+
+            // Falla real de servidor (SMTP, conexion, etc.), no del token.
+            ModelState.AddModelError(string.Empty, message);
+            return View(modelo);
+        }
 
         TempData[Alerta.Exito] =
             "Tu contrasena fue actualizada. Ya puedes iniciar sesion con ella.";

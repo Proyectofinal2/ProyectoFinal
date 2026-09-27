@@ -65,3 +65,40 @@ public class Result<T>
     public static Result<T> InternalError(string message = "Error interno del servidor")
         => new(false, message, default, 500);
 }
+
+/// <summary>
+/// Resultado de una operación de servicio que no retorna datos (solo mensaje y status).
+/// A diferencia de <see cref="Result{T}"/>, no tiene una propiedad Data: se usa cuando
+/// la operación genuinamente no tiene nada que devolver (ej. comandos como recuperación
+/// de contraseña), en vez de forzar un tipo de dato o un "object?" ambiguo.
+/// </summary>
+public class Result
+{
+    /// <summary>true si la operación fue exitosa, false si falló.</summary>
+    public bool Success { get; set; }
+
+    /// <summary>Mensaje descriptivo del resultado o error.</summary>
+    public string Message { get; set; } = string.Empty;
+
+    /// <summary>Código HTTP de la respuesta (200, 400, etc).</summary>
+    public int StatusCode { get; set; } = 200;
+
+    private Result(bool success, string message, int statusCode)
+    {
+        Success = success;
+        Message = message;
+        StatusCode = statusCode;
+    }
+
+    /// <summary>Crea un resultado exitoso sin datos (200 OK).</summary>
+    public static Result Ok(string message = "Operación exitosa")
+        => new(true, message, 200);
+
+    /// <summary>Crea un resultado de solicitud inválida (400 Bad Request).</summary>
+    public static Result BadRequest(string message)
+        => new(false, message, 400);
+
+    /// <summary>Crea un resultado de error interno del servidor (500 Internal Server Error).</summary>
+    public static Result InternalError(string message = "No se pudo procesar la solicitud. Intenta nuevamente más tarde.")
+        => new(false, message, 500);
+}

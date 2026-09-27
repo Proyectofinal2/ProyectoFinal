@@ -24,12 +24,22 @@
                       Solo tiene sentido en campos de contrasena
                       nueva, no al pedir la vigente.
         placeholder   texto de ejemplo, opcional.
+        requisitos    true para exigir la politica de contrasena
+                      (longitud minima y complejidad) como
+                      restriccion nativa del campo, ademas de la
+                      validacion del servidor. Habilita, junto con
+                      data-mc-enable-submit en el form, deshabilitar
+                      el boton de envio hasta que el campo sea valido.
+        igualA        selector CSS de otro campo de contrasena que
+                      este debe igualar (ej. "#NuevaContrasena").
+                      Se usa para la confirmacion de contrasena.
 *@
 @model string
 
 @{
     var idCampo = Html.IdForModel().ToString();
     var mostrarMedidor = ViewData["medidor"] as bool? ?? false;
+    var exigirRequisitos = ViewData["requisitos"] as bool? ?? false;
     var idMedidor = $"{idCampo}_medidor";
 
     var atributos = new Dictionary<string, object>
@@ -47,6 +57,19 @@
     {
         atributos["data-mc-strength"] = $"#{idMedidor}";
         atributos["aria-describedby"] = idMedidor;
+    }
+
+    if (exigirRequisitos)
+    {
+        atributos["required"] = "required";
+        atributos["minlength"] = MonteCarlo.WEB.Models.Autenticacion.PoliticaContrasena.LongitudMinima;
+        atributos["pattern"] = MonteCarlo.WEB.Models.Autenticacion.PoliticaContrasena.Patron;
+    }
+
+    if (ViewData["igualA"] is string igualA)
+    {
+        atributos["required"] = "required";
+        atributos["data-mc-equal-to"] = igualA;
     }
 }
 

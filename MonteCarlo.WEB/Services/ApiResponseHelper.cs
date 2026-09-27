@@ -12,7 +12,7 @@ public static class ApiResponseHelper
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
-    public static async Task<(bool Success, string Message, T? Data, JsonElement? ErrorData)> ParseAsync<T>(
+    public static async Task<(bool Success, string Message, T? Data, JsonElement? ErrorData, Dictionary<string, string[]>? Errors)> ParseAsync<T>(
         HttpResponseMessage response,
         string successMessage,
         string errorMessage)
@@ -25,14 +25,14 @@ public static class ApiResponseHelper
             var data = envelope.Data != null
                 ? JsonSerializer.Deserialize<T>(envelope.Data.ToString() ?? "{}", Options)
                 : default;
-            return (true, envelope.Message ?? successMessage, data, null);
+            return (true, envelope.Message ?? successMessage, data, null, null);
         }
 
         var errorData = envelope?.Data is JsonElement { ValueKind: not JsonValueKind.Null and not JsonValueKind.Undefined } je
             ? je
             : (JsonElement?)null;
 
-        return (false, envelope?.Message ?? errorMessage, default, errorData);
+        return (false, envelope?.Message ?? errorMessage, default, errorData, envelope?.Errors);
     }
 
     private class ApiResponseWrapper

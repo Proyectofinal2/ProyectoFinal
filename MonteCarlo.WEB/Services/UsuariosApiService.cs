@@ -23,12 +23,12 @@ public class UsuariosApiService(HttpClient httpClient, ILogger<UsuariosApiServic
         {
             var response = await httpClient.PostAsJsonAsync("usuarios", modelo);
 
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<UserApiResponse>(
+            var resultado = await ApiResponseHelper.ParseAsync<UserApiResponse>(
                 response,
                 "Usuario creado exitosamente.",
                 "Error al crear el usuario. Intenta de nuevo.");
 
-            return (success, message, data);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {
@@ -70,12 +70,12 @@ public class UsuariosApiService(HttpClient httpClient, ILogger<UsuariosApiServic
             var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
             var response = await httpClient.GetAsync($"usuarios{queryString}");
 
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<List<UserApiResponse>>(
+            var resultado = await ApiResponseHelper.ParseAsync<List<UserApiResponse>>(
                 response,
                 "Usuarios obtenidos exitosamente.",
                 "Error al obtener el listado de usuarios. Intenta de nuevo.");
 
-            return (success, message, data);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {
@@ -100,12 +100,12 @@ public class UsuariosApiService(HttpClient httpClient, ILogger<UsuariosApiServic
         {
             var response = await httpClient.PostAsync($"usuarios/{id}/desactivar", null);
 
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<UserApiResponse>(
+            var resultado = await ApiResponseHelper.ParseAsync<UserApiResponse>(
                 response,
                 "La cuenta fue desactivada exitosamente.",
                 "Error al desactivar la cuenta. Intenta de nuevo.");
 
-            return (success, message, data);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {
@@ -130,12 +130,12 @@ public class UsuariosApiService(HttpClient httpClient, ILogger<UsuariosApiServic
         {
             var response = await httpClient.PostAsync($"usuarios/{id}/reactivar", null);
 
-            var (success, message, data, _) = await ApiResponseHelper.ParseAsync<UserApiResponse>(
+            var resultado = await ApiResponseHelper.ParseAsync<UserApiResponse>(
                 response,
                 "La cuenta fue reactivada exitosamente.",
                 "Error al reactivar la cuenta. Intenta de nuevo.");
 
-            return (success, message, data);
+            return (resultado.Success, resultado.Message, resultado.Data);
         }
         catch (HttpRequestException ex)
         {

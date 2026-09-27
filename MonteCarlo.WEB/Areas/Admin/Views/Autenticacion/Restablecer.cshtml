@@ -8,7 +8,7 @@
     Layout = "_AuthLayout";
 }
 
-<form asp-action="Restablecer" method="post" data-mc-guard-submit novalidate>
+<form asp-action="Restablecer" method="post" data-mc-guard-submit data-mc-enable-submit novalidate>
     <input type="hidden" asp-for="Token" />
 
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
@@ -18,7 +18,8 @@
         @Html.EditorFor(m => m.NuevaContrasena, "Contrasena", new
         {
             autocomplete = "new-password",
-            medidor = true
+            medidor = true,
+            requisitos = true
         })
         <span asp-validation-for="NuevaContrasena" class="text-danger small"></span>
         <div class="form-text">@PoliticaContrasena.Ayuda</div>
@@ -26,7 +27,11 @@
 
     <div class="mb-4">
         <label asp-for="ConfirmacionContrasena" class="form-label mc-required"></label>
-        @Html.EditorFor(m => m.ConfirmacionContrasena, "Contrasena", new { autocomplete = "new-password" })
+        @Html.EditorFor(m => m.ConfirmacionContrasena, "Contrasena", new
+        {
+            autocomplete = "new-password",
+            igualA = "#" + Html.IdFor(m => m.NuevaContrasena)
+        })
         <span asp-validation-for="ConfirmacionContrasena" class="text-danger small"></span>
     </div>
 
