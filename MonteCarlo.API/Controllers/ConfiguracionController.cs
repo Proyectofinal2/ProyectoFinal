@@ -7,8 +7,9 @@ using MonteCarlo.API.Services.Interfaces;
 namespace MonteCarlo.API.Controllers;
 
 
-/// HU-CFG-001: umbral de confirmación automática de reservas.
-/// Solo el rol "General" puede consultarlo y modificarlo.
+/// HU-CFG-001 / HU-CFG-006: parametros dinamicos del sistema (ConfiguracionSistema).
+/// No hay un set fijo de claves: se expone todo lo que exista en la tabla.
+/// Solo el rol "General" puede consultarlos y modificarlos.
 
 [ApiController]
 [Route("api/configuracion")]
@@ -18,17 +19,20 @@ public class ConfiguracionController(IConfiguracionService configuracionService)
     private int IdUsuarioAutenticado =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    [HttpGet("umbral-confirmacion")]
-    public async Task<IActionResult> ObtenerUmbral()
+    /// Pantalla unica de Parametros: trae todos los parametros existentes en una sola llamada.
+    [HttpGet]
+    public async Task<IActionResult> ObtenerConfiguracionGeneral()
     {
-        var result = await configuracionService.ObtenerUmbralAsync();
+        var result = await configuracionService.ObtenerConfiguracionGeneralAsync();
         return StatusCode(result.StatusCode, ApiResponse.SuccessResponse(result.Message, result.Data));
     }
 
-    [HttpPut("umbral-confirmacion")]
-    public async Task<IActionResult> ActualizarUmbral([FromBody] ActualizarUmbralRequest request)
+    /// Pantalla unica de Parametros: guarda, con un unico "Guardar cambios", solo los
+    /// parametros recibidos (PATCH simplificado).
+    [HttpPut]
+    public async Task<IActionResult> ActualizarConfiguracionGeneral([FromBody] ActualizarConfiguracionGeneralRequest request)
     {
-        var result = await configuracionService.ActualizarUmbralAsync(request.Umbral!.Value, IdUsuarioAutenticado);
+        var result = await configuracionService.ActualizarConfiguracionGeneralAsync(request, IdUsuarioAutenticado);
 
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)

@@ -11,6 +11,18 @@ public class ConfiguracionRepository(MonteCarloDbContext context) : IConfiguraci
             .Include(c => c.UsuarioModificacion)
             .FirstOrDefaultAsync(c => c.Clave == clave);
 
+    public Task<List<ConfiguracionSistema>> ObtenerVariasAsync(IReadOnlyCollection<string> claves) =>
+        context.ConfiguracionesSistema
+            .Include(c => c.UsuarioModificacion)
+            .Where(c => claves.Contains(c.Clave))
+            .ToListAsync();
+
+    public Task<List<ConfiguracionSistema>> ObtenerTodasAsync() =>
+        context.ConfiguracionesSistema
+            .Include(c => c.UsuarioModificacion)
+            .OrderBy(c => c.Clave)
+            .ToListAsync();
+
     public void Agregar(ConfiguracionSistema configuracion) =>
         context.ConfiguracionesSistema.Add(configuracion);
 

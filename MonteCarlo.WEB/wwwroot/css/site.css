@@ -215,6 +215,32 @@ body {
   color: var(--mc-ink-muted);
 }
 
+/* Franja de auditoria (fecha/usuario de ultimo cambio) bajo un campo.
+   Mismo tamano/color que .form-text a proposito: la caja (fondo + borde)
+   es lo que la separa de la descripcion, no un contraste de texto. */
+.mc-audit-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-sm);
+  font-size: var(--mc-text-xs);
+  color: var(--mc-ink-muted);
+}
+
+.mc-audit-strip__usuario {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--mc-green-200);
+  border-radius: var(--mc-radius-pill);
+  font-size: inherit;
+  color: inherit;
+}
+
 /* Selector de horarios: conserva un valor HH:mm para el formulario,
    pero evita el selector nativo inconsistente entre navegadores. */
 .mc-time-picker {

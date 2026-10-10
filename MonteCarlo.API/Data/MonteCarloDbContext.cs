@@ -308,6 +308,8 @@ public class MonteCarloDbContext : DbContext
 
             entity.Property(e => e.Clave).HasMaxLength(50);
             entity.Property(e => e.Valor).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Etiqueta).HasMaxLength(150);
+            entity.Property(e => e.Descripcion).HasMaxLength(300);
             entity.Property(e => e.FechaModificacion).HasDefaultValueSql("SYSDATETIME()");
 
             entity.HasOne(e => e.UsuarioModificacion)

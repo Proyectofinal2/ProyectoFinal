@@ -272,6 +272,37 @@
   }
 
   /* --------------------------------------------------------
+       Deshabilita el boton de envio hasta que algun campo con
+       data-mc-original cambie respecto a su valor original
+       (pantalla de Parametros: no reenviar si nada cambio).
+       Uso: <form data-mc-enable-on-change> ... <input data-mc-original="valor-inicial">
+       -------------------------------------------------------- */
+  function initSubmitEnableOnChange() {
+    document
+      .querySelectorAll("form[data-mc-enable-on-change]")
+      .forEach(function (form) {
+        var boton = form.querySelector('[type="submit"]');
+        var campos = form.querySelectorAll("[data-mc-original]");
+        if (!boton || campos.length === 0) {
+          return;
+        }
+
+        function hayCambios() {
+          return Array.prototype.some.call(campos, function (campo) {
+            return campo.value !== campo.dataset.mcOriginal;
+          });
+        }
+
+        function actualizar() {
+          boton.disabled = !hayCambios();
+        }
+
+        form.addEventListener("input", actualizar);
+        actualizar();
+      });
+  }
+
+  /* --------------------------------------------------------
        Evita el doble envio de formularios
 
        form.checkValidity() (Constraint Validation API nativa) no
@@ -939,6 +970,7 @@
     initCountdowns();
     initEqualToFields();
     initSubmitEnableOnValid();
+    initSubmitEnableOnChange();
     initSubmitGuard();
     initAutoDismiss();
     initReservationCalendars();

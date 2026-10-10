@@ -15,9 +15,6 @@ public class ReservasService(
     private const string Confirmada = "Confirmada";
     private const string Cancelada = "Cancelada";
 
-    private static readonly TimeSpan IntervaloLlegada = TimeSpan.FromMinutes(30);
-    private static readonly TimeSpan DuracionReserva = TimeSpan.FromMinutes(90);
-
     // Alfabeto sin vocales para evitar palabras ofensivas accidentales.
     private const string AlfabetoCodigo = "BCDFGHJKLMNPQRSTVWXYZ23456789";
     private const int LongitudAleatoria = 5;
@@ -35,8 +32,11 @@ public class ReservasService(
         }
 
         var datos = await ObtenerDatosDisponibilidadAsync();
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var intervaloMinutos = await configuracionService.ObtenerValorIntervaloCalendarioAsync();
+
         return Result<DisponibilidadFechaResponse>.Ok(
-            CalcularDisponibilidad(fecha, datos, DateTime.Now),
+            CalcularDisponibilidad(fecha, datos, DateTime.Now, duracionMinutos, intervaloMinutos),
             "Disponibilidad obtenida exitosamente.");
     }
 
@@ -55,12 +55,14 @@ public class ReservasService(
         var inicio = new DateOnly(anio, mes, 1);
         var fin = new DateOnly(anio, mes, DateTime.DaysInMonth(anio, mes));
         var datos = await ObtenerDatosDisponibilidadAsync();
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var intervaloMinutos = await configuracionService.ObtenerValorIntervaloCalendarioAsync();
         var ahora = DateTime.Now;
 
         var fechas = new List<DisponibilidadFechaResponse>();
         for (var dia = inicio; dia <= fin; dia = dia.AddDays(1))
         {
-            var disponibilidad = CalcularDisponibilidad(dia, datos, ahora);
+            var disponibilidad = CalcularDisponibilidad(dia, datos, ahora, duracionMinutos, intervaloMinutos);
             fechas.Add(new DisponibilidadFechaResponse
             {
                 Fecha = disponibilidad.Fecha,
@@ -174,7 +176,9 @@ public class ReservasService(
 
         if (dentroDelUmbral)
         {
-            mesaAsignada = await BuscarMesaDisponibleAsync(request.CantidadPersonas, request.FechaReserva, request.HoraReserva);
+            var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+            mesaAsignada = await BuscarMesaDisponibleAsync(
+                request.CantidadPersonas, request.FechaReserva, request.HoraReserva, duracionMinutos);
 
             // Si no hay mesa, la reserva queda Confirmada pero marcada para asignación manual.
             if (mesaAsignada is null)
@@ -227,9 +231,10 @@ public class ReservasService(
 
     /// <summary>
     /// RN-01 / RN-03: devuelve la mesa de menor capacidad que quepa al grupo
-    /// y que no tenga otra reserva activa en la franja de 90 minutos.
+    /// y que no tenga otra reserva activa dentro de la duración de reserva configurada.
     /// </summary>
-    private async Task<Mesa?> BuscarMesaDisponibleAsync(int cantidadPersonas, DateOnly fecha, TimeOnly hora)
+    private async Task<Mesa?> BuscarMesaDisponibleAsync(
+        int cantidadPersonas, DateOnly fecha, TimeOnly hora, int duracionMinutos)
     {
         var candidatas = await mesasRepository.ObtenerDisponiblesPorCapacidadAsync(cantidadPersonas);
 
@@ -238,7 +243,7 @@ public class ReservasService(
             var reservasDelDia = await mesasRepository.ObtenerReservasActivasPorMesaYFechaAsync(mesa.IdMesa, fecha);
 
             var haySolapamiento = reservasDelDia.Any(r =>
-                SeSolapan(hora, r.HoraReserva));
+                SeSolapan(hora, r.HoraReserva, duracionMinutos));
 
             if (!haySolapamiento)
             {
@@ -250,13 +255,13 @@ public class ReservasService(
     }
 
     /// <summary>
-    /// Dos reservas se solapan si la diferencia entre sus horas de inicio
-    /// es menor que la duración total de una reserva (90 minutos).
+    /// Dos reservas se solapan si la diferencia entre sus horas de inicio es menor
+    /// que la duración de reserva configurada (ConfiguracionSistema, HU-CFG-006).
     /// </summary>
-    private static bool SeSolapan(TimeOnly horaNueva, TimeOnly horaExistente)
+    private static bool SeSolapan(TimeOnly horaNueva, TimeOnly horaExistente, int duracionMinutos)
     {
         var diferencia = Math.Abs((horaNueva.ToTimeSpan() - horaExistente.ToTimeSpan()).TotalMinutes);
-        return diferencia < DuracionReserva.TotalMinutes;
+        return diferencia < duracionMinutos;
     }
 
     /// <summary>
@@ -295,7 +300,9 @@ public class ReservasService(
     private static DisponibilidadFechaResponse CalcularDisponibilidad(
         DateOnly fecha,
         DatosDisponibilidad datos,
-        DateTime ahora)
+        DateTime ahora,
+        int duracionMinutos,
+        int intervaloMinutos)
     {
         var respuesta = new DisponibilidadFechaResponse { Fecha = fecha };
         var hoy = DateOnly.FromDateTime(ahora);
@@ -322,10 +329,12 @@ public class ReservasService(
         }
 
         var horaActual = TimeOnly.FromDateTime(ahora);
+        var duracionReserva = TimeSpan.FromMinutes(duracionMinutos);
+        var intervaloLlegada = TimeSpan.FromMinutes(intervaloMinutos);
 
         for (var hora = horario.HoraApertura;
-             hora.ToTimeSpan() + DuracionReserva <= horario.HoraCierre.ToTimeSpan();
-             hora = hora.Add(IntervaloLlegada))
+             hora.ToTimeSpan() + duracionReserva <= horario.HoraCierre.ToTimeSpan();
+             hora = hora.Add(intervaloLlegada))
         {
             if (fecha == hoy && hora <= horaActual)
             {
