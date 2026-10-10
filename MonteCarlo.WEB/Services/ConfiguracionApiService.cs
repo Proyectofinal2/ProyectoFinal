@@ -12,17 +12,21 @@ namespace MonteCarlo.WEB.Services;
 public class ConfiguracionApiService(HttpClient httpClient, ILogger<ConfiguracionApiService> logger)
     : IConfiguracionApiService
 {
-    public Task<(bool Success, string Message, UmbralApiResponse? Data)> ObtenerUmbralAsync() =>
-        EjecutarAsync<UmbralApiResponse>(
-            () => httpClient.GetAsync("configuracion/umbral-confirmacion"),
-            "Umbral obtenido.",
-            "No se pudo obtener el umbral. Intenta de nuevo.");
+    public Task<(bool Success, string Message, ConfiguracionGeneralApiResponse? Data)> ObtenerConfiguracionGeneralAsync() =>
+        EjecutarAsync<ConfiguracionGeneralApiResponse>(
+            () => httpClient.GetAsync("configuracion"),
+            "Configuración obtenida.",
+            "No se pudo obtener la configuración. Intenta de nuevo.");
 
-    public Task<(bool Success, string Message, UmbralApiResponse? Data)> ActualizarUmbralAsync(int umbral) =>
-        EjecutarAsync<UmbralApiResponse>(
-            () => httpClient.PutAsJsonAsync("configuracion/umbral-confirmacion", new { umbral }),
-            "El umbral fue actualizado.",
-            "No se pudo actualizar el umbral. Intenta de nuevo.");
+    public Task<(bool Success, string Message, ConfiguracionGeneralApiResponse? Data)> ActualizarConfiguracionGeneralAsync(
+        IEnumerable<(string Clave, string Valor)> cambios) =>
+        EjecutarAsync<ConfiguracionGeneralApiResponse>(
+            () => httpClient.PutAsJsonAsync("configuracion", new
+            {
+                parametros = cambios.Select(c => new { clave = c.Clave, valor = c.Valor })
+            }),
+            "Los cambios fueron guardados.",
+            "No se pudieron guardar los cambios. Intenta de nuevo.");
 
     public Task<(bool Success, string Message, CierresFijosApiResponse? Data)> ObtenerCierresFijosAsync() =>
         EjecutarAsync<CierresFijosApiResponse>(

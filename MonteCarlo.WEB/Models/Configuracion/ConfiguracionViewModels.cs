@@ -2,24 +2,54 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MonteCarlo.WEB.Models.Configuracion;
 
-/// Respuesta de GET api/configuracion/umbral-confirmacion.
-public class UmbralApiResponse
+/// Un parámetro tal como lo devuelve la API, dentro de GET/PUT api/configuracion.
+public class ParametroConfiguracionApiResponse
 {
-    public int Umbral { get; set; }
+    public string Clave { get; set; } = string.Empty;
+    public string Etiqueta { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public string Valor { get; set; } = string.Empty;
     public DateTime? FechaModificacion { get; set; }
     public string? UsuarioModificacion { get; set; }
 }
 
-///HU-CFG-001: formulario del umbral de confirmación automática.
-public class UmbralViewModel
+/// Respuesta de GET/PUT api/configuracion (pantalla dinámica de Parametros): la
+/// lista completa de lo que exista en ConfiguracionSistema, no un set fijo de claves.
+public class ConfiguracionGeneralApiResponse
 {
-    [Display(Name = "Umbral de confirmación automática (personas)")]
-    [Required(ErrorMessage = "Ingresa un valor para el umbral.")]
-    [Range(1, 1000, ErrorMessage = "El umbral debe ser un número entero positivo.")]
-    public int? Umbral { get; set; }
+    public List<ParametroConfiguracionApiResponse> Parametros { get; set; } = [];
+}
 
+/// HU-CFG-001 / HU-CFG-006: un parámetro del sistema en el formulario de Parametros.
+/// Trae su "ValorOriginal" (oculto en la vista) para poder detectar cambios y
+/// enviar a la API solo lo que realmente cambió.
+public class ParametroViewModel
+{
+    public string Clave { get; set; } = string.Empty;
+    public string Etiqueta { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+
+    [Required(ErrorMessage = "Este valor es obligatorio.")]
+    public string Valor { get; set; } = string.Empty;
+
+    public string ValorOriginal { get; set; } = string.Empty;
     public DateTime? FechaModificacion { get; set; }
     public string? UsuarioModificacion { get; set; }
+}
+
+/// Un único formulario con un único botón "Guardar cambios", que se construye
+/// dinámicamente a partir de lo que exista en ConfiguracionSistema.
+public class ParametrosViewModel
+{
+    public List<ParametroViewModel> Parametros { get; set; } = [];
+
+    /// <summary>Compara cada valor contra su "ValorOriginal" y devuelve solo los que
+    /// cambiaron, listos para enviar a la API como PATCH simplificado.</summary>
+    public List<(string Clave, string Valor)> ObtenerCambios() =>
+        Parametros
+            .Where(p => p.Valor != p.ValorOriginal)
+            .Select(p => (p.Clave, p.Valor))
+            .ToList();
 }
 
 /// Respuesta de GET api/cierres-fijos (0=Domingo ... 6=Sábado).

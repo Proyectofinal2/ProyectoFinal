@@ -4,9 +4,12 @@ namespace MonteCarlo.WEB.Services.Interfaces;
 
 public interface IConfiguracionApiService
 {
-    Task<(bool Success, string Message, UmbralApiResponse? Data)> ObtenerUmbralAsync();
+    /// Pantalla única de Parametros: un solo GET, un solo PUT.
+    Task<(bool Success, string Message, ConfiguracionGeneralApiResponse? Data)> ObtenerConfiguracionGeneralAsync();
 
-    Task<(bool Success, string Message, UmbralApiResponse? Data)> ActualizarUmbralAsync(int umbral);
+    /// PATCH simplificado: solo envía los parámetros que cambiaron (ver ParametrosViewModel.ObtenerCambios).
+    Task<(bool Success, string Message, ConfiguracionGeneralApiResponse? Data)> ActualizarConfiguracionGeneralAsync(
+        IEnumerable<(string Clave, string Valor)> cambios);
 
     Task<(bool Success, string Message, CierresFijosApiResponse? Data)> ObtenerCierresFijosAsync();
 

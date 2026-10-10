@@ -1,12 +1,18 @@
 @*
-    HU-CFG-001 — Umbral de confirmación automática de reservas.
+    HU-CFG-001 / HU-CFG-006 - Parametros del sistema.
 
-    Escenario 1  muestra el valor vigente (4 por defecto)
-    Escenario 2  guarda un entero positivo; la API registra fecha y usuario
-                 y solo aplica a reservas creadas de ahí en adelante.
+    Escenario 1  pinta un input por cada fila que exista en ConfiguracionSistema
+                 en ese momento (pantalla dinamica: si se agrega una clave nueva
+                 directo en la base de datos, aparece aqui sin tocar esta vista).
+    Escenario 2  un unico "Guardar cambios", habilitado solo cuando algun valor
+                 cambia respecto al que se cargo (data-mc-enable-on-change); solo
+                 se envian a la API los parametros que realmente cambiaron
+                 (comparados contra ValorOriginal, oculto por cada fila) -- no todos.
+                 La API registra fecha y usuario solo en los que cambiaron, y aplica
+                 solo a lo que se genere de ahi en adelante (reservas/recordatorios nuevos).
 *@
 @using MonteCarlo.WEB.Models.Configuracion
-@model UmbralViewModel
+@model ParametrosViewModel
 @{
     ViewData["Title"] = "Parametros";
     ViewData["Subtitle"] = "Ajusta la operacion del sistema sin cambiar codigo.";
@@ -16,33 +22,52 @@
     <div class="col-lg-8 col-xl-6">
         <div class="card">
             <div class="card-body">
-                <form asp-action="Index" method="post" data-mc-guard-submit novalidate>
+                @if (Model.Parametros.Count == 0)
+                {
+                <p class="text-secondary mb-0">No hay parametros de configuracion registrados.</p>
+                }
+                else
+                {
+                <form asp-action="Index" method="post" data-mc-guard-submit data-mc-enable-on-change novalidate>
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                    <div class="mb-3">
-                        <label asp-for="Umbral" class="form-label mc-required"></label>
-                        <input asp-for="Umbral" type="number" min="1" step="1" class="form-control" />
-                        <div class="form-text">
-                            Las reservas para este numero de personas o menos se confirman solas;
-                            las de mas personas quedan pendientes de revision. El cambio aplica
-                            solo a las reservas nuevas, no a las ya existentes.
-                        </div>
-                        <span asp-validation-for="Umbral" class="text-danger small"></span>
-                    </div>
-
-                    @if (Model.FechaModificacion is { } fecha)
+                    @for (var i = 0; i < Model.Parametros.Count; i++)
                     {
-                    <p class="text-secondary small">
-                        Ultimo cambio: @fecha.ToString("dd/MM/yyyy HH:mm")
-                        @if (!string.IsNullOrWhiteSpace(Model.UsuarioModificacion))
+                        var parametro = Model.Parametros[i];
+                        <input type="hidden" asp-for="Parametros[i].Clave" />
+                        <input type="hidden" asp-for="Parametros[i].Etiqueta" />
+                        <input type="hidden" asp-for="Parametros[i].ValorOriginal" />
+
+                        <div class="mb-4">
+                            <label asp-for="Parametros[i].Valor" class="form-label mc-required">@parametro.Etiqueta</label>
+                            <input asp-for="Parametros[i].Valor" type="text" inputmode="numeric" class="form-control"
+                                   data-mc-original="@parametro.ValorOriginal" />
+                            @if (!string.IsNullOrWhiteSpace(parametro.Descripcion))
                             {
-                        <text>por @Model.UsuarioModificacion</text>
+                            <div class="form-text">@parametro.Descripcion</div>
                             }
-                    </p>
+                            <span asp-validation-for="Parametros[i].Valor" class="text-danger small"></span>
+                            @if (parametro.FechaModificacion is { } fecha)
+                            {
+                            <div class="mc-audit-strip">
+                                <span>
+                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                                    @fecha.ToString("dd/MM/yyyy HH:mm")
+                                </span>
+                                @if (!string.IsNullOrWhiteSpace(parametro.UsuarioModificacion))
+                                {
+                                <span class="mc-audit-strip__usuario">
+                                    <i class="bi bi-person me-1" aria-hidden="true"></i>@parametro.UsuarioModificacion
+                                </span>
+                                }
+                            </div>
+                            }
+                        </div>
                     }
 
-                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    <button type="submit" class="btn btn-primary" disabled>Guardar cambios</button>
                 </form>
+                }
             </div>
         </div>
     </div>

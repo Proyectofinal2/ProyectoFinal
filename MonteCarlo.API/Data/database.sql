@@ -35,6 +35,33 @@
       precio vigente del catalogo).
    8. El chatbot (modulo CHB) reutiliza el motor de reservas
       existente y no requiere tablas propias.
+
+   ------------------------------------------------------------
+   CAMBIOS ADICIONALES (automatizacion de asignacion de mesas
+   por combinacion):
+
+   9. Reserva.IdMesa se elimina. La relacion Reserva-Mesa pasa
+      a ser N*N via la nueva tabla ReservaMesa, ya que una
+      reserva puede necesitar 1 o 2 mesas combinadas (mesas
+      adyacentes). ReservaMesa es la unica fuente de verdad,
+      incluso cuando la reserva usa una sola mesa.
+   10. Nuevas claves en ConfiguracionSistema: DuracionReservaMinutos
+      (duracion estimada de un turno, antes hardcodeada en 90
+      minutos; se usa para solapamiento y disponibilidad),
+      VentanaAlertaReservaProximaMinutos (ventana de bloqueo
+      para no asignar un walk-in a una mesa con una reserva
+      confirmada por llegar), y AnticipacionRecordatorioHoras
+      (HU-CFG-006 / HU-NOT-003, cuanto antes de la reserva se
+      envia el recordatorio al cliente).
+   11. ConfiguracionSistema agrega Etiqueta y Descripcion: la
+      pantalla de Parametros es dinamica (pinta lo que exista
+      en la tabla, sin un set fijo de claves), y estas columnas
+      permiten que una clave nueva traiga su propio nombre
+      amigable y texto de ayuda sin tocar codigo.
+   12. Nueva clave IntervaloCalendarioDisponibilidadMinutos:
+      intervalo entre horarios de llegada ofrecidos en el
+      calendario de disponibilidad (HU-RES-002), antes
+      hardcodeado en 30 minutos en el codigo.
    ============================================================ */
 
 IF DB_ID('MonteCarlo') IS NULL
@@ -54,6 +81,7 @@ IF OBJECT_ID('dbo.TokenRecuperacionContrasena', 'U') IS NOT NULL DROP TABLE dbo.
 IF OBJECT_ID('dbo.ConfiguracionSistema', 'U') IS NOT NULL DROP TABLE dbo.ConfiguracionSistema;
 IF OBJECT_ID('dbo.HistorialCierre', 'U') IS NOT NULL DROP TABLE dbo.HistorialCierre;
 IF OBJECT_ID('dbo.Notificacion', 'U') IS NOT NULL DROP TABLE dbo.Notificacion;
+IF OBJECT_ID('dbo.ReservaMesa', 'U') IS NOT NULL DROP TABLE dbo.ReservaMesa;
 IF OBJECT_ID('dbo.Reserva', 'U') IS NOT NULL DROP TABLE dbo.Reserva;
 IF OBJECT_ID('dbo.CierreEventual', 'U') IS NOT NULL DROP TABLE dbo.CierreEventual;
 IF OBJECT_ID('dbo.CierreFijo', 'U') IS NOT NULL DROP TABLE dbo.CierreFijo;
@@ -231,19 +259,20 @@ GO
         permiten distinguir cancelacion por cliente, por
         administrador, por expiracion automatica o por cierre
         administrativo (y en este ultimo caso, cual).
+   Nota: ya no tiene IdMesa. La mesa (o mesas, si son 2
+        combinadas) se asigna via la tabla ReservaMesa (N*N).
    ------------------------------------------------------------ */
 CREATE TABLE dbo.Reserva (
     IdReserva               INT IDENTITY(1,1) NOT NULL,
     CodigoReserva           NVARCHAR(10)  NOT NULL, -- codigo unico generado por la aplicacion
     IdCliente               INT           NOT NULL,
-    IdMesa                  INT           NULL, -- NULL mientras esta Pendiente o requiere asignacion manual
     IdEstadoReserva         INT           NOT NULL,
     FechaReserva            DATE          NOT NULL,
     HoraReserva             TIME          NOT NULL,
     CantidadPersonas        INT           NOT NULL,
     RequiereAsignacionManual BIT          NOT NULL DEFAULT 0,
     FechaAtencion           DATETIME2     NULL,
-    MotivoCancelacion       NVARCHAR(100) NULL, -- ej: 'Cancelacion por cliente', 'Cancelacion administrativa', 'Cierre administrativo', 'Expiracion automatica'
+    MotivoCancelacion       NVARCHAR(100) NULL, -- ej: 'Cancelacion por cliente', 'Cancelacion administrativa', 'Cierre administrativo', 'Expiracion automatica', 'Liberada sin consumo'
     IdCierreEventual        INT           NULL, -- solo si MotivoCancelacion = 'Cierre administrativo'
     Observaciones           NVARCHAR(300) NULL,
     FechaCreacion           DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
@@ -251,13 +280,29 @@ CREATE TABLE dbo.Reserva (
     CONSTRAINT UQ_Reserva_Codigo UNIQUE (CodigoReserva),
     CONSTRAINT FK_Reserva_Cliente
         FOREIGN KEY (IdCliente) REFERENCES dbo.Cliente (IdCliente),
-    CONSTRAINT FK_Reserva_Mesa
-        FOREIGN KEY (IdMesa) REFERENCES dbo.Mesa (IdMesa),
     CONSTRAINT FK_Reserva_EstadoReserva
         FOREIGN KEY (IdEstadoReserva) REFERENCES dbo.EstadoReserva (IdEstadoReserva),
     CONSTRAINT FK_Reserva_CierreEventual
         FOREIGN KEY (IdCierreEventual) REFERENCES dbo.CierreEventual (IdCierreEventual),
     CONSTRAINT CK_Reserva_CantidadPersonas CHECK (CantidadPersonas > 0)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: ReservaMesa (relacion N*N Reserva-Mesa)
+   Una reserva usa 1 mesa (caso normal) o 2 mesas adyacentes
+   combinadas (grupo que no cabe en una sola mesa). Es la unica
+   fuente de verdad para "que mesa(s) tiene esta reserva" -- no
+   existe una columna IdMesa en Reserva.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.ReservaMesa (
+    IdReserva  INT NOT NULL,
+    IdMesa     INT NOT NULL,
+    CONSTRAINT PK_ReservaMesa PRIMARY KEY (IdReserva, IdMesa),
+    CONSTRAINT FK_ReservaMesa_Reserva
+        FOREIGN KEY (IdReserva) REFERENCES dbo.Reserva (IdReserva),
+    CONSTRAINT FK_ReservaMesa_Mesa
+        FOREIGN KEY (IdMesa) REFERENCES dbo.Mesa (IdMesa)
 );
 GO
 
@@ -317,6 +362,8 @@ GO
 CREATE TABLE dbo.ConfiguracionSistema (
     Clave                  NVARCHAR(50)  NOT NULL,
     Valor                  NVARCHAR(200) NOT NULL,
+    Etiqueta               NVARCHAR(150) NULL, -- nombre amigable para la pantalla de Parametros; si es NULL se muestra la Clave
+    Descripcion            NVARCHAR(300) NULL, -- que almacena y para que se usa, mostrado como texto de ayuda bajo el input
     FechaModificacion      DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
     IdUsuarioModificacion  INT           NULL,
     CONSTRAINT PK_ConfiguracionSistema PRIMARY KEY (Clave),
@@ -403,7 +450,7 @@ GO
    busqueda por codigo, reportes)
    ------------------------------------------------------------ */
 CREATE INDEX IX_Reserva_FechaHora ON dbo.Reserva (FechaReserva, HoraReserva);
-CREATE INDEX IX_Reserva_Mesa ON dbo.Reserva (IdMesa);
+CREATE INDEX IX_ReservaMesa_Mesa ON dbo.ReservaMesa (IdMesa);
 CREATE INDEX IX_Notificacion_Reserva ON dbo.Notificacion (IdReserva);
 CREATE INDEX IX_Venta_Fecha ON dbo.Venta (FechaVenta);
 CREATE INDEX IX_Venta_Tipo ON dbo.Venta (TipoVenta);
@@ -437,13 +484,44 @@ INSERT INTO dbo.MetodoPago (Nombre) VALUES
 GO
 
 /* ------------------------------------------------------------
-   Datos base: umbral de confirmacion automatica (HU-CFG-001)
-   Valor inicial de 4 personas, tal como indica el flujo.
-   IdUsuarioModificacion queda NULL porque este valor inicial
-   no fue modificado por ningun administrador.
+   Datos base: parametros de ConfiguracionSistema.
+   IdUsuarioModificacion queda NULL porque estos valores
+   iniciales no fueron modificados por ningun administrador.
+
+   - UmbralConfirmacionAutomatica (HU-CFG-001): 4 personas.
+   - DuracionReservaMinutos (HU-CFG-006): duracion estimada de
+     un turno/reserva, antes hardcodeada en el codigo. Se usa
+     para detectar solapamiento entre reservas de una misma
+     mesa y para el calculo de disponibilidad del calendario.
+   - VentanaAlertaReservaProximaMinutos: ventana de bloqueo
+     para asignacion de walk-ins -- no se sienta a un cliente
+     sin reserva en una mesa cuya proxima reserva confirmada
+     esta a punto de llegar. Independiente de
+     DuracionReservaMinutos (deliberadamente mas corta).
+   - AnticipacionRecordatorioHoras (HU-CFG-006 / HU-NOT-003):
+     cuantas horas antes de la reserva se envia el recordatorio
+     automatico al cliente.
+   - IntervaloCalendarioDisponibilidadMinutos (HU-RES-002): cada
+     cuantos minutos se ofrece un horario de llegada seleccionable
+     en el calendario de disponibilidad (antes hardcodeado en 30
+     minutos en el codigo).
    ------------------------------------------------------------ */
-INSERT INTO dbo.ConfiguracionSistema (Clave, Valor) VALUES
-    ('UmbralConfirmacionAutomatica', '4');
+INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Etiqueta, Descripcion) VALUES
+    ('UmbralConfirmacionAutomatica', '4',
+        'Umbral de confirmación automática',
+        'Cantidad de personas a partir de la cual una reserva nueva queda Pendiente de revisión en vez de confirmarse sola.'),
+    ('DuracionReservaMinutos', '90',
+        'Duración de reserva (minutos)',
+        'Tiempo estimado que ocupa una reserva en su mesa. Se usa para detectar solapamiento entre reservas y para el cálculo de disponibilidad del calendario.'),
+    ('VentanaAlertaReservaProximaMinutos', '30',
+        'Ventana de alerta de reserva próxima (minutos)',
+        'Minutos antes de una reserva confirmada en los que la mesa deja de poder asignarse a un walk-in sin reserva. Independiente de la duración de reserva.'),
+    ('AnticipacionRecordatorioHoras', '24',
+        'Anticipación del recordatorio (horas)',
+        'Horas antes de la reserva en que se envía el recordatorio automático al cliente.'),
+    ('IntervaloCalendarioDisponibilidadMinutos', '30',
+        'Intervalo del calendario de disponibilidad (minutos)',
+        'Cada cuántos minutos se muestra un horario de llegada seleccionable en el calendario de disponibilidad.');
 GO
 
 
@@ -453,7 +531,7 @@ GO
    administrador puede existir todavia para crearla desde el
    sistema.
  
-   IMPORTANTE: 'CAMBIAR_ESTE_HASH' es un marcador, NO una
+   IMPORTANTE: Contransena de prueba es 'Test@123' es un marcador, NO una
    contrasena en texto plano ni un hash valido. Antes de usar
    esta cuenta, la aplicacion debe generar un hash real (ej.
    bcrypt) para una contrasena definida por el equipo y
@@ -461,5 +539,5 @@ GO
    ambiente real sin hacerlo primero.
    ------------------------------------------------------------ */
 INSERT INTO dbo.Usuario (NombreUsuario, NombreCompleto, CorreoElectronico, ContrasenaHash, Rol) VALUES
-    ('admin', 'Administrador General', 'admin@miradormontecarlo.com', 'CAMBIAR_ESTE_HASH', 'General');
+    ('admin', 'Administrador General', 'admin@miradormontecarlo.com', '$2a$11$uq75mtIS2h2j4frwtVXWqehailPBy18igZljAHV0FKwDgWNHsmp0W', 'General');
 GO
