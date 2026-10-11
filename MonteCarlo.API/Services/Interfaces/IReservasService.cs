@@ -19,4 +19,13 @@ public interface IReservasService
     /// o RN-02 si lo supera. Genera el código único y devuelve los detalles.
     /// </summary>
     Task<Result<ReservaResponse>> CrearAsync(CrearReservaRequest request);
+
+    /// <summary>HU-MES-005/006: sugiere la mejor asignación de mesa para una reserva existente, sin aplicarla.</summary>
+    Task<Result<AsignacionSugeridaResponse>> SugerirAsignacionPorReservaAsync(int idReserva);
+
+    /// <summary>
+    /// HU-MES-005/006 (gap #1) y reasignación de una reserva ya Confirmada (gap #7):
+    /// aplica 1 o 2 mesas elegidas por el admin, validando capacidad y solapamiento.
+    /// </summary>
+    Task<Result<AsignacionMesaResponse>> AsignarMesaAsync(int idReserva, List<int> idsMesa);
 }

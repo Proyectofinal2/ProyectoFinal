@@ -24,6 +24,7 @@ public class MonteCarloDbContext : DbContext
     public DbSet<CierreFijo> CierresFijos => Set<CierreFijo>();
     public DbSet<CierreEventual> CierresEventuales => Set<CierreEventual>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
+    public DbSet<ReservaMesa> ReservasMesa => Set<ReservaMesa>();
     public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
     public DbSet<HistorialCierre> HistorialCierres => Set<HistorialCierre>();
     public DbSet<ConfiguracionSistema> ConfiguracionesSistema => Set<ConfiguracionSistema>();
@@ -48,6 +49,7 @@ public class MonteCarloDbContext : DbContext
         ConfigurarCierreFijo(modelBuilder);
         ConfigurarCierreEventual(modelBuilder);
         ConfigurarReserva(modelBuilder);
+        ConfigurarReservaMesa(modelBuilder);
         ConfigurarNotificacion(modelBuilder);
         ConfigurarHistorialCierre(modelBuilder);
         ConfigurarConfiguracionSistema(modelBuilder);
@@ -93,6 +95,8 @@ public class MonteCarloDbContext : DbContext
             entity.HasIndex(e => e.NumeroMesa).IsUnique().HasDatabaseName("UQ_Mesa_Numero");
 
             entity.Property(e => e.Estado).HasMaxLength(20).IsRequired().HasDefaultValue("Disponible");
+            entity.Property(e => e.PosX).HasDefaultValue(0);
+            entity.Property(e => e.PosY).HasDefaultValue(0);
         });
     }
 
@@ -208,7 +212,6 @@ public class MonteCarloDbContext : DbContext
             entity.HasKey(e => e.IdReserva).HasName("PK_Reserva");
             entity.HasIndex(e => e.CodigoReserva).IsUnique().HasDatabaseName("UQ_Reserva_Codigo");
             entity.HasIndex(e => new { e.FechaReserva, e.HoraReserva }).HasDatabaseName("IX_Reserva_FechaHora");
-            entity.HasIndex(e => e.IdMesa).HasDatabaseName("IX_Reserva_Mesa");
 
             entity.Property(e => e.CodigoReserva).HasMaxLength(10).IsRequired();
             entity.Property(e => e.RequiereAsignacionManual).HasDefaultValue(false);
@@ -222,12 +225,6 @@ public class MonteCarloDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Reserva_Cliente");
 
-            entity.HasOne(e => e.Mesa)
-                .WithMany(m => m.Reservas)
-                .HasForeignKey(e => e.IdMesa)
-                .OnDelete(DeleteBehavior.Restrict)
-                .HasConstraintName("FK_Reserva_Mesa");
-
             entity.HasOne(e => e.EstadoReserva)
                 .WithMany(s => s.Reservas)
                 .HasForeignKey(e => e.IdEstadoReserva)
@@ -239,6 +236,28 @@ public class MonteCarloDbContext : DbContext
                 .HasForeignKey(e => e.IdCierreEventual)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Reserva_CierreEventual");
+        });
+    }
+
+    private static void ConfigurarReservaMesa(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ReservaMesa>(entity =>
+        {
+            entity.ToTable("ReservaMesa");
+            entity.HasKey(e => new { e.IdReserva, e.IdMesa }).HasName("PK_ReservaMesa");
+            entity.HasIndex(e => e.IdMesa).HasDatabaseName("IX_ReservaMesa_Mesa");
+
+            entity.HasOne(e => e.Reserva)
+                .WithMany(r => r.ReservaMesas)
+                .HasForeignKey(e => e.IdReserva)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ReservaMesa_Reserva");
+
+            entity.HasOne(e => e.Mesa)
+                .WithMany(m => m.ReservaMesas)
+                .HasForeignKey(e => e.IdMesa)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_ReservaMesa_Mesa");
         });
     }
 

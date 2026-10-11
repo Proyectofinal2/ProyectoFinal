@@ -130,6 +130,8 @@ CREATE TABLE dbo.Mesa (
     NumeroMesa INT           NOT NULL,
     Capacidad  INT           NOT NULL,
     Estado     NVARCHAR(20)  NOT NULL DEFAULT 'Disponible',
+    PosX       INT           NOT NULL DEFAULT 0, -- posicion en el canvas del editor visual de mesas
+    PosY       INT           NOT NULL DEFAULT 0,
     CONSTRAINT PK_Mesa PRIMARY KEY (IdMesa),
     CONSTRAINT UQ_Mesa_Numero UNIQUE (NumeroMesa),
     CONSTRAINT CK_Mesa_Capacidad CHECK (Capacidad > 0)
@@ -472,6 +474,19 @@ INSERT INTO dbo.EstadoReserva (Nombre, Descripcion) VALUES
     ('Cancelada',  'Reserva cancelada por el cliente, el administrador o un cierre administrativo'),
     ('Finalizada', 'Cliente atendido, reserva completada'),
     ('No Show',    'Cliente no se presento en el horario reservado');
+GO
+
+/* ------------------------------------------------------------
+   Datos de prueba: mesas (posiciones en una grilla arbitraria
+   del canvas, pensadas para dejar pares adyacentes cercanos:
+   1-2, 3-4, 6-7 quedan a <= 120px entre sí para probar
+   combinacion de 2 mesas; 5 y 8 quedan aisladas).
+   ------------------------------------------------------------ */
+INSERT INTO dbo.Mesa (NumeroMesa, Capacidad, Estado, PosX, PosY) VALUES
+    (1, 2, 'Disponible',   0,   0),
+    (2, 2, 'Disponible', 100,   0),
+    (3, 4, 'Disponible',   0, 150),
+    (4, 4, 'Disponible', 100, 150)
 GO
 
 /* ------------------------------------------------------------

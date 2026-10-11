@@ -57,3 +57,73 @@ Content-Type: application/json
 }
 
 ###
+
+### Sección 4 (plan combinación de mesas): login admin, usado por las llamadas de abajo
+# @name login
+POST {{MonteCarlo.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usuario": "marcela.pozo@montecarlo.com",
+  "contrasena": "Test@123"
+}
+
+###
+
+### HU-RES-003: crear una reserva de prueba para 8 personas.
+# Con el seed real (mesas 1-2 cap. 2, 3-4 cap. 4), la única forma de cubrir 8 es la
+# combinación 3+4 (4+4=8). Si tu umbral configurado es >= 8, CrearAsync la asigna sola
+# y queda Confirmada (probás entonces la REASIGNACIÓN, gap #7, en la llamada de abajo);
+# si tu umbral es < 8, queda Pendiente y probás la PRIMERA asignación manual (gap #1).
+# Cualquiera de los dos casos es válido para validar el endpoint de abajo.
+POST {{MonteCarlo.API_HostAddress}}/api/reservas
+Content-Type: application/json
+
+{
+  "nombre": "Prueba Seccion 4",
+  "telefono": "88880000",
+  "cantidadPersonas": 8,
+  "fechaReserva": "2026-11-02",
+  "horaReserva": "19:00"
+}
+
+###
+
+### IMPORTANTE: CrearAsync solo devuelve CodigoReserva (nunca IdReserva -- no hay endpoint
+# admin para buscar por codigo y obtener el id, eso depende de HU-OPE-002 / sección 2, sin
+# empezar). Para probar los endpoints de abajo, buscá el IdReserva en la base de datos:
+# SELECT IdReserva FROM dbo.Reserva WHERE CodigoReserva = 'MC-XXXXX';
+# y reemplazá el 1 de abajo por ese valor.
+@idReserva = 1
+
+### Sección 4: sugerencia de asignación para esa reserva (requiere login)
+GET {{MonteCarlo.API_HostAddress}}/api/reservas/{{idReserva}}/sugerencia-mesa
+Authorization: Bearer {{login.response.body.$.data.token}}
+
+###
+
+### Sección 4: asignar manualmente mesas 3 y 4 (cap. 4 c/u, adyacentes) a esa reserva
+POST {{MonteCarlo.API_HostAddress}}/api/reservas/{{idReserva}}/asignar-mesa
+Authorization: Bearer {{login.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "idsMesa": [3, 4]
+}
+
+###
+
+### Sección 4: reasignar la misma reserva (gap #7) a una sola mesa en vez de la combinación.
+# Con el seed de 4 mesas no hay ninguna individual con capacidad >= 8, así que esta llamada
+# debe rechazarse con 400 ("capacidad combinada no alcanza") -- es el comportamiento esperado,
+# no un error. Para probar una reasignación exitosa, agregá una mesa de mayor capacidad al
+# seed y reemplazá el Id de abajo.
+POST {{MonteCarlo.API_HostAddress}}/api/reservas/{{idReserva}}/asignar-mesa
+Authorization: Bearer {{login.response.body.$.data.token}}
+Content-Type: application/json
+
+{
+  "idsMesa": [4]
+}
+
+###

@@ -9,9 +9,15 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
     public Task<Reserva?> ObtenerPorCodigoAsync(string codigo) =>
         context.Reservas
             .Include(r => r.Cliente)
-            .Include(r => r.Mesa)
+            .Include(r => r.ReservaMesas)
             .Include(r => r.EstadoReserva)
             .FirstOrDefaultAsync(r => r.CodigoReserva == codigo);
+
+    public Task<Reserva?> ObtenerPorIdAsync(int id) =>
+        context.Reservas
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas)
+            .FirstOrDefaultAsync(r => r.IdReserva == id);
 
     public Task<EstadoReserva?> ObtenerEstadoAsync(string nombre) =>
         context.EstadosReserva.FirstOrDefaultAsync(e => e.Nombre == nombre);

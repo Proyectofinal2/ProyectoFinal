@@ -11,8 +11,6 @@ public class Reserva
     public string CodigoReserva { get; set; } = null!;
     public int IdCliente { get; set; }
 
-    /// <summary>NULL mientras esta Pendiente o requiere asignacion manual.</summary>
-    public int? IdMesa { get; set; }
     public int IdEstadoReserva { get; set; }
     public DateOnly FechaReserva { get; set; }
     public TimeOnly HoraReserva { get; set; }
@@ -33,9 +31,9 @@ public class Reserva
     public DateTime FechaCreacion { get; set; }
 
     public Cliente Cliente { get; set; } = null!;
-    public Mesa? Mesa { get; set; }
     public EstadoReserva EstadoReserva { get; set; } = null!;
     public CierreEventual? CierreEventual { get; set; }
     public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
     public ICollection<Venta> Ventas { get; set; } = new List<Venta>();
+    public ICollection<ReservaMesa> ReservaMesas { get; set; } = new List<ReservaMesa>();
 }

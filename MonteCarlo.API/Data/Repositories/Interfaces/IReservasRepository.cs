@@ -7,6 +7,9 @@ public interface IReservasRepository
     /// <summary>Reserva con cliente, mesa y estado cargados (entidad rastreada).</summary>
     Task<Reserva?> ObtenerPorCodigoAsync(string codigo);
 
+    /// <summary>Reserva por Id (entidad rastreada), para las acciones administrativas de asignación de mesa.</summary>
+    Task<Reserva?> ObtenerPorIdAsync(int id);
+
     Task<EstadoReserva?> ObtenerEstadoAsync(string nombre);
 
     Task<List<byte>> ObtenerDiasCierreFijoAsync();
