@@ -210,11 +210,16 @@ public class MonteCarloDbContext : DbContext
             entity.ToTable("Reserva", t => t.HasCheckConstraint(
                 "CK_Reserva_CantidadPersonas", "CantidadPersonas > 0"));
             entity.HasKey(e => e.IdReserva).HasName("PK_Reserva");
-            entity.HasIndex(e => e.CodigoReserva).IsUnique().HasDatabaseName("UQ_Reserva_Codigo");
+            // Filtrado: un walk-in (EsWalkIn) no tiene CodigoReserva, y SQL Server solo
+            // permite un NULL en un indice unico comun -- el filtro deja pasar varios walk-ins.
+            entity.HasIndex(e => e.CodigoReserva).IsUnique()
+                .HasFilter("[CodigoReserva] IS NOT NULL")
+                .HasDatabaseName("UQ_Reserva_Codigo");
             entity.HasIndex(e => new { e.FechaReserva, e.HoraReserva }).HasDatabaseName("IX_Reserva_FechaHora");
 
-            entity.Property(e => e.CodigoReserva).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.CodigoReserva).HasMaxLength(10);
             entity.Property(e => e.RequiereAsignacionManual).HasDefaultValue(false);
+            entity.Property(e => e.EsWalkIn).HasDefaultValue(false);
             entity.Property(e => e.MotivoCancelacion).HasMaxLength(100);
             entity.Property(e => e.Observaciones).HasMaxLength(300);
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("SYSDATETIME()");

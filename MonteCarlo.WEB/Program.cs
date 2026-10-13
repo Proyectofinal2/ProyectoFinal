@@ -6,6 +6,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Canvas de mesas (HU-MES/HU-OPE-004): fetch() desde el navegador manda el token
+// antiforgery por header en vez de por campo de formulario -- primer uso de este
+// patron AJAX en el proyecto.
+builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+
 // Agregar autenticación por cookies
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
@@ -46,6 +51,15 @@ builder.Services
 // HU-CFG-001 y HU-CFG-002: configuración (umbral y cierres fijos), requiere token.
 builder.Services
     .AddHttpClient<IConfiguracionApiService, ConfiguracionApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
+// HU-MES-001/002/003/006 y HU-OPE-004: canvas de mesas, requiere token.
+builder.Services
+    .AddHttpClient<IMesasApiService, MesasApiService>(client =>
     {
         client.BaseAddress = new Uri(
             builder.Configuration["ApiSettings:BaseUrl"]!);

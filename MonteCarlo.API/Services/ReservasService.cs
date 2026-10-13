@@ -14,6 +14,11 @@ public class ReservasService(
     private const string Pendiente = "Pendiente";
     private const string Confirmada = "Confirmada";
     private const string Cancelada = "Cancelada";
+    private const string Finalizada = "Finalizada";
+    private const string Deshabilitada = "Deshabilitada";
+
+    /// <summary>Telefono del cliente centinela "Walk-in" sembrado en database.sql -- nunca una persona real.</summary>
+    private const string TelefonoClienteWalkIn = "00000000";
 
     // Alfabeto sin vocales para evitar palabras ofensivas accidentales.
     private const string AlfabetoCodigo = "BCDFGHJKLMNPQRSTVWXYZ23456789";
@@ -150,6 +155,11 @@ public class ReservasService(
 
         // ---------- Buscar o crear el cliente ----------
         var telefono = request.Telefono.Trim();
+        if (telefono == TelefonoClienteWalkIn)
+        {
+            return Result<ReservaResponse>.BadRequest("El telefono ingresado no es valido.");
+        }
+
         var cliente = await clientesRepository.ObtenerPorTelefonoAsync(telefono);
 
         if (cliente is null)
@@ -235,15 +245,10 @@ public class ReservasService(
     // Métodos auxiliares
     // ============================================================
 
-    // ============================================================
-    // Sección 4 del plan: endpoints de asignación/reasignación manual de mesa
-    // (HU-MES-005/006, gap #1 y gap #7). Usan el mismo algoritmo en memoria
-    // de la sección 3 (BuscarMejorAsignacion).
-    // ============================================================
+    // HU-MES-005/006: asignación/reasignación manual de mesa, usando el
+    // mismo algoritmo en memoria de la sección 3 (BuscarMejorAsignacion).
 
-    /// <summary>
-    /// Sugiere la mejor asignación de mesa para una reserva existente, sin aplicarla.
-    /// </summary>
+    /// <summary>Sugiere la mejor asignación de mesa para una reserva existente, sin aplicarla.</summary>
     public async Task<Result<AsignacionSugeridaResponse>> SugerirAsignacionPorReservaAsync(int idReserva)
     {
         var reserva = await reservasRepository.ObtenerPorIdAsync(idReserva);
@@ -266,14 +271,7 @@ public class ReservasService(
         }, "Sugerencia calculada.");
     }
 
-    /// <summary>
-    /// Asigna o reasigna manualmente 1 o 2 mesas a una reserva. Cubre tanto la primera
-    /// asignación (HU-MES-005, reserva Pendiente) como la reasignación de una reserva ya
-    /// Confirmada (gap #7) -- bloqueada si el cliente ya fue atendido (FechaAtencion != null).
-    /// A diferencia de <see cref="BuscarMejorAsignacion"/> (automático), aquí NO se valida
-    /// adyacencia entre las mesas elegidas: es una decisión manual del admin, que conoce
-    /// el layout real y puede necesitar combinar mesas que el algoritmo no sugeriría.
-    /// </summary>
+    /// <summary>Asigna/reasigna 1 o 2 mesas a mano; a diferencia del algoritmo, no valida adyacencia.</summary>
     public async Task<Result<AsignacionMesaResponse>> AsignarMesaAsync(int idReserva, List<int> idsMesa)
     {
         if (idsMesa is not { Count: 1 or 2 })
@@ -302,6 +300,12 @@ public class ReservasService(
         if (mesas.Count != idsMesa.Count)
         {
             return Result<AsignacionMesaResponse>.BadRequest("Una o mas mesas indicadas no existen.");
+        }
+
+        var mesaDeshabilitada = mesas.FirstOrDefault(m => m.Estado == Deshabilitada);
+        if (mesaDeshabilitada is not null)
+        {
+            return Result<AsignacionMesaResponse>.BadRequest($"La mesa {mesaDeshabilitada.NumeroMesa} esta deshabilitada.");
         }
 
         if (mesas.Sum(m => m.Capacidad) < reserva.CantidadPersonas)
@@ -346,10 +350,143 @@ public class ReservasService(
         }, "Mesa asignada correctamente.");
     }
 
-    /// <summary>
-    /// Quita, de los datos ya cargados, la propia reserva en reasignación -- si no se excluyera,
-    /// su propia hora reservada haría que sus mesas actuales parezcan ocupadas por sí mismas.
-    /// </summary>
+    // HU-OPE-004: asignar sin reserva (walk-in), reutilizando el
+    // algoritmo de la sección 3 -- un walk-in es una Reserva más.
+
+    public async Task<Result<AsignacionSugeridaResponse>> SugerirWalkInAsync(int cantidadPersonas)
+    {
+        if (cantidadPersonas <= 0)
+        {
+            return Result<AsignacionSugeridaResponse>.BadRequest("La cantidad de personas debe ser mayor que cero.");
+        }
+
+        var ahora = DateTime.Now;
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var datosMesas = await CargarMesasConReservasDelDiaAsync(DateOnly.FromDateTime(ahora));
+        var resultado = BuscarMejorAsignacion(cantidadPersonas, TimeOnly.FromDateTime(ahora), duracionMinutos, datosMesas);
+
+        return Result<AsignacionSugeridaResponse>.Ok(new AsignacionSugeridaResponse
+        {
+            NumerosMesa = resultado.Mesas.Select(m => m.NumeroMesa).ToList(),
+            EsCombinacionDeMesas = resultado.EsCombinacionDeMesas,
+            RequiereRevisionManual = resultado.RequiereManual
+        }, "Sugerencia calculada.");
+    }
+
+    public async Task<Result<ReservaWalkInResponse>> CrearWalkInAsync(CrearReservaWalkInRequest request)
+    {
+        if (request.CantidadPersonas <= 0)
+        {
+            return Result<ReservaWalkInResponse>.BadRequest("La cantidad de personas debe ser mayor que cero.");
+        }
+
+        if (request.IdsMesa is not { Count: 1 or 2 })
+        {
+            return Result<ReservaWalkInResponse>.BadRequest("Debes indicar 1 o 2 mesas.");
+        }
+
+        var clienteWalkIn = await clientesRepository.ObtenerPorTelefonoAsync(TelefonoClienteWalkIn);
+        if (clienteWalkIn is null)
+        {
+            return Result<ReservaWalkInResponse>.InternalError(
+                "El cliente centinela \"Walk-in\" no esta sembrado en la base de datos.");
+        }
+
+        var mesas = await mesasRepository.ObtenerPorIdsAsync(request.IdsMesa);
+        if (mesas.Count != request.IdsMesa.Count)
+        {
+            return Result<ReservaWalkInResponse>.BadRequest("Una o mas mesas indicadas no existen.");
+        }
+
+        var mesaDeshabilitada = mesas.FirstOrDefault(m => m.Estado == Deshabilitada);
+        if (mesaDeshabilitada is not null)
+        {
+            return Result<ReservaWalkInResponse>.BadRequest($"La mesa {mesaDeshabilitada.NumeroMesa} esta deshabilitada.");
+        }
+
+        if (mesas.Sum(m => m.Capacidad) < request.CantidadPersonas)
+        {
+            return Result<ReservaWalkInResponse>.BadRequest(
+                "La capacidad combinada de las mesas elegidas no alcanza para la cantidad de personas.");
+        }
+
+        var ahora = DateTime.Now;
+        var hoy = DateOnly.FromDateTime(ahora);
+        var horaActual = TimeOnly.FromDateTime(ahora);
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var horasReservadas = await mesasRepository.ObtenerHorasReservadasPorFechaAsync(hoy);
+
+        var mesaOcupada = mesas.FirstOrDefault(m => !EstaLibre(m, horasReservadas, horaActual, duracionMinutos));
+        if (mesaOcupada is not null)
+        {
+            return Result<ReservaWalkInResponse>.Conflict(
+                $"La mesa {mesaOcupada.NumeroMesa} ya tiene otra reserva activa que se solapa con este horario.");
+        }
+
+        var estadoConfirmada = await reservasRepository.ObtenerEstadoAsync(Confirmada);
+        if (estadoConfirmada is null)
+        {
+            return Result<ReservaWalkInResponse>.InternalError("El estado \"Confirmada\" no esta configurado.");
+        }
+
+        // FechaAtencion = ahora: a diferencia de una reserva normal (sin flujo de check-in
+        // todavia, HU-OPE-003), un walk-in esta sentado desde el momento en que se crea.
+        var reserva = new Reserva
+        {
+            IdCliente = clienteWalkIn.IdCliente,
+            IdEstadoReserva = estadoConfirmada.IdEstadoReserva,
+            FechaReserva = hoy,
+            HoraReserva = horaActual,
+            CantidadPersonas = request.CantidadPersonas,
+            EsWalkIn = true,
+            FechaAtencion = ahora,
+            FechaCreacion = ahora
+        };
+
+        foreach (var mesa in mesas)
+        {
+            reserva.ReservaMesas.Add(new ReservaMesa { IdMesa = mesa.IdMesa });
+        }
+
+        reservasRepository.Agregar(reserva);
+        await reservasRepository.GuardarCambiosAsync();
+
+        return Result<ReservaWalkInResponse>.Ok(new ReservaWalkInResponse
+        {
+            IdReserva = reserva.IdReserva,
+            NumerosMesa = mesas.Select(m => m.NumeroMesa).ToList(),
+            EsCombinacionDeMesas = mesas.Count > 1
+        }, "Cliente sentado correctamente.");
+    }
+
+    /// <summary>Gap #5: solo para el abandono sin consumo -- el cierre con cobro pasa por HU-CON-002.</summary>
+    public async Task<Result> LiberarMesaAsync(int idMesa)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        var reserva = await reservasRepository.ObtenerConfirmadaActivaPorMesaAsync(idMesa, hoy);
+        if (reserva is null)
+        {
+            return Result.BadRequest("Esa mesa no tiene ninguna reserva activa que liberar.");
+        }
+
+        var estadoFinalizada = await reservasRepository.ObtenerEstadoAsync(Finalizada);
+        if (estadoFinalizada is null)
+        {
+            return Result.InternalError("El estado \"Finalizada\" no esta configurado.");
+        }
+
+        // Libera TODAS las mesas de esta reserva, no solo la seleccionada -- evita que
+        // una mesa combinada quede "huerfana" marcada Ocupada (gap #5).
+        reserva.EstadoReserva = estadoFinalizada;
+        reserva.ReservaMesas.Clear();
+        reserva.MotivoCancelacion = "Liberada sin consumo";
+
+        await reservasRepository.GuardarCambiosAsync();
+
+        return Result.Ok("Mesa liberada.");
+    }
+
+    /// <summary>Quita la propia reserva de los datos cargados para que no parezca ocupada por sí misma.</summary>
     private static void ExcluirReservaPropia(Dictionary<int, List<TimeOnly>> horasReservadas, Reserva reserva)
     {
         foreach (var reservaMesa in reserva.ReservaMesas)
@@ -361,17 +498,10 @@ public class ReservasService(
         }
     }
 
-    // ============================================================
-    // Sección 3 del plan de combinación de mesas: algoritmo en memoria.
-    // Usado por CrearAsync y por las acciones de asignación de arriba.
-    // ============================================================
+    // Sección 3: algoritmo de combinación de mesas en memoria, usado por
+    // CrearAsync y por las acciones de asignación de arriba.
 
-    /// <summary>
-    /// Carga, en una sola consulta por tabla, todas las mesas disponibles y la
-    /// ocupación activa del día completo -- reutilizable por cualquier consumidor
-    /// del algoritmo (creación de reservas, sugerencia al admin, calendario)
-    /// sin repetir consultas por cada franja horaria.
-    /// </summary>
+    /// <summary>Carga, en una sola consulta por tabla, mesas y ocupación del día (evita N+1 por franja).</summary>
     private async Task<DatosMesasDelDia> CargarMesasConReservasDelDiaAsync(DateOnly fecha)
     {
         var mesas = await mesasRepository.ObtenerMesasHabilitadasAsync();
@@ -380,11 +510,7 @@ public class ReservasService(
         return new DatosMesasDelDia(mesas, horasReservadas);
     }
 
-    /// <summary>
-    /// RN-01 / RN-03: 1 mesa individual de menor capacidad que alcance; si ninguna
-    /// alcanza sola, el par de mesas adyacentes de menor capacidad combinada que
-    /// alcance (nunca 3+). Opera sobre datos ya cargados en memoria.
-    /// </summary>
+    /// <summary>RN-01/RN-03: mesa individual que alcance, o par adyacente de menor capacidad (nunca 3+).</summary>
     private static AsignacionResult BuscarMejorAsignacion(
         int cantidadPersonas, TimeOnly hora, int duracionMinutos, DatosMesasDelDia datosMesas)
     {
@@ -403,10 +529,7 @@ public class ReservasService(
             : new AsignacionResult([], RequiereManual: true);
     }
 
-    /// <summary>
-    /// Par de mesas adyacentes (por posición en el canvas) con capacidad combinada
-    /// mínima que alcance a cubrir al grupo. Nunca evalúa combinaciones de 3+.
-    /// </summary>
+    /// <summary>Par de mesas adyacentes con capacidad combinada mínima que alcance (nunca 3+).</summary>
     private static List<Mesa>? BuscarMejorParAdyacente(List<Mesa> mesasLibres, int cantidadPersonas)
     {
         List<Mesa>? mejorPar = null;
@@ -440,11 +563,7 @@ public class ReservasService(
 
     private sealed record DatosMesasDelDia(List<Mesa> Mesas, Dictionary<int, List<TimeOnly>> HorasReservadas);
 
-    /// <summary>
-    /// Una mesa está libre a esa hora si no tiene ninguna reserva activa que se solape.
-    /// Único punto de verdad para este chequeo; usado por <see cref="BuscarMejorAsignacion"/>,
-    /// que a su vez decide tanto la creación de reservas como el calendario de disponibilidad.
-    /// </summary>
+    /// <summary>Unico punto de verdad: una mesa esta libre si ninguna reserva activa se solapa a esa hora.</summary>
     private static bool EstaLibre(
         Mesa mesa, Dictionary<int, List<TimeOnly>> horasReservadas, TimeOnly hora, int duracionMinutos) =>
         !horasReservadas.TryGetValue(mesa.IdMesa, out var horas) || !horas.Any(h => SeSolapan(hora, h, duracionMinutos));
@@ -593,7 +712,8 @@ public class ReservasService(
         HoraReserva = reserva.HoraReserva,
         CantidadPersonas = reserva.CantidadPersonas,
         Estado = reserva.EstadoReserva.Nombre,
-        PuedeCancelarse = PuedeCancelarse(reserva)
+        PuedeCancelarse = PuedeCancelarse(reserva),
+        NumerosMesa = reserva.ReservaMesas.Select(rm => rm.Mesa.NumeroMesa).ToList()
     };
 
     private sealed record DatosDisponibilidad(

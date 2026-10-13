@@ -1,9 +1,6 @@
 namespace MonteCarlo.API.Data.Entities;
 
-/// <summary>
-/// Relacion N*N Reserva-Mesa. Una reserva usa 1 mesa (caso normal) o 2 mesas
-/// adyacentes combinadas. Unica fuente de verdad de la asignacion de mesa(s).
-/// </summary>
+/// <summary>Relacion N*N Reserva-Mesa: unica fuente de verdad de la asignacion de mesa(s).</summary>
 public class ReservaMesa
 {
     public int IdReserva { get; set; }

@@ -34,10 +34,7 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
-    /// <summary>
-    /// HU-MES-005/006: asigna o reasigna manualmente 1 o 2 mesas a una reserva
-    /// (aplica tanto a una reserva Pendiente sin mesa como a una Confirmada que se reasigna).
-    /// </summary>
+    /// <summary>HU-MES-005/006: asigna o reasigna manualmente 1 o 2 mesas a una reserva.</summary>
     [Authorize(Roles = "General,Regular")]
     [HttpPost("{id:int}/asignar-mesa")]
     public async Task<IActionResult> AsignarMesa(int id, [FromBody] AsignarMesaRequest request)
@@ -70,6 +67,15 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
     public async Task<IActionResult> Crear([FromBody] CrearReservaRequest request)
     {
         var result = await reservasService.CrearAsync(request);
+        return Responder(result);
+    }
+
+    /// <summary>HU-OPE-004: sienta un cliente sin reserva previa en 1 o 2 mesas elegidas por el admin.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpPost("walkin")]
+    public async Task<IActionResult> CrearWalkIn([FromBody] CrearReservaWalkInRequest request)
+    {
+        var result = await reservasService.CrearWalkInAsync(request);
         return Responder(result);
     }
 

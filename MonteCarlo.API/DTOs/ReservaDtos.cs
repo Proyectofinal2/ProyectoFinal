@@ -12,6 +12,9 @@ public class ReservaResponse
 
     /// <summary>Solo Pendiente y Confirmada pueden cancelarse (HU-RES-005).</summary>
     public bool PuedeCancelarse { get; set; }
+
+    /// <summary>Mesa(s) asignadas; vacio si aun no se asigno (Pendiente/RequiereAsignacionManual).</summary>
+    public List<int> NumerosMesa { get; set; } = [];
 }
 
 public class DisponibilidadFechaResponse
@@ -30,10 +33,7 @@ public class DisponibilidadMesResponse
     public List<DisponibilidadFechaResponse> Fechas { get; set; } = [];
 }
 
-/// <summary>
-/// Resultado del algoritmo de combinacion de mesas (seccion 3 del plan) para una
-/// reserva existente -- GET /api/reservas/{id}/sugerencia-mesa (HU-MES-005/006).
-/// </summary>
+/// <summary>Resultado del algoritmo de combinacion de mesas (HU-MES-005/006), sin aplicar.</summary>
 public class AsignacionSugeridaResponse
 {
     public List<int> NumerosMesa { get; set; } = [];

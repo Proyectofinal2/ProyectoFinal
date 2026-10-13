@@ -42,4 +42,19 @@ public class MesasRepository(MonteCarloDbContext context) : IMesasRepository
             .AsNoTracking()
             .Where(m => idsMesa.Contains(m.IdMesa))
             .ToListAsync();
+
+    public Task<List<Mesa>> ObtenerTodasAsync() =>
+        context.Mesas
+            .AsNoTracking()
+            .OrderBy(m => m.NumeroMesa)
+            .ToListAsync();
+
+    public Task<Mesa?> ObtenerPorIdAsync(int idMesa) =>
+        context.Mesas.FirstOrDefaultAsync(m => m.IdMesa == idMesa);
+
+    public void Agregar(Mesa mesa) => context.Mesas.Add(mesa);
+
+    public void Eliminar(Mesa mesa) => context.Mesas.Remove(mesa);
+
+    public Task GuardarCambiosAsync() => context.SaveChangesAsync();
 }
