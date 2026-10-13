@@ -1,0 +1,589 @@
+@*
+    HU-MES-002 / HU-OPE-004 - Plano del salon (canvas unico, dos modos).
+
+    Replica visual del mockup https://claude.ai/artifact/MVT2wFRJqdTdv7EJSbQSVc#play-15dd8cd198dd,
+    adaptado a JS nativo + fetch contra las acciones JSON de este controlador (que a su vez
+    reenvian a la API). A diferencia del mockup, cada accion persiste de inmediato
+    (sin "Guardar cambios" en lote) -- simplificacion deliberada para esta primera version.
+
+    Modo "Editar salon" (solo rol General, HU-MES-001/002/003/006): crear, arrastrar,
+    cambiar capacidad, habilitar/deshabilitar y eliminar mesas. La logica de negocio
+    de estas acciones (validaciones) vive en MesasService.cs del lado de la API -- ver
+    los comentarios "TODO HU-MES" ahi para el detalle de lo que falta.
+
+    Modo "Atender mesas" (HU-OPE-004, ambos roles): sentar un cliente sin
+    reserva previa en 1 mesa o una combinacion de 2 adyacentes, o liberar una mesa.
+*@
+@using MonteCarlo.WEB.Models.Mesas
+@model MesasIndexViewModel
+@{
+    ViewData["Title"] = "Mesas";
+    ViewData["Subtitle"] = "Plano del salon: distribucion, estado en vivo y asignacion sin reserva.";
+}
+
+@section Styles {
+    <style>
+        .mc-mesas-card { background: #F5F4F1; border-radius: 16px; overflow: hidden; border: 1px solid #E3E1DB; }
+
+        .mc-mesas-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; padding: 20px 28px 16px; background: #FFFFFF; border-bottom: 1px solid #E3E1DB; }
+        .mc-mesas-toolbar p { font-size: 14px; color: #6B6862; max-width: 620px; margin: 0; }
+        .mc-mesas-modos { display: flex; gap: 2px; background: #F0EEE8; border-radius: 10px; padding: 3px; flex-shrink: 0; }
+        .mc-mesas-modos button { padding: 8px 14px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #6B6862; transition: background .15s, color .15s; }
+        .mc-mesas-modos button.is-active { background: #FFFFFF; color: #1F1D1A; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+
+        .mc-mesas-buscar { display: none; margin: 16px 28px 0; padding: 12px 16px; background: #FFFFFF; border: 1px solid #E3E1DB; border-radius: 12px; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .mc-mesas-buscar.is-visible { display: flex; }
+        .mc-mesas-buscar .divider { width: 1px; height: 20px; background: #E3E1DB; }
+        .mc-mesas-buscar input[type="number"] { width: 56px; padding: 6px 8px; border-radius: 6px; border: 1px solid #D8D5CE; text-align: center; font-size: 13px; }
+        #mc-buscar-resultado { font-size: 13px; font-weight: 600; }
+        #btn-aceptar-recomendacion { margin-left: auto; padding: 9px 18px; border-radius: 8px; border: none; background: #2F6B4F; color: #fff; font-size: 13px; font-weight: 700; }
+
+        .mc-aviso-liberar { margin: 12px 28px 0; padding: 10px 16px; background: #FBF3E6; border: 1px solid #E8D4AE; border-radius: 10px; font-size: 13px; font-weight: 600; color: #8A6D1F; }
+
+        .mc-mesas-canvas-wrap { position: relative; width: 100%; height: 600px; margin: 20px 28px; border-radius: 16px; background-image: radial-gradient(circle, #DBD8D0 1px, transparent 1px); background-size: 24px 24px; background-color: #FBFAF8; border: 1px solid #E3E1DB; overflow: hidden; user-select: none; width: calc(100% - 56px); }
+
+        .mc-chair { position: absolute; width: 14px; height: 14px; border-radius: 4px; pointer-events: none; }
+
+        .mc-mesa { position: absolute; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,.15), inset 0 0 0 5px rgba(255,255,255,.55); transition: box-shadow .15s; outline-offset: 3px; }
+        .mc-mesa .num { font-size: 16px; font-weight: 700; color: #1F1D1A; line-height: 1.1; }
+        .mc-mesa .etq { font-size: 12px; color: #8A877F; line-height: 1.1; }
+        .mc-mesa.is-recomendada { animation: mcRecoPulse 1.8s ease-out infinite; }
+        @@keyframes mcRecoPulse {
+            0% { box-shadow: 0 0 0 0 rgba(47,107,79,.45), 0 2px 5px rgba(0,0,0,.15), inset 0 0 0 5px rgba(255,255,255,.55); }
+            70% { box-shadow: 0 0 0 12px rgba(47,107,79,0), 0 2px 5px rgba(0,0,0,.15), inset 0 0 0 5px rgba(255,255,255,.55); }
+            100% { box-shadow: 0 0 0 0 rgba(47,107,79,0), 0 2px 5px rgba(0,0,0,.15), inset 0 0 0 5px rgba(255,255,255,.55); }
+        }
+        .mc-mesa-tag { position: absolute; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+        .mc-mesa-badge-icon { position: absolute; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; pointer-events: none; }
+        .mc-mesa-badge-icon.is-reloj { width: 20px; height: 20px; font-size: 11px; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+        .mc-mesa-badge-icon.is-reloj.critica { animation: mcClockPulse 1.4s ease-out infinite; }
+        @@keyframes mcClockPulse {
+            0% { box-shadow: 0 0 0 0 rgba(192,57,43,.55); }
+            70% { box-shadow: 0 0 0 7px rgba(192,57,43,0); }
+            100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+        }
+
+        .mc-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 280px; background: #FFFFFF; border-left: 1px solid #E3E1DB; box-shadow: -8px 0 24px rgba(0,0,0,.08); padding: 20px; display: none; flex-direction: column; gap: 14px; overflow-y: auto; z-index: 5; }
+        .mc-panel.is-open { display: flex; }
+        .mc-panel-header { display: flex; justify-content: space-between; align-items: center; }
+        .mc-panel-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8A877F; }
+        .mc-panel-numero { font-size: 17px; font-weight: 700; color: #1F1D1A; }
+        .mc-panel-badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+        .mc-fab { position: absolute; right: 20px; bottom: 20px; width: 48px; height: 48px; border-radius: 50%; background: #1F1D1A; color: #fff; border: none; font-size: 24px; cursor: pointer; display: none; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+        .mc-fab.is-visible { display: block; }
+        .mc-add-popover { position: absolute; right: 20px; bottom: 80px; width: 220px; background: #fff; border: 1px solid #E3E1DB; border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.16); padding: 16px; display: none; flex-direction: column; gap: 12px; z-index: 6; }
+        .mc-add-popover.is-open { display: flex; }
+
+        .mc-stepper { display: flex; align-items: center; gap: 10px; }
+        .mc-stepper button { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #E3E1DB; background: #F5F4F1; cursor: pointer; font-weight: 700; }
+        .mc-stepper span { min-width: 16px; text-align: center; font-size: 14px; font-weight: 600; }
+
+        .mc-panel-aviso { background: #FBF3E6; border: 1px solid #E8D4AE; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #8A6D1F; margin: 0; }
+        .mc-btn-mant, .mc-btn-eliminar, .mc-btn-liberar, .mc-btn-sentar { width: 100%; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .mc-btn-mant { border: 1px solid #E3E1DB; background: #F5F4F1; color: #1F1D1A; margin: 10px 0;}
+        .mc-btn-mant:disabled { background: #F0EEE8; color: #ADA99F; cursor: not-allowed; }
+        .mc-btn-eliminar { border: 1px solid #E6B4A4; background: #FBEAE4; color: #B8441F; }
+        .mc-btn-eliminar:disabled { border-color: #E3E1DB; background: #F0EEE8; color: #ADA99F; cursor: not-allowed; }
+        .mc-btn-liberar { border: 1px solid #E3E1DB; background: #F5F4F1; color: #6B6862; }
+        .mc-btn-sentar { border: none; background: #1F1D1A; color: #FFFFFF; font-weight: 700; margin: 10px 0px; }
+
+        .mc-leyenda { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #8A877F; padding: 12px 28px 16px; background: #FFFFFF; border-top: 1px solid #E3E1DB; }
+        .mc-leyenda .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+        .mc-leyenda .regla { margin-left: auto; }
+
+        .mc-toast { position: fixed; top: 90px; right: 36px; background: #1F1D1A; color: #fff; font-size: 13px; padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 1050; }
+    </style>
+}
+
+<div class="mc-mesas-card">
+    <div class="mc-mesas-toolbar">
+        <p id="mc-mode-hint"></p>
+        <div class="mc-mesas-modos" id="mc-mode-switch">
+            @if (Model.EsAdministradorGeneral)
+            {
+                <button type="button" data-modo="editar" id="btn-modo-editar">Editar salon</button>
+            }
+            <button type="button" data-modo="asignar" id="btn-modo-asignar">Atender mesas</button>
+        </div>
+    </div>
+
+    <div class="mc-mesas-buscar" id="mc-buscar-bar">
+        <label class="d-flex align-items-center gap-2" style="font-size:13px;color:#6B6862;">
+            Buscar mesa para
+            <input type="number" min="1" max="20" value="2" id="mc-buscar-personas" />
+            persona(s)
+        </label>
+        <div class="divider"></div>
+        <span id="mc-buscar-resultado" role="status"></span>
+        <button type="button" id="btn-aceptar-recomendacion" class="d-none">✓ Aceptar recomendacion</button>
+    </div>
+
+    <div class="mc-aviso-liberar d-none" id="mc-aviso-liberar"></div>
+
+    <div class="mc-mesas-canvas-wrap" id="mc-canvas">
+        <svg id="mc-svg-lineas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></svg>
+        <div id="mc-mesas-layer"></div>
+
+        <div class="d-none" id="mc-canvas-vacio" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;color:#8A877F;pointer-events:none;">
+            <i class="bi bi-grid-3x3-gap" style="font-size:28px;"></i>
+            <span style="font-size:14px;">No hay mesas registradas.</span>
+        </div>
+
+        <div class="mc-panel" id="mc-panel">
+            <div class="mc-panel-header">
+                <div>
+                    <div class="mc-panel-eyebrow">Mesa seleccionada</div>
+                    <div class="mc-panel-numero" id="mc-panel-numero"></div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="mc-panel-badge" id="mc-panel-badge"></span>
+                    <button type="button" class="btn-close" id="btn-cerrar-panel" aria-label="Cerrar"></button>
+                </div>
+            </div>
+            <hr class="m-0" />
+            <div id="mc-panel-body"></div>
+        </div>
+
+        <div class="mc-add-popover" id="mc-add-popover">
+            <div class="d-flex justify-content-between align-items-center">
+                <span style="font-weight:700;font-size:14px;">Nueva mesa</span>
+                <button type="button" class="btn-close" id="btn-cancelar-nueva-mesa" aria-label="Cancelar"></button>
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+                <span style="font-size:13px;color:#6B6862;">Capacidad</span>
+                <div class="mc-stepper">
+                    <button type="button" id="btn-dec-nueva-capacidad">&minus;</button>
+                    <span id="mc-nueva-capacidad">2</span>
+                    <button type="button" id="btn-inc-nueva-capacidad">+</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-dark" id="btn-confirmar-nueva-mesa">Agregar al salon</button>
+        </div>
+
+        <button type="button" class="mc-fab" id="btn-fab-agregar" aria-label="Agregar mesa">+</button>
+    </div>
+
+    <div class="mc-leyenda">
+        <span><span class="dot" style="background:#CFE3C7;border:1px solid #5C9A4A;"></span>Disponible</span>
+        <span><span class="dot" style="background:#E7B3AE;border:1px solid #C0392B;"></span>Ocupada</span>
+        <span><span class="dot" style="background:#F6DFA3;border:1px solid #C98A1E;"></span>Reserva proxima</span>
+        <span><span class="dot" style="background:#D8D5CE;border:1px solid #ADA99F;"></span>En mantenimiento</span>
+        <span><span class="dot" style="background:transparent;border:2px dashed #6A93C7;"></span>Anillo azul = adyacente/seleccionada</span>
+        <span>🔗 Mesas combinadas para un mismo grupo</span>
+        <span>⏰ Ocupada con otra reserva por llegar (ambar = pronto, rojo = limite)</span>
+        <span class="regla">Regla: 1 mesa o combinacion de 2 adyacentes = automatico; 3+ requiere revision manual.</span>
+    </div>
+</div>
+
+<form id="mc-antiforgery-form">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const esAdministradorGeneral = @Html.Raw(Model.EsAdministradorGeneral ? "true" : "false");
+            const token = document.querySelector('#mc-antiforgery-form input[name="__RequestVerificationToken"]').value;
+            const RADIO_ADYACENCIA = 200;
+
+            // Igual que el mockup: arranca en "Editar salon" para quien pueda verlo.
+            let modo = esAdministradorGeneral ? "editar" : "asignar";
+            let mesas = [];
+            let seleccionadaId = null;
+            let recomendadas = [];
+            let recomendacionIds = [];
+
+            async function llamar(url, metodo, cuerpo) {
+                const resp = await fetch(url, {
+                    method: metodo,
+                    headers: { "Content-Type": "application/json", "RequestVerificationToken": token },
+                    body: cuerpo ? JSON.stringify(cuerpo) : undefined
+                });
+                return resp.json();
+            }
+
+            function toast(mensaje) {
+                if (!mensaje) return;
+                const el = document.createElement("div");
+                el.className = "mc-toast";
+                el.textContent = mensaje;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 2500);
+            }
+
+            function sizeFor(capacidad) { return 64 + Math.min(capacidad, 10) * 9; }
+
+            function colorFor(mesa) {
+                if (mesa.estado === "Deshabilitada") return { bg: "#D8D5CE", border: "#ADA99F", chair: "#CFCCC4" };
+                if (mesa.estado === "Ocupada") return { bg: "#E7B3AE", border: "#C0392B", chair: "#DFA09A" };
+                if (mesa.esProxima) return { bg: "#F6DFA3", border: "#C98A1E", chair: "#F0CE86" };
+                return { bg: "#CFE3C7", border: "#5C9A4A", chair: "#B9D7AD" };
+            }
+
+            function sonAdyacentes(a, b) {
+                const sa = sizeFor(a.capacidad), sb = sizeFor(b.capacidad);
+                const dx = (a.posX + sa / 2) - (b.posX + sb / 2);
+                const dy = (a.posY + sa / 2) - (b.posY + sb / 2);
+                return Math.hypot(dx, dy) <= RADIO_ADYACENCIA;
+            }
+
+            async function cargarMesas() {
+                const r = await llamar(`/admin/mesas/listado?incluirDeshabilitadas=${modo === "editar"}`, "GET");
+                mesas = r.success ? (r.data || []) : [];
+                if (!r.success) toast(r.message || "No se pudieron cargar las mesas.");
+                renderizar();
+                renderizarAvisoLiberar();
+                renderizarEstadoVacio();
+            }
+
+            // HU-MES-002, escenario 2: sin mesas registradas, mensaje informativo.
+            function renderizarEstadoVacio() {
+                const vacio = document.getElementById("mc-canvas-vacio");
+                vacio.classList.toggle("d-none", mesas.length > 0);
+            }
+
+            function renderizarAvisoLiberar() {
+                const aviso = document.getElementById("mc-aviso-liberar");
+                if (modo !== "asignar") { aviso.classList.add("d-none"); return; }
+                const porLiberar = mesas.filter(m => m.minutosHastaSiguienteReserva != null);
+                if (porLiberar.length === 0) { aviso.classList.add("d-none"); return; }
+                aviso.textContent = "⚠ " + (porLiberar.length === 1
+                    ? "1 mesa debe liberarse pronto para su proxima reserva."
+                    : porLiberar.length + " mesas deben liberarse pronto para su proxima reserva.");
+                aviso.classList.remove("d-none");
+            }
+
+            function renderizar() {
+                const layer = document.getElementById("mc-mesas-layer");
+                const svg = document.getElementById("mc-svg-lineas");
+                layer.innerHTML = "";
+                svg.innerHTML = "";
+
+                const idsAdyacentes = new Set();
+                if (modo === "editar") {
+                    for (let i = 0; i < mesas.length; i++) {
+                        for (let j = i + 1; j < mesas.length; j++) {
+                            if (!sonAdyacentes(mesas[i], mesas[j])) continue;
+                            const a = mesas[i], b = mesas[j];
+                            idsAdyacentes.add(a.idMesa); idsAdyacentes.add(b.idMesa);
+                            const sa = sizeFor(a.capacidad), sb = sizeFor(b.capacidad);
+                            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                            line.setAttribute("x1", a.posX + sa / 2); line.setAttribute("y1", a.posY + sa / 2);
+                            line.setAttribute("x2", b.posX + sb / 2); line.setAttribute("y2", b.posY + sb / 2);
+                            line.setAttribute("stroke", "#D97757"); line.setAttribute("stroke-width", "2"); line.setAttribute("stroke-dasharray", "6 6");
+                            svg.appendChild(line);
+                        }
+                    }
+                }
+
+                mesas.forEach(mesa => {
+                    const size = sizeFor(mesa.capacidad);
+                    const color = colorFor(mesa);
+                    const esRecomendada = recomendadas.includes(mesa.idMesa);
+                    const cx = mesa.posX + size / 2, cy = mesa.posY + size / 2;
+                    const radioSillas = size / 2 + 13;
+
+                    for (let i = 0; i < mesa.capacidad; i++) {
+                        const angulo = (2 * Math.PI * i) / mesa.capacidad - Math.PI / 2;
+                        const chair = document.createElement("div");
+                        chair.className = "mc-chair";
+                        chair.style.left = (cx + Math.cos(angulo) * radioSillas - 7) + "px";
+                        chair.style.top = (cy + Math.sin(angulo) * radioSillas - 7) + "px";
+                        chair.style.background = color.chair;
+                        chair.style.border = "1px solid " + color.border;
+                        layer.appendChild(chair);
+                    }
+
+                    const div = document.createElement("div");
+                    div.className = "mc-mesa" + (esRecomendada ? " is-recomendada" : "");
+                    div.style.left = mesa.posX + "px";
+                    div.style.top = mesa.posY + "px";
+                    div.style.width = size + "px";
+                    div.style.height = size + "px";
+                    div.style.background = color.bg;
+                    div.style.border = (esRecomendada ? "3px" : "2px") + " solid " + color.border;
+                    div.style.cursor = modo === "editar" ? (mesa.enUnionActiva ? "not-allowed" : "grab") : (mesa.estado === "Deshabilitada" || mesa.esProxima ? "not-allowed" : "pointer");
+                    div.style.opacity = (modo === "asignar" && (mesa.estado === "Deshabilitada" || mesa.esProxima)) ? "0.6" : "1";
+                    if (mesa.idMesa === seleccionadaId) div.style.outline = "3px solid #3B6FB0";
+                    else if (esRecomendada) div.style.outline = "3px solid #2F6B4F";
+                    else if (modo === "editar" && idsAdyacentes.has(mesa.idMesa)) div.style.outline = "2px dashed #6A93C7";
+
+                    let etiqueta = mesa.capacidad + "p";
+                    if (modo === "asignar") {
+                        etiqueta = mesa.estado === "Ocupada" ? (mesa.personasActuales + "/" + mesa.capacidad)
+                            : mesa.estado === "Deshabilitada" ? "Manten."
+                            : mesa.esProxima ? ("En " + mesa.minutosProximaReserva + " min")
+                            : "Libre";
+                    }
+
+                    div.innerHTML = `<div class="num">M${mesa.numeroMesa}</div><div class="etq">${etiqueta}</div>`;
+                    div.addEventListener("mousedown", e => iniciarInteraccion(e, mesa));
+                    layer.appendChild(div);
+
+                    if (esRecomendada) {
+                        const tag = document.createElement("div");
+                        tag.className = "mc-mesa-tag";
+                        tag.style.left = mesa.posX + "px";
+                        tag.style.top = (mesa.posY - 22) + "px";
+                        tag.style.background = "#2F6B4F";
+                        tag.textContent = "★ Recomendada";
+                        layer.appendChild(tag);
+                    }
+                    if (mesa.enUnionActiva && modo === "editar") {
+                        const badge = document.createElement("div");
+                        badge.className = "mc-mesa-badge-icon";
+                        badge.style.left = (mesa.posX + size - 10) + "px";
+                        badge.style.top = (mesa.posY - 4) + "px";
+                        badge.style.background = "#2F6B4F";
+                        badge.style.color = "#fff";
+                        badge.textContent = "🔗";
+                        layer.appendChild(badge);
+                    }
+                    if (mesa.minutosHastaSiguienteReserva != null) {
+                        const critica = mesa.minutosHastaSiguienteReserva <= 15;
+                        const badge = document.createElement("div");
+                        badge.className = "mc-mesa-badge-icon is-reloj" + (critica ? " critica" : "");
+                        badge.style.left = (mesa.posX - 6) + "px";
+                        badge.style.top = (mesa.posY - 6) + "px";
+                        badge.style.background = critica ? "#C0392B" : "#C98A1E";
+                        badge.title = "Proxima reserva en " + mesa.minutosHastaSiguienteReserva + " min";
+                        badge.textContent = "⏰";
+                        layer.appendChild(badge);
+                    }
+                });
+            }
+
+            // ---------- Drag (modo Editar salon) ----------
+            let arrastrando = null, inicioMouseX = 0, inicioMouseY = 0, inicioMesaX = 0, inicioMesaY = 0, seMovio = false;
+
+            function iniciarInteraccion(e, mesa) {
+                if (modo !== "editar" || mesa.enUnionActiva) {
+                    seleccionar(mesa.idMesa);
+                    return;
+                }
+                arrastrando = mesa;
+                inicioMouseX = e.clientX; inicioMouseY = e.clientY;
+                inicioMesaX = mesa.posX; inicioMesaY = mesa.posY;
+                seMovio = false;
+            }
+
+            document.addEventListener("mousemove", e => {
+                if (!arrastrando) return;
+                const dx = e.clientX - inicioMouseX, dy = e.clientY - inicioMouseY;
+                if (Math.abs(dx) + Math.abs(dy) > 3) seMovio = true;
+                arrastrando.posX = Math.max(0, inicioMesaX + dx);
+                arrastrando.posY = Math.max(0, inicioMesaY + dy);
+                renderizar();
+            });
+
+            document.addEventListener("mouseup", async () => {
+                if (!arrastrando) return;
+                const mesa = arrastrando;
+                const movio = seMovio;
+                arrastrando = null;
+                if (!movio) { seleccionar(mesa.idMesa); return; }
+                const r = await llamar(`/admin/mesas/${mesa.idMesa}/posicion`, "PUT", { posX: Math.round(mesa.posX), posY: Math.round(mesa.posY) });
+                if (!r.success) toast(r.message || "No se pudo actualizar la posicion.");
+                await cargarMesas();
+            });
+
+            // ---------- Seleccion / panel ----------
+            const estadoBadgeEstilo = {
+                Disponible: { bg: "#E3F0DC", color: "#3F6B30" },
+                Ocupada: { bg: "#F6DEDA", color: "#9C2D1F" },
+                Proxima: { bg: "#FBEFD3", color: "#8A6D1F" },
+                Deshabilitada: { bg: "#EAE8E2", color: "#6B6862" }
+            };
+
+            function seleccionar(idMesa) {
+                seleccionadaId = seleccionadaId === idMesa ? null : idMesa;
+                renderizar();
+                abrirPanel();
+            }
+
+            function abrirPanel() {
+                const panel = document.getElementById("mc-panel");
+                const mesa = mesas.find(m => m.idMesa === seleccionadaId);
+                if (!mesa) { panel.classList.remove("is-open"); return; }
+
+                document.getElementById("mc-panel-numero").textContent = "M" + mesa.numeroMesa;
+
+                const claveEstado = mesa.esProxima ? "Proxima" : mesa.estado;
+                const estiloBadge = estadoBadgeEstilo[claveEstado] || estadoBadgeEstilo.Disponible;
+                const badge = document.getElementById("mc-panel-badge");
+                badge.textContent = claveEstado === "Proxima" ? "Reserva proxima" : claveEstado;
+                badge.style.background = estiloBadge.bg;
+                badge.style.color = estiloBadge.color;
+
+                const body = document.getElementById("mc-panel-body");
+
+                if (modo === "editar") {
+                    body.innerHTML = `
+                        ${mesa.tieneReservaActiva ? '<p class="mc-panel-aviso">Esta mesa tiene una reserva activa: no se puede deshabilitar ni eliminar hasta que finalice o se cancele.</p>' : ""}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span style="font-size:13px;color:#6B6862;">Capacidad</span>
+                            <div class="mc-stepper">
+                                <button type="button" id="p-dec-cap">&minus;</button>
+                                <span id="p-cap">${mesa.capacidad}</span>
+                                <button type="button" id="p-inc-cap">+</button>
+                            </div>
+                        </div>
+                        <button type="button" class="mc-btn-mant" id="p-toggle-estado" ${mesa.tieneReservaActiva && mesa.estado !== "Deshabilitada" ? "disabled" : ""}>
+                            ${mesa.estado === "Deshabilitada" ? "Habilitar mesa" : "Deshabilitar por mantenimiento"}
+                        </button>
+                        <button type="button" class="mc-btn-eliminar" id="p-eliminar" ${mesa.tieneReservaActiva ? "disabled" : ""}>Eliminar mesa</button>
+                    `;
+                    document.getElementById("p-dec-cap").onclick = () => cambiarCapacidad(mesa, -1);
+                    document.getElementById("p-inc-cap").onclick = () => cambiarCapacidad(mesa, 1);
+                    document.getElementById("p-toggle-estado").onclick = () => toggleEstado(mesa);
+                    document.getElementById("p-eliminar").onclick = () => eliminarMesa(mesa);
+                } else {
+                    if (mesa.estado === "Deshabilitada") {
+                        body.innerHTML = `<p class="text-secondary small mb-0">Mesa en mantenimiento, no disponible para asignar.</p>`;
+                    } else if (mesa.esProxima) {
+                        body.innerHTML = `<p class="mc-panel-aviso">Tiene una reserva confirmada en ${mesa.minutosProximaReserva} minutos. No se puede asignar a un walk-in.</p>`;
+                    } else if (mesa.estado === "Ocupada") {
+                        body.innerHTML = `
+                            <p class="small text-secondary mb-0">Ocupada por ${mesa.personasActuales} persona(s). Duracion estimada del turno: ${mesa.duracionReservaMinutos} min.</p>
+                            <button type="button" class="mc-btn-liberar" id="p-liberar">Liberar sin consumo</button>
+                            <p class="small text-muted mb-0">Usa esto solo si el cliente se retira sin pedir nada.</p>
+                        `;
+                        document.getElementById("p-liberar").onclick = () => liberarMesa(mesa);
+                    } else {
+                        body.innerHTML = `
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span style="font-size:13px;color:#6B6862;">Personas a sentar</span>
+                                <div class="mc-stepper">
+                                    <button type="button" id="p-dec-pers">&minus;</button>
+                                    <span id="p-pers">2</span>
+                                    <button type="button" id="p-inc-pers">+</button>
+                                </div>
+                            </div>
+                            <button type="button" class="mc-btn-sentar" id="p-sentar">Sentar cliente</button>
+                            <p class="small text-muted mb-0">Tiempo estimado de ocupacion: ${mesa.duracionReservaMinutos} min.</p>
+                        `;
+                        let personas = 2;
+                        document.getElementById("p-dec-pers").onclick = () => { personas = Math.max(1, personas - 1); document.getElementById("p-pers").textContent = personas; };
+                        document.getElementById("p-inc-pers").onclick = () => { personas = Math.min(mesa.capacidad, personas + 1); document.getElementById("p-pers").textContent = personas; };
+                        document.getElementById("p-sentar").onclick = () => sentarCliente(mesa.idMesa, personas);
+                    }
+                }
+
+                panel.classList.add("is-open");
+            }
+
+            document.getElementById("btn-cerrar-panel").onclick = () => { seleccionadaId = null; renderizar(); document.getElementById("mc-panel").classList.remove("is-open"); };
+
+            async function cambiarCapacidad(mesa, delta) {
+                const nueva = Math.max(1, Math.min(12, mesa.capacidad + delta));
+                const r = await llamar(`/admin/mesas/${mesa.idMesa}/capacidad`, "PUT", { capacidad: nueva });
+                if (!r.success) toast(r.message);
+                await cargarMesas(); abrirPanel();
+            }
+
+            async function toggleEstado(mesa) {
+                const nuevo = mesa.estado === "Deshabilitada" ? "Disponible" : "Deshabilitada";
+                const r = await llamar(`/admin/mesas/${mesa.idMesa}/estado`, "PUT", { estado: nuevo });
+                if (!r.success) toast(r.message);
+                await cargarMesas(); abrirPanel();
+            }
+
+            async function eliminarMesa(mesa) {
+                const r = await llamar(`/admin/mesas/${mesa.idMesa}`, "DELETE");
+                if (!r.success) toast(r.message);
+                seleccionadaId = null;
+                document.getElementById("mc-panel").classList.remove("is-open");
+                await cargarMesas();
+            }
+
+            async function sentarCliente(idMesa, personas) {
+                const r = await llamar("/admin/mesas/walkin", "POST", { cantidadPersonas: personas, idsMesa: [idMesa] });
+                if (!r.success) toast(r.message);
+                if (r.success) { seleccionadaId = null; document.getElementById("mc-panel").classList.remove("is-open"); }
+                await cargarMesas();
+            }
+
+            async function liberarMesa(mesa) {
+                const r = await llamar(`/admin/mesas/${mesa.idMesa}/liberar`, "PUT");
+                if (!r.success) toast(r.message);
+                seleccionadaId = null;
+                document.getElementById("mc-panel").classList.remove("is-open");
+                await cargarMesas();
+            }
+
+            // ---------- Agregar mesa ----------
+            let nuevaCapacidad = 2;
+            document.getElementById("btn-fab-agregar")?.addEventListener("click", () => {
+                document.getElementById("mc-add-popover").classList.toggle("is-open");
+            });
+            document.getElementById("btn-cancelar-nueva-mesa")?.addEventListener("click", () => {
+                document.getElementById("mc-add-popover").classList.remove("is-open");
+            });
+            document.getElementById("btn-dec-nueva-capacidad")?.addEventListener("click", () => {
+                nuevaCapacidad = Math.max(1, nuevaCapacidad - 1);
+                document.getElementById("mc-nueva-capacidad").textContent = nuevaCapacidad;
+            });
+            document.getElementById("btn-inc-nueva-capacidad")?.addEventListener("click", () => {
+                nuevaCapacidad = Math.min(12, nuevaCapacidad + 1);
+                document.getElementById("mc-nueva-capacidad").textContent = nuevaCapacidad;
+            });
+            document.getElementById("btn-confirmar-nueva-mesa")?.addEventListener("click", async () => {
+                const numeroMesa = Math.max(0, ...mesas.map(m => m.numeroMesa)) + 1;
+                const r = await llamar("/admin/mesas", "POST", { numeroMesa, capacidad: nuevaCapacidad, posX: 950, posY: 420 });
+                if (!r.success) toast(r.message);
+                document.getElementById("mc-add-popover").classList.remove("is-open");
+                nuevaCapacidad = 2;
+                document.getElementById("mc-nueva-capacidad").textContent = "2";
+                await cargarMesas();
+            });
+
+            // ---------- Buscar mesa / recomendacion (modo Asignar) ----------
+            async function actualizarRecomendacion() {
+                const personas = parseInt(document.getElementById("mc-buscar-personas").value, 10) || 1;
+                const r = await llamar(`/admin/mesas/sugerencia-walkin?cantidadPersonas=${personas}`, "GET");
+                const resultado = document.getElementById("mc-buscar-resultado");
+                const btnAceptar = document.getElementById("btn-aceptar-recomendacion");
+                recomendadas = []; recomendacionIds = [];
+                if (r.success && r.data && r.data.numerosMesa && r.data.numerosMesa.length > 0) {
+                    const idsPorNumero = mesas.filter(m => r.data.numerosMesa.includes(m.numeroMesa)).map(m => m.idMesa);
+                    recomendadas = idsPorNumero;
+                    recomendacionIds = idsPorNumero;
+                    resultado.textContent = (r.data.esCombinacionDeMesas ? "✓ Combinacion sugerida: Mesa " : "✓ Mejor opcion: Mesa ") + r.data.numerosMesa.join(" + Mesa ");
+                    resultado.style.color = "#2F6B4F";
+                    btnAceptar.classList.remove("d-none");
+                } else {
+                    resultado.textContent = "⚠ Ninguna mesa ni combinacion cubre este grupo.";
+                    resultado.style.color = "#9C2D1F";
+                    btnAceptar.classList.add("d-none");
+                }
+                renderizar();
+            }
+            document.getElementById("mc-buscar-personas").addEventListener("input", actualizarRecomendacion);
+            document.getElementById("btn-aceptar-recomendacion").addEventListener("click", async () => {
+                const personas = parseInt(document.getElementById("mc-buscar-personas").value, 10) || 1;
+                const r = await llamar("/admin/mesas/walkin", "POST", { cantidadPersonas: personas, idsMesa: recomendacionIds });
+                if (!r.success) toast(r.message);
+                await cargarMesas();
+                await actualizarRecomendacion();
+            });
+
+            // ---------- Cambio de modo ----------
+            function aplicarModo() {
+                document.querySelectorAll("#mc-mode-switch button").forEach(b => b.classList.toggle("is-active", b.dataset.modo === modo));
+                document.getElementById("mc-buscar-bar").classList.toggle("is-visible", modo === "asignar");
+                document.getElementById("btn-fab-agregar").classList.toggle("is-visible", modo === "editar" && esAdministradorGeneral);
+                document.getElementById("mc-mode-hint").textContent = modo === "editar"
+                    ? "Arrastra las mesas para ubicarlas. Las lineas punteadas indican mesas adyacentes: se combinan automaticamente para un grupo que no cabe en una sola mesa."
+                    : "Selecciona una mesa Disponible para sentar a un cliente sin reserva, o libera una mesa Ocupada.";
+                seleccionadaId = null;
+                document.getElementById("mc-panel").classList.remove("is-open");
+                recomendadas = [];
+            }
+
+            document.getElementById("btn-modo-editar")?.addEventListener("click", () => { modo = "editar"; aplicarModo(); cargarMesas(); });
+            document.getElementById("btn-modo-asignar").addEventListener("click", () => { modo = "asignar"; aplicarModo(); cargarMesas(); });
+
+            aplicarModo();
+            cargarMesas();
+        })();
+    </script>
+}

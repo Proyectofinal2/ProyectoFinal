@@ -9,10 +9,12 @@ public class ReservaResponse
     public TimeOnly HoraReserva { get; set; }
     public int CantidadPersonas { get; set; }
     public string Estado { get; set; } = null!;
-    public int? NumeroMesa { get; set; }
 
     /// <summary>Solo Pendiente y Confirmada pueden cancelarse (HU-RES-005).</summary>
     public bool PuedeCancelarse { get; set; }
+
+    /// <summary>Mesa(s) asignadas; vacio si aun no se asigno (Pendiente/RequiereAsignacionManual).</summary>
+    public List<int> NumerosMesa { get; set; } = [];
 }
 
 public class DisponibilidadFechaResponse
@@ -29,4 +31,26 @@ public class DisponibilidadMesResponse
     public int Anio { get; set; }
     public int Mes { get; set; }
     public List<DisponibilidadFechaResponse> Fechas { get; set; } = [];
+}
+
+/// <summary>Resultado del algoritmo de combinacion de mesas (HU-MES-005/006), sin aplicar.</summary>
+public class AsignacionSugeridaResponse
+{
+    public List<int> NumerosMesa { get; set; } = [];
+    public bool EsCombinacionDeMesas { get; set; }
+    public bool RequiereRevisionManual { get; set; }
+}
+
+/// <summary>Mesas elegidas por el admin para asignar o reasignar una reserva (HU-MES-005/006).</summary>
+public class AsignarMesaRequest
+{
+    public List<int> IdsMesa { get; set; } = [];
+}
+
+/// <summary>Resultado de aplicar una asignacion/reasignacion manual de mesa.</summary>
+public class AsignacionMesaResponse
+{
+    public List<int> NumerosMesa { get; set; } = [];
+    public bool EsCombinacionDeMesas { get; set; }
+    public string Estado { get; set; } = null!;
 }

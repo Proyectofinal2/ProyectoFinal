@@ -130,6 +130,8 @@ CREATE TABLE dbo.Mesa (
     NumeroMesa INT           NOT NULL,
     Capacidad  INT           NOT NULL,
     Estado     NVARCHAR(20)  NOT NULL DEFAULT 'Disponible',
+    PosX       INT           NOT NULL DEFAULT 0, -- posicion en el canvas del editor visual de mesas
+    PosY       INT           NOT NULL DEFAULT 0,
     CONSTRAINT PK_Mesa PRIMARY KEY (IdMesa),
     CONSTRAINT UQ_Mesa_Numero UNIQUE (NumeroMesa),
     CONSTRAINT CK_Mesa_Capacidad CHECK (Capacidad > 0)
@@ -261,23 +263,26 @@ GO
         administrativo (y en este ultimo caso, cual).
    Nota: ya no tiene IdMesa. La mesa (o mesas, si son 2
         combinadas) se asigna via la tabla ReservaMesa (N*N).
+   HU-OPE-004: EsWalkIn marca un cliente sentado sin reserva
+        previa; CodigoReserva queda NULL (indice unico filtrado)
+        e IdCliente apunta al cliente centinela "Walk-in".
    ------------------------------------------------------------ */
 CREATE TABLE dbo.Reserva (
     IdReserva               INT IDENTITY(1,1) NOT NULL,
-    CodigoReserva           NVARCHAR(10)  NOT NULL, -- codigo unico generado por la aplicacion
+    CodigoReserva           NVARCHAR(10)  NULL, -- codigo unico generado por la aplicacion; NULL si EsWalkIn
     IdCliente               INT           NOT NULL,
     IdEstadoReserva         INT           NOT NULL,
     FechaReserva            DATE          NOT NULL,
     HoraReserva             TIME          NOT NULL,
     CantidadPersonas        INT           NOT NULL,
     RequiereAsignacionManual BIT          NOT NULL DEFAULT 0,
+    EsWalkIn                BIT           NOT NULL DEFAULT 0,
     FechaAtencion           DATETIME2     NULL,
     MotivoCancelacion       NVARCHAR(100) NULL, -- ej: 'Cancelacion por cliente', 'Cancelacion administrativa', 'Cierre administrativo', 'Expiracion automatica', 'Liberada sin consumo'
     IdCierreEventual        INT           NULL, -- solo si MotivoCancelacion = 'Cierre administrativo'
     Observaciones           NVARCHAR(300) NULL,
     FechaCreacion           DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
     CONSTRAINT PK_Reserva PRIMARY KEY (IdReserva),
-    CONSTRAINT UQ_Reserva_Codigo UNIQUE (CodigoReserva),
     CONSTRAINT FK_Reserva_Cliente
         FOREIGN KEY (IdCliente) REFERENCES dbo.Cliente (IdCliente),
     CONSTRAINT FK_Reserva_EstadoReserva
@@ -286,6 +291,9 @@ CREATE TABLE dbo.Reserva (
         FOREIGN KEY (IdCierreEventual) REFERENCES dbo.CierreEventual (IdCierreEventual),
     CONSTRAINT CK_Reserva_CantidadPersonas CHECK (CantidadPersonas > 0)
 );
+GO
+
+CREATE UNIQUE INDEX UQ_Reserva_Codigo ON dbo.Reserva (CodigoReserva) WHERE CodigoReserva IS NOT NULL;
 GO
 
 /* ------------------------------------------------------------
@@ -462,6 +470,14 @@ CREATE INDEX IX_HistorialCierre_Usuario ON dbo.HistorialCierre (IdUsuario);
 GO
 
 /* ------------------------------------------------------------
+   Cliente centinela para walk-ins (HU-OPE-004): nunca una persona
+   real. No eliminar; si se agrega borrado de clientes, excluirlo.
+   ------------------------------------------------------------ */
+INSERT INTO dbo.Cliente (Nombre, Apellido, Telefono) VALUES
+    ('Walk-in', 'Sin reserva', '00000000');
+GO
+
+/* ------------------------------------------------------------
    Datos base del catalogo de estados (segun alcance aprobado).
    Ya no se hardcodea "mas de 4 personas": el umbral vive en
    ConfiguracionSistema (HU-CFG-001).
@@ -472,6 +488,19 @@ INSERT INTO dbo.EstadoReserva (Nombre, Descripcion) VALUES
     ('Cancelada',  'Reserva cancelada por el cliente, el administrador o un cierre administrativo'),
     ('Finalizada', 'Cliente atendido, reserva completada'),
     ('No Show',    'Cliente no se presento en el horario reservado');
+GO
+
+/* ------------------------------------------------------------
+   Datos de prueba: mesas, con la misma distribucion (capacidad y
+   posicion en el canvas del editor visual) que la base de
+   desarrollo. Todas inician 'Disponible'.
+   ------------------------------------------------------------ */
+INSERT INTO dbo.Mesa (NumeroMesa, Capacidad, Estado, PosX, PosY) VALUES
+    (1, 2, 'Disponible', 395, 256),
+    (2, 2, 'Disponible', 230, 352),
+    (3, 4, 'Disponible', 383,  80),
+    (4, 4, 'Disponible', 623, 166),
+    (5, 9, 'Disponible', 952, 342);
 GO
 
 /* ------------------------------------------------------------

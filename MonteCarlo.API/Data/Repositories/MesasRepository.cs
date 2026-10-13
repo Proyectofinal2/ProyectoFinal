@@ -6,20 +6,55 @@ namespace MonteCarlo.API.Data.Repositories;
 
 public class MesasRepository(MonteCarloDbContext context) : IMesasRepository
 {
-    public Task<List<Mesa>> ObtenerDisponiblesPorCapacidadAsync(int cantidadPersonas) =>
+    public Task<List<Mesa>> ObtenerMesasHabilitadasAsync() =>
         context.Mesas
             .AsNoTracking()
-            .Where(m => m.Estado == "Disponible" && m.Capacidad >= cantidadPersonas)
-            .OrderBy(m => m.Capacidad)
-            .ThenBy(m => m.NumeroMesa)
+            .Where(m => m.Estado == "Disponible")
+            .OrderBy(m => m.NumeroMesa)
             .ToListAsync();
 
-    public Task<List<Reserva>> ObtenerReservasActivasPorMesaYFechaAsync(int idMesa, DateOnly fecha) =>
-        context.Reservas
-            .Include(r => r.EstadoReserva)
-            .Where(r => r.IdMesa == idMesa
-                        && r.FechaReserva == fecha
-                        && (r.EstadoReserva.Nombre == "Pendiente"
-                            || r.EstadoReserva.Nombre == "Confirmada"))
+    public async Task<Dictionary<int, List<TimeOnly>>> ObtenerHorasReservadasPorFechaAsync(DateOnly fecha)
+    {
+        var rango = await ObtenerHorasReservadasPorRangoAsync(fecha, fecha);
+        return rango.GetValueOrDefault(fecha, []);
+    }
+
+    public async Task<Dictionary<DateOnly, Dictionary<int, List<TimeOnly>>>> ObtenerHorasReservadasPorRangoAsync(
+        DateOnly inicio, DateOnly fin)
+    {
+        var filas = await context.Reservas
+            .Where(r => r.FechaReserva >= inicio && r.FechaReserva <= fin
+                        && (r.EstadoReserva.Nombre == "Pendiente" || r.EstadoReserva.Nombre == "Confirmada"))
+            .SelectMany(r => r.ReservaMesas, (r, rm) => new { r.FechaReserva, rm.IdMesa, r.HoraReserva })
             .ToListAsync();
+
+        return filas
+            .GroupBy(f => f.FechaReserva)
+            .ToDictionary(
+                dia => dia.Key,
+                dia => dia
+                    .GroupBy(f => f.IdMesa)
+                    .ToDictionary(mesa => mesa.Key, mesa => mesa.Select(f => f.HoraReserva).ToList()));
+    }
+
+    public Task<List<Mesa>> ObtenerPorIdsAsync(List<int> idsMesa) =>
+        context.Mesas
+            .AsNoTracking()
+            .Where(m => idsMesa.Contains(m.IdMesa))
+            .ToListAsync();
+
+    public Task<List<Mesa>> ObtenerTodasAsync() =>
+        context.Mesas
+            .AsNoTracking()
+            .OrderBy(m => m.NumeroMesa)
+            .ToListAsync();
+
+    public Task<Mesa?> ObtenerPorIdAsync(int idMesa) =>
+        context.Mesas.FirstOrDefaultAsync(m => m.IdMesa == idMesa);
+
+    public void Agregar(Mesa mesa) => context.Mesas.Add(mesa);
+
+    public void Eliminar(Mesa mesa) => context.Mesas.Remove(mesa);
+
+    public Task GuardarCambiosAsync() => context.SaveChangesAsync();
 }

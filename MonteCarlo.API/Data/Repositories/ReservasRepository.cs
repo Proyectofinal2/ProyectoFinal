@@ -9,9 +9,15 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
     public Task<Reserva?> ObtenerPorCodigoAsync(string codigo) =>
         context.Reservas
             .Include(r => r.Cliente)
-            .Include(r => r.Mesa)
+            .Include(r => r.ReservaMesas).ThenInclude(rm => rm.Mesa)
             .Include(r => r.EstadoReserva)
             .FirstOrDefaultAsync(r => r.CodigoReserva == codigo);
+
+    public Task<Reserva?> ObtenerPorIdAsync(int id) =>
+        context.Reservas
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas)
+            .FirstOrDefaultAsync(r => r.IdReserva == id);
 
     public Task<EstadoReserva?> ObtenerEstadoAsync(string nombre) =>
         context.EstadosReserva.FirstOrDefaultAsync(e => e.Nombre == nombre);
@@ -28,4 +34,21 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
     public void Agregar(Reserva reserva) => context.Reservas.Add(reserva);
 
     public Task GuardarCambiosAsync() => context.SaveChangesAsync();
+
+    public Task<List<Reserva>> ObtenerConfirmadasPorFechaAsync(DateOnly fecha) =>
+        context.Reservas
+            .AsNoTracking()
+            .Include(r => r.ReservaMesas)
+            .Where(r => r.FechaReserva == fecha && r.EstadoReserva.Nombre == "Confirmada")
+            .ToListAsync();
+
+    public Task<Reserva?> ObtenerConfirmadaActivaPorMesaAsync(int idMesa, DateOnly fecha) =>
+        context.Reservas
+            .Include(r => r.ReservaMesas)
+            .Where(r => r.FechaReserva == fecha
+                        && r.EstadoReserva.Nombre == "Confirmada"
+                        && r.FechaAtencion != null
+                        && r.ReservaMesas.Any(rm => rm.IdMesa == idMesa))
+            .OrderByDescending(r => r.FechaAtencion)
+            .FirstOrDefaultAsync();
 }
