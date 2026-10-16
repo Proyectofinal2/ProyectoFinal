@@ -66,13 +66,15 @@ builder.Services
     })
     .AddHttpMessageHandler<AuthTokenHandler>();
 
-// HU-RES-005: consulta y cancelación pública de reservas (sin token).
+// Consulta y cancelacion publica de reservas. El token solo se agrega
+// si hay sesion; el listado de reservas del dia lo necesita.
 builder.Services
     .AddHttpClient<IReservasApiService, ReservasApiService>(client =>
     {
         client.BaseAddress = new Uri(
             builder.Configuration["ApiSettings:BaseUrl"]!);
-    });
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
 
 var app = builder.Build();
 

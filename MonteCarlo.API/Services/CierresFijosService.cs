@@ -42,6 +42,14 @@ public class CierresFijosService(ICierresFijosRepository cierresFijosRepository)
             return Result<CierresFijosResponse>.Ok(Mapear(actuales), "No hubo cambios en los cierres fijos.");
         }
 
+        // El cierre quitado no se borra: queda inactivo con la fecha y el usuario de la baja.
+        foreach (var cierre in aEliminar)
+        {
+            cierre.Activo = false;
+            cierre.FechaEliminacion = DateTime.Now;
+            cierre.IdUsuarioEliminacion = idUsuario;
+        }
+
         // Auditoría (HU-CFG-004): una fila por día agregado o quitado.
         var historial = aAgregar
             .Select(c => NuevoHistorial("Registrado", c.DiaSemana, idUsuario))

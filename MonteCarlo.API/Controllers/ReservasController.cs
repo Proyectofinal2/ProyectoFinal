@@ -43,6 +43,15 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
+    /// Reservas del dia (hoy si no se indica fecha).
+    [Authorize(Roles = "General,Regular")]
+    [HttpGet("del-dia")]
+    public async Task<IActionResult> ObtenerDelDia([FromQuery] DateOnly? fecha)
+    {
+        var result = await reservasService.ObtenerDelDiaAsync(fecha ?? DateOnly.FromDateTime(DateTime.Now));
+        return Responder(result);
+    }
+
     [AllowAnonymous]
     [HttpGet("{codigo}")]
     public async Task<IActionResult> ObtenerPorCodigo(string codigo)

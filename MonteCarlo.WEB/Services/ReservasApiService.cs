@@ -22,6 +22,12 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
             "Disponibilidad mensual obtenida.",
             "No se pudo consultar la disponibilidad mensual.");
 
+    public Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> ObtenerReservasDelDiaAsync(DateOnly fecha) =>
+        EjecutarAsync<List<ReservaDelDiaApiResponse>>(
+            () => httpClient.GetAsync($"reservas/del-dia?fecha={fecha.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}"),
+            "Reservas del dia obtenidas.",
+            "No se pudieron obtener las reservas del dia. Intenta de nuevo.");
+
     public Task<(bool Success, string Message, ReservaApiResponse? Data)> ObtenerPorCodigoAsync(string codigo) =>
         EjecutarAsync<ReservaApiResponse>(
             () => httpClient.GetAsync($"reservas/{Uri.EscapeDataString(codigo)}"),

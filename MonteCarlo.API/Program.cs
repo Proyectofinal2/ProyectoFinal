@@ -43,6 +43,14 @@ builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<ICierresFijosRepository, CierresFijosRepository>();
 builder.Services.AddScoped<ICierresFijosService, CierresFijosService>();
 
+// Cierres eventuales
+builder.Services.AddScoped<ICierresEventualesRepository, CierresEventualesRepository>();
+builder.Services.AddScoped<ICierresEventualesService, CierresEventualesService>();
+
+// Historial de cierres
+builder.Services.AddScoped<IHistorialCierresRepository, HistorialCierresRepository>();
+builder.Services.AddScoped<IHistorialCierresService, HistorialCierresService>();
+
 // HU-CFG-005: horarios regulares de operación
 builder.Services.AddScoped<IHorariosOperacionRepository, HorariosOperacionRepository>();
 builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>();

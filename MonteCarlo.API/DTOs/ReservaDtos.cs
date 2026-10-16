@@ -54,3 +54,17 @@ public class AsignacionMesaResponse
     public bool EsCombinacionDeMesas { get; set; }
     public string Estado { get; set; } = null!;
 }
+
+public class ReservaDelDiaResponse
+{
+    public int IdReserva { get; set; }
+    public string? CodigoReserva { get; set; }
+    public TimeOnly HoraReserva { get; set; }
+    public string NombreCliente { get; set; } = null!;
+    public string? Telefono { get; set; }
+    public int CantidadPersonas { get; set; }
+    public string Estado { get; set; } = null!;
+    public List<int> NumerosMesa { get; set; } = [];
+    public string? Observaciones { get; set; }
+    public bool EsWalkIn { get; set; }
+}

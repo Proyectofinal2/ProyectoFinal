@@ -172,15 +172,23 @@ public class MonteCarloDbContext : DbContext
             entity.ToTable("CierreFijo", t => t.HasCheckConstraint(
                 "CK_CierreFijo_Dia", "DiaSemana BETWEEN 0 AND 6"));
             entity.HasKey(e => e.IdCierreFijo).HasName("PK_CierreFijo");
-            entity.HasIndex(e => e.DiaSemana).IsUnique().HasDatabaseName("UQ_CierreFijo_Dia");
+            entity.HasIndex(e => e.DiaSemana).IsUnique().HasFilter("[Activo] = 1").HasDatabaseName("UQ_CierreFijo_Dia");
+            entity.HasQueryFilter(e => e.Activo);
 
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("SYSDATETIME()");
+            entity.Property(e => e.Activo).HasDefaultValue(true);
 
             entity.HasOne(e => e.UsuarioCreacion)
                 .WithMany(u => u.CierresFijos)
                 .HasForeignKey(e => e.IdUsuarioCreacion)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_CierreFijo_Usuario");
+
+            entity.HasOne(e => e.UsuarioEliminacion)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuarioEliminacion)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_CierreFijo_UsuarioEliminacion");
         });
     }
 
@@ -190,16 +198,24 @@ public class MonteCarloDbContext : DbContext
         {
             entity.ToTable("CierreEventual");
             entity.HasKey(e => e.IdCierreEventual).HasName("PK_CierreEventual");
-            entity.HasIndex(e => e.Fecha).IsUnique().HasDatabaseName("UQ_CierreEventual_Fecha");
+            entity.HasIndex(e => e.Fecha).IsUnique().HasFilter("[Activo] = 1").HasDatabaseName("UQ_CierreEventual_Fecha");
+            entity.HasQueryFilter(e => e.Activo);
 
             entity.Property(e => e.Motivo).HasMaxLength(300).IsRequired();
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("SYSDATETIME()");
+            entity.Property(e => e.Activo).HasDefaultValue(true);
 
             entity.HasOne(e => e.UsuarioCreacion)
                 .WithMany(u => u.CierresEventuales)
                 .HasForeignKey(e => e.IdUsuarioCreacion)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_CierreEventual_Usuario");
+
+            entity.HasOne(e => e.UsuarioEliminacion)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuarioEliminacion)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_CierreEventual_UsuarioEliminacion");
         });
     }
 

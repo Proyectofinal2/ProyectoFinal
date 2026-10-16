@@ -1,0 +1,102 @@
+@*
+    Reservas del dia.
+    Lista las reservas de una fecha (hoy por defecto) ordenadas por hora.
+*@
+@using MonteCarlo.WEB.Models.Reservas
+@model ReservasDelDiaViewModel
+@{
+    ViewData["Title"] = "Reservas del dia";
+    ViewData["Subtitle"] = "Planifica la operacion y prepara la atencion.";
+}
+
+<form asp-action="Index" method="get" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="fecha" class="form-label">Fecha</label>
+                <input id="fecha" name="fecha" type="date" class="form-control" value="@Model.Fecha.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary">Ver dia</button>
+                <a asp-action="Index" class="btn btn-link">Hoy</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Reservas.Count == 0)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                 {
+                     Icono = "bi-calendar-check",
+                     Titulo = "No hay reservas para este dia",
+                     Descripcion = "Cuando haya reservas para esta fecha apareceran aqui."
+                 })" />
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <caption class="visually-hidden">Reservas del dia ordenadas por hora</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Hora</th>
+                        <th scope="col">Cliente</th>
+                        <th scope="col" class="text-center">Personas</th>
+                        <th scope="col">Mesa</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var reserva in Model.Reservas)
+                    {
+                        <tr>
+                            <td class="text-nowrap fw-medium">@reserva.HoraReserva.ToString("HH:mm")</td>
+                            <td>
+                                <span class="fw-medium">@reserva.NombreCliente</span>
+                                @if (reserva.EsWalkIn)
+                                {
+                                    <span class="badge text-bg-light border ms-1">Walk-in</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(reserva.Telefono))
+                                {
+                                    <span class="d-block text-secondary small">@reserva.Telefono</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(reserva.CodigoReserva))
+                                {
+                                    <span class="d-block text-secondary small">@reserva.CodigoReserva</span>
+                                }
+                            </td>
+                            <td class="text-center">@reserva.CantidadPersonas</td>
+                            <td>
+                                @if (reserva.NumerosMesa.Count > 0)
+                                {
+                                    <span>Mesa @string.Join(" + ", reserva.NumerosMesa)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary">Sin mesa asignada</span>
+                                }
+                            </td>
+                            <td><partial name="_BadgeEstado" model="BadgeEstadoViewModel.Reserva(reserva.Estado)" /></td>
+                            <td class="text-break">@reserva.Observaciones</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="form-text mt-3">
+        @Model.Reservas.Count @(Model.Reservas.Count == 1 ? "reserva" : "reservas"),
+        @Model.PersonasEsperadas personas esperadas
+        @if (Model.Pendientes > 0)
+        {
+            <text>&middot; @Model.Pendientes pendiente(s) de asignar mesa</text>
+        }
+    </p>
+}

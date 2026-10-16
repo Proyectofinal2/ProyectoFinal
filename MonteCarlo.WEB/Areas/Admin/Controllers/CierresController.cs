@@ -26,7 +26,14 @@ public class CierresController(IConfiguracionApiService configuracionApiService)
             TempData[Alerta.Error] = message;
         }
 
-        return View(new CierresFijosViewModel { Dias = data?.Dias ?? [] });
+        var (successEventuales, messageEventuales, eventuales) = await configuracionApiService.ObtenerCierresEventualesAsync();
+
+        if (!successEventuales)
+        {
+            TempData[Alerta.Error] = messageEventuales;
+        }
+
+        return View(new CierresFijosViewModel { Dias = data?.Dias ?? [], Eventuales = eventuales ?? [] });
     }
 
     /// Escenarios 1 y 2: la selección enviada es la lista completa de días cerrados;
@@ -37,6 +44,37 @@ public class CierresController(IConfiguracionApiService configuracionApiService)
     public async Task<IActionResult> Index(CierresFijosViewModel modelo)
     {
         var (success, message, _) = await configuracionApiService.ActualizarCierresFijosAsync(modelo.Dias);
+
+        TempData[success ? Alerta.Exito : Alerta.Error] = message;
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// Registra un cierre en una fecha puntual. Si hay reservas en esa fecha,
+    /// solo se registra cuando el administrador confirma su cancelacion.
+    [HttpPost("eventuales")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegistrarEventual(NuevoCierreEventualViewModel modelo)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData[Alerta.Error] = ModelState.Values.SelectMany(v => v.Errors).First().ErrorMessage;
+            return RedirectToAction(nameof(Index));
+        }
+
+        var (success, message, _) = await configuracionApiService.RegistrarCierreEventualAsync(
+            modelo.Fecha!.Value, modelo.Motivo!, modelo.CancelarReservas);
+
+        TempData[success ? Alerta.Exito : Alerta.Error] = message;
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("eventuales/{id:int}/eliminar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarEventual(int id)
+    {
+        var (success, message, _) = await configuracionApiService.EliminarCierreEventualAsync(id);
 
         TempData[success ? Alerta.Exito : Alerta.Error] = message;
 

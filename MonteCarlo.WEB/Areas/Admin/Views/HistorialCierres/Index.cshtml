@@ -1,0 +1,115 @@
+@*
+    Historial de cambios en cierres fijos y eventuales.
+    Muestra quien, cuando y por que se registro o quito cada cierre.
+*@
+@using MonteCarlo.WEB.Models.Configuracion
+@model HistorialCierresViewModel
+@{
+    ViewData["Title"] = "Historial de cierres";
+    ViewData["Subtitle"] = "Quien, cuando y por que se modifico la disponibilidad del restaurante.";
+}
+
+<form asp-action="Index" method="get" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="tipo" class="form-label">Tipo de cierre</label>
+                <select id="tipo" name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Fijo" selected="@(Model.Tipo == "Fijo")">Fijo (semanal)</option>
+                    <option value="Eventual" selected="@(Model.Tipo == "Eventual")">Eventual (fecha puntual)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="accion" class="form-label">Accion</label>
+                <select id="accion" name="accion" class="form-select">
+                    <option value="">Todas</option>
+                    <option value="Registrado" selected="@(Model.Accion == "Registrado")">Registrado</option>
+                    <option value="Eliminado" selected="@(Model.Accion == "Eliminado")">Quitado</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="desde" class="form-label">Desde</label>
+                <input id="desde" name="desde" type="date" class="form-control" value="@Model.Desde?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label for="hasta" class="form-label">Hasta</label>
+                <input id="hasta" name="hasta" type="date" class="form-control" value="@Model.Hasta?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-primary flex-grow-1">Filtrar</button>
+                @if (Model.TieneFiltrosAplicados)
+                {
+                    <a asp-action="Index" class="btn btn-link">Limpiar</a>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                 {
+                     Icono = "bi-clock-history",
+                     Titulo = Model.TieneFiltrosAplicados ? "Sin resultados" : "Aun no hay cambios registrados",
+                     Descripcion = Model.TieneFiltrosAplicados
+                         ? "Ningun cambio coincide con los filtros aplicados."
+                         : "Cada vez que se registre o se quite un cierre quedara aqui."
+                 })" />
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <caption class="visually-hidden">Historial de cambios en cierres</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Cuando</th>
+                        <th scope="col">Cierre</th>
+                        <th scope="col">Accion</th>
+                        <th scope="col">Motivo</th>
+                        <th scope="col">Quien</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@item.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (item.TipoCierre == "Fijo")
+                                {
+                                    <span class="fw-medium">Todos los @(item.DiaSemana.HasValue ? CierresFijosViewModel.DiasSemana.First(d => d.Valor == item.DiaSemana.Value).Nombre : "dias")</span>
+                                    <span class="d-block text-secondary small">Cierre fijo semanal</span>
+                                }
+                                else
+                                {
+                                    <span class="fw-medium">@item.FechaCierre?.ToString("dd/MM/yyyy")</span>
+                                    <span class="d-block text-secondary small">Cierre eventual</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.Accion == "Registrado")
+                                {
+                                    <span class="mc-badge mc-badge--success">Registrado</span>
+                                }
+                                else
+                                {
+                                    <span class="mc-badge mc-badge--neutral">Quitado</span>
+                                }
+                            </td>
+                            <td class="text-break">@(string.IsNullOrWhiteSpace(item.Motivo) ? "-" : item.Motivo)</td>
+                            <td>@item.Usuario</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="form-text mt-3">Se muestran los ultimos @Model.Items.Count cambios.</p>
+}

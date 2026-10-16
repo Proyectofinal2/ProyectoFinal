@@ -46,9 +46,10 @@
 
             <li class="mc-sidebar__section">Operacion</li>
             <li>
-                <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                <a class="@ClaseActiva(controladorActual, "ReservasDelDia")"
+                   asp-area="Admin" asp-controller="ReservasDelDia" asp-action="Index">
                     <i class="bi bi-calendar-check" aria-hidden="true"></i> Reservas del dia
-                </span>
+                </a>
             </li>
             <li>
                 <a class="@ClaseActiva(controladorActual, "Mesas")"
@@ -80,6 +81,12 @@
                 <a class="@ClaseActiva(controladorActual, "Cierres")"
                    asp-area="Admin" asp-controller="Cierres" asp-action="Index">
                     <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
+                </a>
+            </li>
+            <li>
+                <a class="@ClaseActiva(controladorActual, "HistorialCierres")"
+                   asp-area="Admin" asp-controller="HistorialCierres" asp-action="Index">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i> Historial de cierres
                 </a>
             </li>
             <li>
