@@ -10,6 +10,9 @@ public interface IReservasService
 
     Task<Result<ReservaResponse>> ObtenerPorCodigoAsync(string codigo);
 
+    /// Reservas de una fecha, ordenadas por hora y sin las canceladas.
+    Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha);
+
     /// <summary>HU-RES-005: cancela una reserva Pendiente o Confirmada y libera su mesa.</summary>
     Task<Result<ReservaResponse>> CancelarAsync(string codigo);
 

@@ -25,8 +25,20 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
     public Task<List<byte>> ObtenerDiasCierreFijoAsync() =>
         context.CierresFijos.AsNoTracking().Select(c => c.DiaSemana).ToListAsync();
 
+    public Task<List<DateOnly>> ObtenerFechasCierreEventualAsync(DateOnly desde) =>
+        context.CierresEventuales.AsNoTracking().Where(c => c.Fecha >= desde).Select(c => c.Fecha).ToListAsync();
+
     public Task<List<HorarioOperacion>> ObtenerHorariosOperacionAsync() =>
         context.HorariosOperacion.AsNoTracking().ToListAsync();
+
+    public Task<List<Reserva>> ObtenerPorFechaAsync(DateOnly fecha) =>
+        context.Reservas
+            .Include(r => r.Cliente)
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas).ThenInclude(rm => rm.Mesa)
+            .Where(r => r.FechaReserva == fecha)
+            .OrderBy(r => r.HoraReserva)
+            .ToListAsync();
 
     public Task<bool> ExisteCodigoAsync(string codigo) =>
         context.Reservas.AnyAsync(r => r.CodigoReserva == codigo);

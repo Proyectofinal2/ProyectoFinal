@@ -63,12 +63,63 @@ public class CierresFijosViewModel
 {
     public List<int> Dias { get; set; } = [];
 
+    /// Cierres eventuales proximos.
+    public List<CierreEventualApiResponse> Eventuales { get; set; } = [];
+
     /// Orden de presentación: la semana empieza el lunes (valor 0 = domingo).
     public static readonly IReadOnlyList<(int Valor, string Nombre)> DiasSemana =
     [
         (1, "Lunes"), (2, "Martes"), (3, "Miércoles"), (4, "Jueves"),
         (5, "Viernes"), (6, "Sábado"), (0, "Domingo")
     ];
+}
+
+/// Respuesta de GET api/cierres-eventuales.
+public class CierreEventualApiResponse
+{
+    public int IdCierreEventual { get; set; }
+    public DateOnly Fecha { get; set; }
+    public string Motivo { get; set; } = string.Empty;
+    public string UsuarioCreacion { get; set; } = string.Empty;
+}
+
+/// Formulario para cerrar una fecha puntual.
+public class NuevoCierreEventualViewModel
+{
+    [Required(ErrorMessage = "Selecciona la fecha que se va a cerrar.")]
+    public DateOnly? Fecha { get; set; }
+
+    [Required(ErrorMessage = "Indica el motivo del cierre.")]
+    [StringLength(300, ErrorMessage = "El motivo no puede superar los 300 caracteres.")]
+    public string? Motivo { get; set; }
+
+    /// Confirma la cancelacion de las reservas que existan en esa fecha.
+    public bool CancelarReservas { get; set; }
+}
+
+/// Fila de GET api/historial-cierres.
+public class HistorialCierreApiResponse
+{
+    public DateTime Fecha { get; set; }
+    public string TipoCierre { get; set; } = string.Empty;
+    public string Accion { get; set; } = string.Empty;
+    public int? DiaSemana { get; set; }
+    public DateOnly? FechaCierre { get; set; }
+    public string? Motivo { get; set; }
+    public string Usuario { get; set; } = string.Empty;
+}
+
+/// Historial de cierres con sus filtros.
+public class HistorialCierresViewModel
+{
+    public string? Tipo { get; set; }
+    public string? Accion { get; set; }
+    public DateOnly? Desde { get; set; }
+    public DateOnly? Hasta { get; set; }
+    public List<HistorialCierreApiResponse> Items { get; set; } = [];
+
+    public bool TieneFiltrosAplicados =>
+        !string.IsNullOrEmpty(Tipo) || !string.IsNullOrEmpty(Accion) || Desde.HasValue || Hasta.HasValue;
 }
 
 /// Respuesta de GET/PUT api/horarios-operacion.

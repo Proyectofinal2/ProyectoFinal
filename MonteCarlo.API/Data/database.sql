@@ -212,41 +212,58 @@ GO
 /* ------------------------------------------------------------
    Entidad: CierreFijo (HU-CFG-002)
    Dias de la semana marcados como cierre recurrente.
-   Al eliminarse, la fila se borra; la accion queda registrada
-   en HistorialCierre.
+   Al quitarse, la fila no se borra: queda con Activo = 0 y se
+   guarda quien y cuando la quito. La accion tambien queda
+   registrada en HistorialCierre.
    ------------------------------------------------------------ */
 CREATE TABLE dbo.CierreFijo (
-    IdCierreFijo       INT IDENTITY(1,1) NOT NULL,
-    DiaSemana          TINYINT   NOT NULL, -- 0=Domingo ... 6=Sabado
-    FechaCreacion      DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    IdUsuarioCreacion  INT       NOT NULL,
+    IdCierreFijo         INT IDENTITY(1,1) NOT NULL,
+    DiaSemana            TINYINT   NOT NULL, -- 0=Domingo ... 6=Sabado
+    FechaCreacion        DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    IdUsuarioCreacion    INT       NOT NULL,
+    Activo               BIT       NOT NULL DEFAULT 1, -- 0 = cierre quitado
+    FechaEliminacion     DATETIME2 NULL,
+    IdUsuarioEliminacion INT       NULL,
     CONSTRAINT PK_CierreFijo PRIMARY KEY (IdCierreFijo),
-    CONSTRAINT UQ_CierreFijo_Dia UNIQUE (DiaSemana),
     CONSTRAINT CK_CierreFijo_Dia CHECK (DiaSemana BETWEEN 0 AND 6),
     CONSTRAINT FK_CierreFijo_Usuario
-        FOREIGN KEY (IdUsuarioCreacion) REFERENCES dbo.Usuario (IdUsuario)
+        FOREIGN KEY (IdUsuarioCreacion) REFERENCES dbo.Usuario (IdUsuario),
+    CONSTRAINT FK_CierreFijo_UsuarioEliminacion
+        FOREIGN KEY (IdUsuarioEliminacion) REFERENCES dbo.Usuario (IdUsuario)
 );
+GO
+
+-- Un solo cierre activo por dia; un dia quitado puede volver a marcarse.
+CREATE UNIQUE INDEX UQ_CierreFijo_Dia ON dbo.CierreFijo (DiaSemana) WHERE Activo = 1;
 GO
 
 /* ------------------------------------------------------------
    Entidad: CierreEventual (HU-CFG-003)
    Fechas puntuales cerradas (evento, mantenimiento, etc.).
-   No se definio flujo de eliminacion en las HU, por lo que
-   estas filas se conservan siempre (necesario para el reporte
+   Las filas se conservan siempre (necesario para el reporte
    de impacto de HU-REP-002, que cuenta cancelaciones en
-   cascada por cierre).
+   cascada por cierre). Al quitar un cierre se marca Activo = 0
+   y se guarda quien y cuando lo quito.
    ------------------------------------------------------------ */
 CREATE TABLE dbo.CierreEventual (
-    IdCierreEventual   INT IDENTITY(1,1) NOT NULL,
-    Fecha              DATE          NOT NULL,
-    Motivo             NVARCHAR(300) NOT NULL,
-    FechaCreacion      DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
-    IdUsuarioCreacion  INT           NOT NULL,
+    IdCierreEventual     INT IDENTITY(1,1) NOT NULL,
+    Fecha                DATE          NOT NULL,
+    Motivo               NVARCHAR(300) NOT NULL,
+    FechaCreacion        DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+    IdUsuarioCreacion    INT           NOT NULL,
+    Activo               BIT           NOT NULL DEFAULT 1, -- 0 = cierre quitado
+    FechaEliminacion     DATETIME2     NULL,
+    IdUsuarioEliminacion INT           NULL,
     CONSTRAINT PK_CierreEventual PRIMARY KEY (IdCierreEventual),
-    CONSTRAINT UQ_CierreEventual_Fecha UNIQUE (Fecha),
     CONSTRAINT FK_CierreEventual_Usuario
-        FOREIGN KEY (IdUsuarioCreacion) REFERENCES dbo.Usuario (IdUsuario)
+        FOREIGN KEY (IdUsuarioCreacion) REFERENCES dbo.Usuario (IdUsuario),
+    CONSTRAINT FK_CierreEventual_UsuarioEliminacion
+        FOREIGN KEY (IdUsuarioEliminacion) REFERENCES dbo.Usuario (IdUsuario)
 );
+GO
+
+-- Un solo cierre activo por fecha; una fecha quitada puede volver a cerrarse.
+CREATE UNIQUE INDEX UQ_CierreEventual_Fecha ON dbo.CierreEventual (Fecha) WHERE Activo = 1;
 GO
 
 /* ------------------------------------------------------------

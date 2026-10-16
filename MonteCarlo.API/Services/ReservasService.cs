@@ -617,6 +617,7 @@ public class ReservasService(
     private async Task<DatosDisponibilidad> ObtenerDatosDisponibilidadAsync(int cantidadPersonas, int umbral)
     {
         var cierres = await reservasRepository.ObtenerDiasCierreFijoAsync();
+        var cierresEventuales = await reservasRepository.ObtenerFechasCierreEventualAsync(DateOnly.FromDateTime(DateTime.Now));
         var horarios = await reservasRepository.ObtenerHorariosOperacionAsync();
 
         var requiereMesaDisponible = cantidadPersonas <= umbral;
@@ -624,7 +625,8 @@ public class ReservasService(
             ? await mesasRepository.ObtenerMesasHabilitadasAsync()
             : [];
 
-        return new DatosDisponibilidad(cantidadPersonas, cierres.ToHashSet(), horarios, mesasHabilitadas, requiereMesaDisponible);
+        return new DatosDisponibilidad(
+            cantidadPersonas, cierres.ToHashSet(), cierresEventuales.ToHashSet(), horarios, mesasHabilitadas, requiereMesaDisponible);
     }
 
     private static DisponibilidadFechaResponse CalcularDisponibilidad(
@@ -649,6 +651,12 @@ public class ReservasService(
         if (datosDisponibilidad.CierresFijos.Contains(diaSemana))
         {
             respuesta.MotivoNoDisponible = "El restaurante permanece cerrado este dia.";
+            return respuesta;
+        }
+
+        if (datosDisponibilidad.CierresEventuales.Contains(fecha))
+        {
+            respuesta.MotivoNoDisponible = "El restaurante permanecera cerrado en esta fecha.";
             return respuesta;
         }
 
@@ -701,6 +709,32 @@ public class ReservasService(
         return respuesta;
     }
 
+    // Reservas del dia
+
+    public async Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha)
+    {
+        var reservas = await reservasRepository.ObtenerPorFechaAsync(fecha);
+
+        var respuesta = reservas
+            .Where(r => r.EstadoReserva.Nombre != Cancelada)
+            .Select(r => new ReservaDelDiaResponse
+            {
+                IdReserva = r.IdReserva,
+                CodigoReserva = r.CodigoReserva,
+                HoraReserva = r.HoraReserva,
+                NombreCliente = $"{r.Cliente.Nombre} {r.Cliente.Apellido}".Trim(),
+                Telefono = r.EsWalkIn ? null : r.Cliente.Telefono,
+                CantidadPersonas = r.CantidadPersonas,
+                Estado = r.EstadoReserva.Nombre,
+                NumerosMesa = r.ReservaMesas.Select(rm => rm.Mesa.NumeroMesa).OrderBy(n => n).ToList(),
+                Observaciones = r.Observaciones,
+                EsWalkIn = r.EsWalkIn
+            })
+            .ToList();
+
+        return Result<List<ReservaDelDiaResponse>>.Ok(respuesta, "Reservas del dia obtenidas exitosamente.");
+    }
+
     private static bool PuedeCancelarse(Reserva reserva) =>
         reserva.EstadoReserva.Nombre is Pendiente or Confirmada;
 
@@ -719,6 +753,7 @@ public class ReservasService(
     private sealed record DatosDisponibilidad(
         int CantidadPersonas,
         HashSet<byte> CierresFijos,
+        HashSet<DateOnly> CierresEventuales,
         List<HorarioOperacion> Horarios,
         List<Mesa> MesasCandidatas,
         bool RequiereMesaDisponible);

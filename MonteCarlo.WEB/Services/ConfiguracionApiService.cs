@@ -1,3 +1,4 @@
+using System.Globalization;
 using MonteCarlo.WEB.Models.Configuracion;
 using MonteCarlo.WEB.Services.Interfaces;
 
@@ -39,6 +40,40 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
             () => httpClient.PutAsJsonAsync("cierres-fijos", new { dias }),
             "Los cierres fijos fueron actualizados.",
             "No se pudieron actualizar los cierres fijos. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, List<CierreEventualApiResponse>? Data)> ObtenerCierresEventualesAsync() =>
+        EjecutarAsync<List<CierreEventualApiResponse>>(
+            () => httpClient.GetAsync("cierres-eventuales"),
+            "Cierres eventuales obtenidos.",
+            "No se pudieron obtener los cierres eventuales. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, CierreEventualApiResponse? Data)> RegistrarCierreEventualAsync(
+        DateOnly fecha, string motivo, bool cancelarReservas) =>
+        EjecutarAsync<CierreEventualApiResponse>(
+            () => httpClient.PostAsJsonAsync("cierres-eventuales", new { fecha, motivo, cancelarReservas }),
+            "El cierre fue registrado.",
+            "No se pudo registrar el cierre. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, CierreEventualApiResponse? Data)> EliminarCierreEventualAsync(int id) =>
+        EjecutarAsync<CierreEventualApiResponse>(
+            () => httpClient.DeleteAsync($"cierres-eventuales/{id}"),
+            "El cierre fue quitado.",
+            "No se pudo quitar el cierre. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, List<HistorialCierreApiResponse>? Data)> ObtenerHistorialCierresAsync(
+        string? tipo, string? accion, DateOnly? desde, DateOnly? hasta)
+    {
+        var filtros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(tipo)) filtros.Add($"tipo={Uri.EscapeDataString(tipo)}");
+        if (!string.IsNullOrWhiteSpace(accion)) filtros.Add($"accion={Uri.EscapeDataString(accion)}");
+        if (desde.HasValue) filtros.Add($"desde={desde.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        if (hasta.HasValue) filtros.Add($"hasta={hasta.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+
+        return EjecutarAsync<List<HistorialCierreApiResponse>>(
+            () => httpClient.GetAsync("historial-cierres" + (filtros.Count > 0 ? "?" + string.Join("&", filtros) : "")),
+            "Historial obtenido.",
+            "No se pudo obtener el historial. Intenta de nuevo.");
+    }
 
     public Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> ObtenerHorariosOperacionAsync() =>
         EjecutarAsync<List<HorarioOperacionApiResponse>>(

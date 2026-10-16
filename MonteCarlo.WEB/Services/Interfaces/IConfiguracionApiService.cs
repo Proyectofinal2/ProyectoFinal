@@ -15,6 +15,16 @@ public interface IConfiguracionApiService
 
     Task<(bool Success, string Message, CierresFijosApiResponse? Data)> ActualizarCierresFijosAsync(IEnumerable<int> dias);
 
+    Task<(bool Success, string Message, List<CierreEventualApiResponse>? Data)> ObtenerCierresEventualesAsync();
+
+    Task<(bool Success, string Message, CierreEventualApiResponse? Data)> RegistrarCierreEventualAsync(
+        DateOnly fecha, string motivo, bool cancelarReservas);
+
+    Task<(bool Success, string Message, CierreEventualApiResponse? Data)> EliminarCierreEventualAsync(int id);
+
+    Task<(bool Success, string Message, List<HistorialCierreApiResponse>? Data)> ObtenerHistorialCierresAsync(
+        string? tipo, string? accion, DateOnly? desde, DateOnly? hasta);
+
     Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> ObtenerHorariosOperacionAsync();
 
     Task<(bool Success, string Message, HorarioOperacionApiResponse? Data)> GuardarHorarioOperacionAsync(

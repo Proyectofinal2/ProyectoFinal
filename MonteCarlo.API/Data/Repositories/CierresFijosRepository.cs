@@ -15,7 +15,7 @@ public class CierresFijosRepository(MonteCarloDbContext context) : ICierresFijos
         IEnumerable<HistorialCierre> historial)
     {
         context.CierresFijos.AddRange(agregar);
-        context.CierresFijos.RemoveRange(eliminar);
+        context.CierresFijos.UpdateRange(eliminar);
         context.HistorialCierres.AddRange(historial);
         await context.SaveChangesAsync();
     }
