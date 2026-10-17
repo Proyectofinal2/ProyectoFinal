@@ -60,6 +60,12 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
             "No se pudo registrar la reserva. Intenta de nuevo.");
     }
 
+    public Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> BuscarAsync(string termino) =>
+    EjecutarAsync<List<ReservaDelDiaApiResponse>>(
+        () => httpClient.GetAsync($"reservas/buscar?termino={Uri.EscapeDataString(termino)}"),
+        "Búsqueda realizada.",
+        "No se pudo realizar la búsqueda.");
+
     private async Task<(bool Success, string Message, T? Data)> EjecutarAsync<T>(
         Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)
     {
@@ -80,4 +86,39 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
             return (false, "Error inesperado. Intenta de nuevo.", default);
         }
     }
+
+    public Task<(bool Success, string Message)> RegistrarAtencionAsync(string codigo) =>
+    EjecutarVoidAsync(
+        () => httpClient.PostAsync($"reservas/{Uri.EscapeDataString(codigo)}/atender", null),
+        "Llegada registrada.",
+        "No se pudo registrar la llegada.");
+
+    public Task<(bool Success, string Message)> RegistrarNoShowAsync(string codigo) =>
+        EjecutarVoidAsync(
+            () => httpClient.PostAsync($"reservas/{Uri.EscapeDataString(codigo)}/no-show", null),
+            "Reserva marcada como No Show.",
+            "No se pudo marcar la reserva como No Show.");
+
+    private async Task<(bool Success, string Message)> EjecutarVoidAsync(
+        Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)
+    {
+        try
+        {
+            var response = await llamada();
+            var resultado = await ApiResponseHelper.ParseAsync<object>(response, mensajeExito, mensajeError);
+            return (resultado.Success, resultado.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Error en peticion void: {Message}", ex.Message);
+            return (false, "Error inesperado. Intenta de nuevo.");
+        }
+    }
+
+    public Task<(bool Success, string Message)> CambiarEstadoAsync(string codigo, string nuevoEstado) =>
+    EjecutarVoidAsync(
+        () => httpClient.PostAsync($"reservas/{Uri.EscapeDataString(codigo)}/cambiar-estado?nuevoEstado={Uri.EscapeDataString(nuevoEstado)}", null),
+        "Estado actualizado.",
+        "No se pudo cambiar el estado.");
+
 }

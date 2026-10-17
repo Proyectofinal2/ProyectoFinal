@@ -19,6 +19,9 @@ public interface IReservasRepository
     /// Reservas de una fecha con cliente, estado y mesas, ordenadas por hora (entidades rastreadas).
     Task<List<Reserva>> ObtenerPorFechaAsync(DateOnly fecha);
 
+    /// <summary>HU-OPE-005: reservas de hoy en adelante cuyo nombre o teléfono coincidan con el término.</summary>
+    Task<List<Reserva>> BuscarPorNombreOTelefonoAsync(string termino, int limite);
+
     /// <summary>Verifica si ya existe una reserva con ese código (evita duplicados).</summary>
     Task<bool> ExisteCodigoAsync(string codigo);
 

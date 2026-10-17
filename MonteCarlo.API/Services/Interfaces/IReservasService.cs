@@ -5,36 +5,27 @@ namespace MonteCarlo.API.Services.Interfaces;
 public interface IReservasService
 {
     Task<Result<DisponibilidadFechaResponse>> ObtenerDisponibilidadAsync(int cantidadPersonas, DateOnly fecha);
-
     Task<Result<DisponibilidadMesResponse>> ObtenerDisponibilidadMesAsync(int cantidadPersonas, int anio, int mes);
-
     Task<Result<ReservaResponse>> ObtenerPorCodigoAsync(string codigo);
-
-    /// Reservas de una fecha, ordenadas por hora y sin las canceladas.
     Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha);
 
-    /// <summary>HU-RES-005: cancela una reserva Pendiente o Confirmada y libera su mesa.</summary>
+    /// <summary>HU-OPE-005: busca reservas por nombre o teléfono del cliente desde hoy en adelante.</summary>
+    Task<Result<List<ReservaDelDiaResponse>>> BuscarAsync(string termino);
+
     Task<Result<ReservaResponse>> CancelarAsync(string codigo);
-
-    /// <summary>
-    /// HU-RES-003: registra una reserva nueva. Aplica RN-01 y RN-03 si la
-    /// cantidad de personas está dentro del umbral de confirmación automática,
-    /// o RN-02 si lo supera. Genera el código único y devuelve los detalles.
-    /// </summary>
     Task<Result<ReservaResponse>> CrearAsync(CrearReservaRequest request);
-
-    /// <summary>HU-MES-005/006: sugiere la mejor asignación de mesa para una reserva existente, sin aplicarla.</summary>
     Task<Result<AsignacionSugeridaResponse>> SugerirAsignacionPorReservaAsync(int idReserva);
-
-    /// <summary>HU-MES-005/006: aplica 1 o 2 mesas elegidas por el admin, validando capacidad y solapamiento.</summary>
     Task<Result<AsignacionMesaResponse>> AsignarMesaAsync(int idReserva, List<int> idsMesa);
-
-    /// <summary>HU-OPE-004: variante de BuscarMejorAsignacion para "ahora", sin una Reserva todavía creada.</summary>
     Task<Result<AsignacionSugeridaResponse>> SugerirWalkInAsync(int cantidadPersonas);
-
-    /// <summary>HU-OPE-004: sienta un cliente sin reserva previa en 1 o 2 mesas elegidas por el admin.</summary>
     Task<Result<ReservaWalkInResponse>> CrearWalkInAsync(CrearReservaWalkInRequest request);
-
-    /// <summary>HU-OPE-004 (gap #5): libera una mesa ocupada por abandono sin consumo.</summary>
     Task<Result> LiberarMesaAsync(int idMesa);
+
+    /// <summary>HU-OPE-003: registra la llegada del cliente (FechaAtencion).</summary>
+    Task<Result> RegistrarAtencionAsync(string codigo);
+
+    /// <summary>HU-OPE-003: marca la reserva como No Show y libera la mesa.</summary>
+    Task<Result> RegistrarNoShowAsync(string codigo);
+
+    /// <summary>HU-OPE-002: Cambia el estado de una reserva validando las transiciones permitidas.</summary>
+    Task<Result> CambiarEstadoAsync(string codigo, string nuevoEstado);
 }

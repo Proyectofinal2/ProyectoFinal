@@ -52,6 +52,33 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
+    /// HU-OPE-005: busca reservas por nombre o teléfono del cliente
+    [Authorize(Roles = "General,Regular")]
+    [HttpGet("buscar")]
+    public async Task<IActionResult> Buscar([FromQuery] string termino)
+    {
+        var result = await reservasService.BuscarAsync(termino);
+        return Responder(result);
+    }
+
+    /// <summary>HU-OPE-003: registra la llegada del cliente.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpPost("{codigo}/atender")]
+    public async Task<IActionResult> Atender(string codigo)
+    {
+        var result = await reservasService.RegistrarAtencionAsync(codigo);
+        return Responder(result);
+    }
+
+    /// <summary>HU-OPE-003: marca la reserva como No Show.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpPost("{codigo}/no-show")]
+    public async Task<IActionResult> NoShow(string codigo)
+    {
+        var result = await reservasService.RegistrarNoShowAsync(codigo);
+        return Responder(result);
+    }
+
     [AllowAnonymous]
     [HttpGet("{codigo}")]
     public async Task<IActionResult> ObtenerPorCodigo(string codigo)
@@ -88,8 +115,24 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
+    /// <summary>HU-OPE-002: Cambia el estado de una reserva manualmente.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpPost("{codigo}/cambiar-estado")]
+    public async Task<IActionResult> CambiarEstado(string codigo, [FromQuery] string nuevoEstado)
+    {
+        var result = await reservasService.CambiarEstadoAsync(codigo, nuevoEstado);
+        return Responder(result);
+    }
+
+    // Método para respuestas con Data (Result<T>)
     private IActionResult Responder<T>(Result<T> result) =>
         StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
+            : ApiResponse.ErrorResponse(result.Message));
+
+    // Método para respuestas sin Data (Result)
+    private IActionResult Responder(Result result) =>
+        StatusCode(result.StatusCode, result.Success
+            ? ApiResponse.SuccessResponse(result.Message)
             : ApiResponse.ErrorResponse(result.Message));
 }

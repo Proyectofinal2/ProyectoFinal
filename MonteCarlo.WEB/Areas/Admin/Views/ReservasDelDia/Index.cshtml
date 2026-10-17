@@ -1,6 +1,14 @@
 @*
     Reservas del dia.
-    Lista las reservas de una fecha (hoy por defecto) ordenadas por hora.
+
+    HU-OPE-005: busqueda por nombre o telefono. El filtro de fecha y el de
+    busqueda funcionan de forma independiente:
+    - Sin busqueda: muestra las reservas del dia seleccionado.
+    - Con busqueda: muestra coincidencias en TODAS las fechas futuras,
+      e incluye una columna "Fecha" adicional.
+
+    HU-OPE-003: registrar llegada (Atender) y marcar No Show.
+    HU-OPE-002: gestionar estados (Cambiar Estado).
 *@
 @using MonteCarlo.WEB.Models.Reservas
 @model ReservasDelDiaViewModel
@@ -9,29 +17,59 @@
     ViewData["Subtitle"] = "Planifica la operacion y prepara la atencion.";
 }
 
+<!-- Token de seguridad necesario para el POST manual -->
+@Html.AntiForgeryToken()
+
+<!-- Filtros: fecha + busqueda -->
 <form asp-action="Index" method="get" class="card mb-4">
     <div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label for="fecha" class="form-label">Fecha</label>
-                <input id="fecha" name="fecha" type="date" class="form-control" value="@Model.Fecha.ToString("yyyy-MM-dd")" />
+                <input id="fecha" name="fecha" type="date" class="form-control"
+                       value="@Model.Fecha.ToString("yyyy-MM-dd")"
+                @(Model.ModoBusqueda ? "disabled" : null) />
+                @if (Model.ModoBusqueda)
+                {
+                    <div class="form-text">Deshabilitado mientras busca por nombre o teléfono.</div>
+                }
+            </div>
+            <div class="col-md-4">
+                <label for="buscar" class="form-label">Buscar por nombre o teléfono</label>
+                <input id="buscar" name="buscar" type="search" class="form-control"
+                       placeholder="Ej. Joseline o 71206802"
+                       value="@Model.TerminoBusqueda"
+                       autocomplete="off" />
             </div>
             <div class="col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-outline-primary">Ver dia</button>
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>Buscar
+                </button>
                 <a asp-action="Index" class="btn btn-link">Hoy</a>
             </div>
         </div>
     </div>
 </form>
 
+@if (Model.ModoBusqueda)
+{
+    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+        <div>
+            Mostrando resultados de <strong>"@Model.TerminoBusqueda"</strong> en todas las fechas.
+            <a asp-action="Index" class="alert-link ms-2">Limpiar búsqueda</a>
+        </div>
+    </div>
+}
+
 @if (Model.Reservas.Count == 0)
 {
     <div class="mc-table-card">
         <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
                  {
-                     Icono = "bi-calendar-check",
-                     Titulo = "No hay reservas para este dia",
-                     Descripcion = "Cuando haya reservas para esta fecha apareceran aqui."
+                     Icono = Model.ModoBusqueda ? "bi-search" : "bi-calendar-check",
+                     Titulo = Model.ModoBusqueda ? "No se encontraron coincidencias" : "No hay reservas para este día",
+                     Descripcion = Model.ModoBusqueda ? $"Ninguna reserva coincide con \"{Model.TerminoBusqueda}\"." : "Cuando haya reservas para esta fecha aparecerán aquí."
                  })" />
     </div>
 }
@@ -40,21 +78,34 @@ else
     <div class="mc-table-card">
         <div class="table-responsive">
             <table class="table mc-table align-middle">
-                <caption class="visually-hidden">Reservas del dia ordenadas por hora</caption>
+                <caption class="visually-hidden">
+                    Reservas @(Model.ModoBusqueda ? "encontradas por búsqueda" : "del día ordenadas por hora")
+                </caption>
                 <thead>
                     <tr>
+                        @if (Model.ModoBusqueda)
+                        {
+                            <th scope="col">Fecha</th>
+                        }
                         <th scope="col">Hora</th>
                         <th scope="col">Cliente</th>
                         <th scope="col" class="text-center">Personas</th>
                         <th scope="col">Mesa</th>
                         <th scope="col">Estado</th>
                         <th scope="col">Observaciones</th>
+                        <th scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var reserva in Model.Reservas)
                     {
                         <tr>
+                            @if (Model.ModoBusqueda)
+                            {
+                                <td class="text-nowrap">
+                                    @reserva.FechaReserva.ToString("dd/MM/yyyy")
+                                </td>
+                            }
                             <td class="text-nowrap fw-medium">@reserva.HoraReserva.ToString("HH:mm")</td>
                             <td>
                                 <span class="fw-medium">@reserva.NombreCliente</span>
@@ -84,6 +135,58 @@ else
                             </td>
                             <td><partial name="_BadgeEstado" model="BadgeEstadoViewModel.Reserva(reserva.Estado)" /></td>
                             <td class="text-break">@reserva.Observaciones</td>
+
+                            <!-- CELDA DE ACCIONES -->
+                            <td>
+                                @if (reserva.Estado == "Confirmada")
+                                {
+                                    <div class="btn-group btn-group-sm">
+                                        @if (reserva.FechaAtencion is null)
+                                        {
+                                            <!-- Si NO ha sido atendido, muestra los botones -->
+                                            <button type="button" class="btn btn-outline-success"
+                                                    data-bs-toggle="modal" data-bs-target="#modalAtender"
+                                                    data-codigo="@reserva.CodigoReserva" data-cliente="@reserva.NombreCliente">
+                                                <i class="bi bi-check-circle"></i> Atender
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#modalNoShow"
+                                                    data-codigo="@reserva.CodigoReserva" data-cliente="@reserva.NombreCliente">
+                                                <i class="bi bi-x-circle"></i> No Show
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <!-- Si YA fue atendido, muestra el badge -->
+                                            <span class="badge text-bg-success d-flex align-items-center px-2 py-1">
+                                                <i class="bi bi-check2-circle me-1"></i> Atendido (@reserva.FechaAtencion.Value.ToString("HH:mm"))
+                                            </span>
+                                        }
+                                        
+                                        <!-- Botón para Cambiar Estado (Confirmada -> Cancelada) -->
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                data-bs-toggle="modal" data-bs-target="#modalCambiarEstado"
+                                                data-codigo="@reserva.CodigoReserva" data-cliente="@reserva.NombreCliente" data-estado="@reserva.Estado">
+                                            <i class="bi bi-arrow-repeat"></i> Estado
+                                        </button>
+                                    </div>
+                                }
+                                else if (reserva.Estado == "Pendiente")
+                                {
+                                    <div class="btn-group btn-group-sm">
+                                        <!-- Botón para Cambiar Estado (Pendiente -> Confirmada/Cancelada) -->
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                data-bs-toggle="modal" data-bs-target="#modalCambiarEstado"
+                                                data-codigo="@reserva.CodigoReserva" data-cliente="@reserva.NombreCliente" data-estado="@reserva.Estado">
+                                            <i class="bi bi-arrow-repeat"></i> Estado
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -92,11 +195,139 @@ else
     </div>
 
     <p class="form-text mt-3">
-        @Model.Reservas.Count @(Model.Reservas.Count == 1 ? "reserva" : "reservas"),
-        @Model.PersonasEsperadas personas esperadas
-        @if (Model.Pendientes > 0)
+        @Model.Reservas.Count @(Model.Reservas.Count == 1 ? "reserva" : "reservas")
+        @if (Model.ModoBusqueda)
         {
-            <text>&middot; @Model.Pendientes pendiente(s) de asignar mesa</text>
+            <text>encontradas</text>
+        }
+        else
+        {
+            <text>· @Model.PersonasEsperadas personas esperadas</text>
+            @if (Model.Pendientes > 0)
+            {
+                <text>· @Model.Pendientes pendiente(s) de asignar mesa</text>
+            }
         }
     </p>
+}
+
+<!-- Modales de Confirmación -->
+<div class="modal fade" id="modalAtender" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar llegada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                ¿Confirmar que el cliente <strong id="atenderNombre"></strong> ha llegado al restaurante?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+
+                <form asp-action="atender" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="codigo" id="atenderCodigo" />
+                    <input type="hidden" name="fecha" value="@Model.Fecha.ToString("yyyy-MM-dd")" />
+                    <button type="submit" class="btn btn-success">Sí, registrar llegada</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNoShow" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marcar como No Show</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                ¿Confirmar que el cliente <strong id="noShowNombre"></strong> no se presentó?
+                <br /><span class="text-danger small mt-2 d-block">Esta acción liberará la mesa asignada.</span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+
+                <form asp-action="noshow" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="codigo" id="noShowCodigo" />
+                    <input type="hidden" name="fecha" value="@Model.Fecha.ToString("yyyy-MM-dd")" />
+                    <button type="submit" class="btn btn-danger">Sí, marcar No Show</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cambiar Estado (HU-OPE-002) -->
+<div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cambiar Estado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Reserva de: <strong id="estadoNombre"></strong> (Estado actual: <span id="estadoActual"></span>)
+                
+                <form action="/admin/reservas-del-dia/cambiar-estado" method="post" class="mt-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="codigo" id="estadoCodigo" />
+                    <input type="hidden" name="fecha" value="@Model.Fecha.ToString("yyyy-MM-dd")" />
+                    
+                    <label for="nuevoEstado" class="form-label">Seleccione el nuevo estado</label>
+                    <select name="nuevoEstado" id="nuevoEstado" class="form-select">
+                        <!-- Las opciones se llenan con JS según el estado actual -->
+                    </select>
+
+                    <div class="modal-footer px-0 pb-0 mt-3">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Cambiar Estado</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalAtender = document.getElementById('modalAtender');
+            modalAtender.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                document.getElementById('atenderCodigo').value = button.getAttribute('data-codigo');
+                document.getElementById('atenderNombre').textContent = button.getAttribute('data-cliente');
+            });
+
+            var modalNoShow = document.getElementById('modalNoShow');
+            modalNoShow.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                document.getElementById('noShowCodigo').value = button.getAttribute('data-codigo');
+                document.getElementById('noShowNombre').textContent = button.getAttribute('data-cliente');
+            });
+
+            // HU-OPE-002: Lógica para el modal de cambiar estado
+            var modalEstado = document.getElementById('modalCambiarEstado');
+            modalEstado.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                document.getElementById('estadoCodigo').value = button.getAttribute('data-codigo');
+                document.getElementById('estadoNombre').textContent = button.getAttribute('data-cliente');
+                
+                var estadoActual = button.getAttribute('data-estado');
+                document.getElementById('estadoActual').textContent = estadoActual;
+                
+                var select = document.getElementById('nuevoEstado');
+                select.innerHTML = '';
+                
+                if (estadoActual === 'Pendiente') {
+                    select.innerHTML = '<option value="Confirmada">Confirmada</option><option value="Cancelada">Cancelada</option>';
+                } else if (estadoActual === 'Confirmada') {
+                    select.innerHTML = '<option value="Cancelada">Cancelada</option>';
+                }
+            });
+        });
+    </script>
 }

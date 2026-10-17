@@ -40,6 +40,28 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
             .OrderBy(r => r.HoraReserva)
             .ToListAsync();
 
+    /// <summary>HU-OPE-005: busca por nombre del cliente o teléfono, desde hoy en adelante.</summary>
+    public Task<List<Reserva>> BuscarPorNombreOTelefonoAsync(string termino, int limite)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        var patron = $"%{termino.Trim()}%";
+
+        return context.Reservas
+            .Include(r => r.Cliente)
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas).ThenInclude(rm => rm.Mesa)
+            .Where(r => r.FechaReserva >= hoy
+                        && r.EstadoReserva.Nombre != "Cancelada"
+                        && !r.EsWalkIn  // walk-ins no son reservas formales
+                        && (EF.Functions.Like(r.Cliente.Nombre, patron)
+                            || EF.Functions.Like(r.Cliente.Apellido ?? "", patron)
+                            || EF.Functions.Like(r.Cliente.Telefono, patron)))
+            .OrderBy(r => r.FechaReserva)
+            .ThenBy(r => r.HoraReserva)
+            .Take(limite)
+            .ToListAsync();
+    }
+
     public Task<bool> ExisteCodigoAsync(string codigo) =>
         context.Reservas.AnyAsync(r => r.CodigoReserva == codigo);
 
