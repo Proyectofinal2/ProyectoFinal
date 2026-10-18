@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MonteCarlo.WEB.Models;
 using MonteCarlo.WEB.Models.Autenticacion;
+using MonteCarlo.WEB.Services.Interfaces;
 
 namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 
@@ -12,7 +13,7 @@ namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 [Area("Admin")]
 [Route("admin/mi-cuenta")]
 [Authorize]
-public class MiCuentaController : Controller
+public class MiCuentaController(IAuthApiService authApiService) : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -23,17 +24,36 @@ public class MiCuentaController : Controller
 
     [HttpPost("contrasena")]
     [ValidateAntiForgeryToken]
-    public IActionResult CambiarContrasena(CambiarContrasenaViewModel modelo)
+    public async Task<IActionResult> CambiarContrasena(CambiarContrasenaViewModel modelo)
     {
         if (!ModelState.IsValid)
         {
             return View(nameof(Index), modelo);
         }
 
-        // TODO conectar: verificar contrasena actual y aplicar la nueva.
-        // No cerrar sesion tras el cambio (refrescar cookie si se revocan otras sesiones).
+        var (success, message) = await authApiService.CambiarContrasenaAsync(
+            modelo.ContrasenaActual,
+            modelo.NuevaContrasena);
 
-        TempData[Alerta.Exito] = "Tu contrasena fue actualizada.";
+        if (!success)
+        {
+            if (message.Contains("contraseña actual", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(modelo.ContrasenaActual), message);
+            }
+            else if (message.Contains("nueva contraseña", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(modelo.NuevaContrasena), message);
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, message);
+            }
+
+            return View(nameof(Index), modelo);
+        }
+
+        TempData[Alerta.Exito] = message;
         return RedirectToAction(nameof(Index));
     }
 }

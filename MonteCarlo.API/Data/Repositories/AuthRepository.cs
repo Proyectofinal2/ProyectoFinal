@@ -22,6 +22,12 @@ public class AuthRepository(MonteCarloDbContext context) : IAuthRepository
                 u.CorreoElectronico == usuarioOCorreo);
     }
 
+    /// <summary>Obtiene un usuario por su identificador.</summary>
+    public async Task<Usuario?> ObtenerPorIdAsync(int idUsuario)
+    {
+        return await context.Usuarios.FindAsync(idUsuario);
+    }
+
     /// <summary>
     /// Registra un intento fallido de login en el usuario.
     /// Si se alcanzan 3 intentos, bloquea temporalmente la cuenta.
@@ -133,5 +139,31 @@ public class AuthRepository(MonteCarloDbContext context) : IAuthRepository
         token.FechaUtilizado = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Cambia la contraseña e invalida todos los tokens de recuperación activos
+    /// en una única transacción. HU-AUT-004.
+    /// </summary>
+    public async Task CambiarContrasenaEInvalidarTokensAsync(Usuario usuario, string nuevoHash)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        var ahora = DateTime.UtcNow;
+        var tokensActivos = await context.TokensRecuperacionContrasena
+            .Where(t => t.IdUsuario == usuario.IdUsuario &&
+                        !t.Utilizado &&
+                        t.FechaExpiracion > ahora)
+            .ToListAsync();
+
+        usuario.ContrasenaHash = nuevoHash;
+
+        foreach (var token in tokensActivos)
+        {
+            token.Utilizado = true;
+            token.FechaUtilizado = ahora;
+        }
+
+        await context.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 }

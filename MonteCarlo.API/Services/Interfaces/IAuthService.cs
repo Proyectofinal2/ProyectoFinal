@@ -14,6 +14,9 @@ namespace MonteCarlo.API.Services.Interfaces
         /// <returns>Un <see cref="Result{LoginResponse}"/> con los datos de autenticación y el estado.</returns>
         Task<Result<LoginResponse>> LoginAsync(LoginRequest request);
 
+        /// <summary>Cambia la contraseña de la cuenta autenticada. HU-AUT-004.</summary>
+        Task<Result> CambiarContrasenaAsync(int idUsuario, ChangePasswordRequest request);
+
         /// <summary>
         /// Solicita la recuperación de contraseña de un usuario. HU-AUT-003.
         /// Retorna un mensaje genérico de éxito para no revelar si el usuario existe

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using MonteCarlo.API.DTOs;
 using MonteCarlo.API.Services.Interfaces;
 
@@ -34,6 +36,26 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return StatusCode(result.StatusCode,
             ApiResponse.SuccessResponse(result.Message, result.Data));
+    }
+
+    /// <summary>Cambia la contraseña de la cuenta identificada por el JWT vigente. HU-AUT-004.</summary>
+    [Authorize]
+    [HttpPost("cambiar-contrasena")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(idClaim, out var idUsuario))
+        {
+            return Unauthorized(ApiResponse.ErrorResponse("No autorizado."));
+        }
+
+        var result = await authService.CambiarContrasenaAsync(idUsuario, request);
+        return result.Success
+            ? StatusCode(result.StatusCode, ApiResponse.SuccessResponse(result.Message, null))
+            : StatusCode(result.StatusCode, ApiResponse.ErrorResponse(result.Message, null));
     }
 
     /// <summary>
