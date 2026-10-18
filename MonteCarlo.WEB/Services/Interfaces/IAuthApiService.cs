@@ -6,6 +6,8 @@ namespace MonteCarlo.WEB.Services.Interfaces
     {
         Task<(bool Success, string Message, LoginApiResponse? Data, int? SegundosBloqueoRestantes)> LoginAsync(string usuario, string contrasena);
 
+        Task<(bool Success, string Message)> CambiarContrasenaAsync(string contrasenaActual, string nuevaContrasena);
+
         Task<(bool Success, string Message)> RecuperarContrasenaAsync(string usuarioOCorreo);
 
         Task<(bool Success, string Message, bool TokenInvalido)> RestablecerContrasenaAsync(string token, string nuevaContrasena);

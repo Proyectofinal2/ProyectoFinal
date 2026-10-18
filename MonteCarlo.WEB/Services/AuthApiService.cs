@@ -36,6 +36,20 @@ public class AuthApiService(HttpClient httpClient, ILogger<AuthApiService> logge
     }
 
     /// <summary>
+    /// Cambia la contraseña de la cuenta autenticada. El AuthTokenHandler agrega el JWT;
+    /// el identificador de usuario nunca se envía desde el navegador.
+    /// </summary>
+    public async Task<(bool Success, string Message)> CambiarContrasenaAsync(string contrasenaActual, string nuevaContrasena)
+    {
+        var resultado = await EnviarAsync<object>(
+            () => httpClient.PostAsJsonAsync("auth/cambiar-contrasena", new { contrasenaActual, nuevaContrasena }),
+            "Tu contraseña fue actualizada.",
+            "No se pudo actualizar la contraseña. Intenta nuevamente.");
+
+        return (resultado.Success, resultado.Message);
+    }
+
+    /// <summary>
     /// Solicita a la API el envío del enlace de recuperación de contraseña. HU-AUT-003.
     /// </summary>
     public async Task<(bool Success, string Message)> RecuperarContrasenaAsync(string usuarioOCorreo)

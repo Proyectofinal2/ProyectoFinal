@@ -15,6 +15,9 @@ namespace MonteCarlo.API.Data.Repositories.Interfaces
         /// <returns>El <see cref="Usuario"/> encontrado; de lo contrario null.</returns>
         Task<Usuario?> ObtenerPorNombreOCorreoAsync(string usuarioOCorreo);
 
+        /// <summary>Obtiene un usuario por su identificador.</summary>
+        Task<Usuario?> ObtenerPorIdAsync(int idUsuario);
+
         /// <summary>
         /// Registra un intento fallido de login para el usuario especificado.
         /// </summary>
@@ -65,5 +68,11 @@ namespace MonteCarlo.API.Data.Repositories.Interfaces
         /// <param name="token">El token de recuperación utilizado.</param>
         /// <param name="nuevoHash">Hash BCrypt de la nueva contraseña.</param>
         Task RestablecerContrasenaAsync(Usuario usuario, TokenRecuperacionContrasena token, string nuevoHash);
+
+        /// <summary>
+        /// Actualiza la contraseña e invalida los tokens de recuperación activos en
+        /// la misma transacción. HU-AUT-004.
+        /// </summary>
+        Task CambiarContrasenaEInvalidarTokensAsync(Usuario usuario, string nuevoHash);
     }
 }

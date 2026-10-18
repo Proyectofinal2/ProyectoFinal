@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.IdentityModel.Tokens;
 using MonteCarlo.API.Data.Entities;
 using MonteCarlo.API.Data.Repositories.Interfaces;
@@ -86,6 +87,40 @@ public class AuthService(
     }
 
     /// <summary>
+    /// Cambia la contraseña de la cuenta indicada por el claim JWT. HU-AUT-004.
+    /// Los intentos fallidos aquí no afectan los contadores de bloqueo de login.
+    /// </summary>
+    public async Task<Result> CambiarContrasenaAsync(int idUsuario, ChangePasswordRequest request)
+    {
+        var usuario = await authRepository.ObtenerPorIdAsync(idUsuario);
+
+        if (usuario == null || !usuario.Activo)
+        {
+            return Result.BadRequest("No se pudo cambiar la contraseña de la cuenta.");
+        }
+
+        if (!VerificarContrasena(request.ContrasenaActual, usuario.ContrasenaHash))
+        {
+            return Result.BadRequest("La contraseña actual es incorrecta.");
+        }
+
+        if (!EsContrasenaNuevaValida(request.NuevaContrasena))
+        {
+            return Result.BadRequest("La nueva contraseña debe tener entre 8 y 100 caracteres e incluir una minúscula, una mayúscula y un número.");
+        }
+
+        if (VerificarContrasena(request.NuevaContrasena, usuario.ContrasenaHash))
+        {
+            return Result.BadRequest("La nueva contraseña no puede ser igual a la contraseña actual.");
+        }
+
+        var nuevoHash = BCrypt.Net.BCrypt.HashPassword(request.NuevaContrasena, workFactor: 12);
+        await authRepository.CambiarContrasenaEInvalidarTokensAsync(usuario, nuevoHash);
+
+        return Result.Ok("Tu contraseña fue actualizada.");
+    }
+
+    /// <summary>
     /// Lee "Jwt:ExpirationMinutes" de la configuración. Si no está definido o no es
     /// un número válido, usa 60 minutos como valor por defecto.
     /// </summary>
@@ -151,6 +186,14 @@ public class AuthService(
         {
             return false;
         }
+    }
+
+    /// <summary>Aplica la política de HU-AUT-004 también en la API.</summary>
+    private static bool EsContrasenaNuevaValida(string contrasena)
+    {
+        return !string.IsNullOrEmpty(contrasena) &&
+               contrasena.Length is >= 8 and <= 100 &&
+               Regex.IsMatch(contrasena, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$");
     }
 
     /// <summary>
