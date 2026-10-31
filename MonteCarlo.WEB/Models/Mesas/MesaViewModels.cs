@@ -18,6 +18,16 @@ public class MesaApiResponse
     public int DuracionReservaMinutos { get; set; }
 }
 
+/// <summary>Datos de GET api/mesas/resumen para los indicadores del panel.</summary>
+public class ResumenMesasApiResponse
+{
+    public int MesasHabilitadas { get; set; }
+    public int MesasDisponibles { get; set; }
+    public int MesasOcupadas { get; set; }
+    public decimal PorcentajeOcupacion { get; set; }
+    public string? MensajeContextual { get; set; }
+}
+
 public class SugerenciaWalkInApiResponse
 {
     public List<int> NumerosMesa { get; set; } = [];

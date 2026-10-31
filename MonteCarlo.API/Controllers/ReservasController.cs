@@ -52,6 +52,27 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
+    /// <summary>HU-REP-001: catalogo real de estados para el filtro de reportes.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpGet("estados")]
+    public async Task<IActionResult> ObtenerEstadosReporte()
+    {
+        var result = await reservasService.ObtenerEstadosReporteAsync();
+        return Responder(result);
+    }
+
+    /// <summary>HU-REP-001: indicadores y distribucion de reservas por periodo.</summary>
+    [Authorize(Roles = "General,Regular")]
+    [HttpGet("reporte")]
+    public async Task<IActionResult> ObtenerReporte(
+        [FromQuery] DateOnly? fechaInicio,
+        [FromQuery] DateOnly? fechaFin,
+        [FromQuery] string? estado)
+    {
+        var result = await reservasService.ObtenerReporteAsync(fechaInicio, fechaFin, estado);
+        return Responder(result);
+    }
+
     /// HU-OPE-005: busca reservas por nombre o teléfono del cliente
     [Authorize(Roles = "General,Regular")]
     [HttpGet("buscar")]

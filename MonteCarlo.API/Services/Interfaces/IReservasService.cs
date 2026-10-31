@@ -9,6 +9,12 @@ public interface IReservasService
     Task<Result<ReservaResponse>> ObtenerPorCodigoAsync(string codigo);
     Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha);
 
+    /// <summary>Catalogo real de estados disponible para filtros administrativos.</summary>
+    Task<Result<List<EstadoReservaReporteResponse>>> ObtenerEstadosReporteAsync();
+
+    /// <summary>HU-REP-001: indicadores y distribucion de reservas por periodo.</summary>
+    Task<Result<ReporteReservasResponse>> ObtenerReporteAsync(DateOnly? fechaInicio, DateOnly? fechaFin, string? estado);
+
     /// <summary>HU-OPE-005: busca reservas por nombre o teléfono del cliente desde hoy en adelante.</summary>
     Task<Result<List<ReservaDelDiaResponse>>> BuscarAsync(string termino);
 

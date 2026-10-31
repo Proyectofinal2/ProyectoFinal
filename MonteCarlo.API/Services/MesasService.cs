@@ -18,6 +18,45 @@ public class MesasService(
 
     public async Task<Result<List<MesaResponse>>> ListarAsync(bool incluirDeshabilitadas)
     {
+        var estadosEnVivo = await ObtenerEstadosEnVivoAsync(incluirDeshabilitadas);
+        var respuesta = estadosEnVivo.Select(x => x.Respuesta).ToList();
+
+        return Result<List<MesaResponse>>.Ok(respuesta, "Mesas obtenidas exitosamente.");
+    }
+
+    /// <summary>Resume la ocupacion actual sin duplicar las reglas de estado del canvas.</summary>
+    public async Task<Result<ResumenMesasResponse>> ObtenerResumenAsync()
+    {
+        var estadosEnVivo = await ObtenerEstadosEnVivoAsync(incluirDeshabilitadas: true);
+        var mesasHabilitadas = estadosEnVivo
+            .Where(x => x.Mesa.Estado != Deshabilitada)
+            .ToList();
+
+        var mesasOcupadas = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Ocupada");
+        var totalHabilitadas = mesasHabilitadas.Count;
+
+        var resumen = new ResumenMesasResponse
+        {
+            MesasHabilitadas = totalHabilitadas,
+            MesasDisponibles = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Disponible"),
+            MesasOcupadas = mesasOcupadas,
+            PorcentajeOcupacion = totalHabilitadas == 0
+                ? 0
+                : Math.Round(mesasOcupadas * 100m / totalHabilitadas, 1),
+            MensajeContextual = totalHabilitadas == 0
+                ? "No hay mesas habilitadas actualmente."
+                : null
+        };
+
+        return Result<ResumenMesasResponse>.Ok(resumen, "Resumen de mesas obtenido exitosamente.");
+    }
+
+    /// <summary>
+    /// Obtiene las mesas y aplica una unica vez la logica de estado actual usada por
+    /// el canvas y el dashboard. La ocupacion no se recalcula fuera de este servicio.
+    /// </summary>
+    private async Task<List<(Mesa Mesa, MesaResponse Respuesta)>> ObtenerEstadosEnVivoAsync(bool incluirDeshabilitadas)
+    {
         var hoy = DateOnly.FromDateTime(DateTime.Now);
         var ahora = DateTime.Now;
 
@@ -29,11 +68,9 @@ public class MesasService(
         var ventanaMinutos = await configuracionService.ObtenerValorVentanaAlertaReservaProximaAsync();
         var contexto = new ContextoEstadoEnVivo(hoy, ahora, duracionMinutos, ventanaMinutos);
 
-        var respuesta = mesas
-            .Select(mesa => MapearEstadoEnVivo(mesa, reservasHoy, contexto))
+        return mesas
+            .Select(mesa => (Mesa: mesa, Respuesta: MapearEstadoEnVivo(mesa, reservasHoy, contexto)))
             .ToList();
-
-        return Result<List<MesaResponse>>.Ok(respuesta, "Mesas obtenidas exitosamente.");
     }
 
     private readonly record struct ContextoEstadoEnVivo(DateOnly Hoy, DateTime Ahora, int DuracionMinutos, int VentanaMinutos);

@@ -191,6 +191,154 @@ body {
 }
 
 /* ------------------------------------------------------------
+   4.1 Dashboard administrativo
+   ------------------------------------------------------------ */
+.mc-dashboard-filters .card-body {
+  padding: var(--mc-space-4);
+}
+
+.mc-dashboard-scorecard {
+  position: relative;
+  overflow: hidden;
+}
+
+.mc-dashboard-scorecard .card-body {
+  padding: var(--mc-space-4);
+}
+
+.mc-dashboard-scorecard__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--mc-space-4);
+  border-radius: var(--mc-radius);
+  font-size: var(--mc-text-lg);
+}
+
+.mc-dashboard-scorecard__icon--neutral {
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-600);
+}
+
+.mc-dashboard-scorecard__icon--success {
+  background-color: var(--mc-success-bg);
+  color: var(--mc-success);
+}
+
+.mc-dashboard-scorecard__icon--warning {
+  background-color: var(--mc-warning-bg);
+  color: var(--mc-warning);
+}
+
+.mc-dashboard-scorecard__icon--accent {
+  background-color: var(--mc-copper-50);
+  color: var(--mc-copper-700);
+}
+
+.mc-dashboard-scorecard__icon--danger {
+  background-color: var(--mc-danger-bg);
+  color: var(--mc-danger);
+}
+
+.mc-dashboard-scorecard__icon--info {
+  background-color: var(--mc-info-bg);
+  color: var(--mc-info);
+}
+
+.mc-dashboard-scorecard__label,
+.mc-dashboard-scorecard__help,
+.mc-dashboard__updated {
+  color: var(--mc-ink-muted);
+}
+
+.mc-dashboard-scorecard__label {
+  margin: 0 0 var(--mc-space-1);
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-medium);
+}
+
+.mc-dashboard-scorecard__value {
+  margin: 0;
+  color: var(--mc-ink);
+  font-size: var(--mc-text-3xl);
+  font-weight: var(--mc-weight-semibold);
+  line-height: 1.1;
+}
+
+.mc-dashboard-scorecard__help,
+.mc-dashboard__updated {
+  margin-top: var(--mc-space-2);
+  font-size: var(--mc-text-xs);
+}
+
+.mc-dashboard-scorecard__value--message {
+  font-size: var(--mc-text-lg);
+  line-height: 1.3;
+}
+
+.mc-dashboard-section {
+  margin-top: var(--mc-space-7);
+  padding-top: var(--mc-space-5);
+  border-top: 1px solid var(--mc-border);
+}
+
+.mc-dashboard__section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--mc-space-4);
+}
+
+.mc-dashboard__section-copy {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-dashboard-report-filters {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--mc-space-3);
+}
+
+.mc-dashboard-report-filters__field {
+  min-width: 10rem;
+}
+
+.mc-dashboard-report-filters__field--estado {
+  min-width: 13rem;
+}
+
+.mc-dashboard-report-filters__field--estado .form-select {
+  padding-right: 2.5rem;
+}
+
+.mc-dashboard-report-filters__action {
+  padding-top: 1.85rem;
+}
+
+@media (max-width: 767.98px) {
+  .mc-dashboard__section-header,
+  .mc-dashboard-report-filters {
+    align-items: stretch;
+  }
+
+  .mc-dashboard-report-filters {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .mc-dashboard-report-filters__field {
+    flex: 1 1 10rem;
+  }
+}
+
+/* ------------------------------------------------------------
    5. Formularios
    ------------------------------------------------------------ */
 .form-label {

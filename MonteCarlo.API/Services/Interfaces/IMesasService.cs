@@ -6,6 +6,9 @@ public interface IMesasService
 {
     Task<Result<List<MesaResponse>>> ListarAsync(bool incluirDeshabilitadas);
 
+    /// <summary>Obtiene los indicadores actuales de disponibilidad y ocupacion.</summary>
+    Task<Result<ResumenMesasResponse>> ObtenerResumenAsync();
+
     Task<Result<MesaResponse>> CrearAsync(CrearMesaRequest request);
 
     Task<Result<MesaResponse>> ActualizarCapacidadAsync(int idMesa, ActualizarCapacidadRequest request);

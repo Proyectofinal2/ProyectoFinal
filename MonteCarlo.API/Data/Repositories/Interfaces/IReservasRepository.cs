@@ -1,4 +1,5 @@
 using MonteCarlo.API.Data.Entities;
+using MonteCarlo.API.DTOs;
 
 namespace MonteCarlo.API.Data.Repositories.Interfaces;
 
@@ -11,6 +12,12 @@ public interface IReservasRepository
     Task<Reserva?> ObtenerPorIdAsync(int id);
 
     Task<EstadoReserva?> ObtenerEstadoAsync(string nombre);
+
+    /// <summary>Catalogo de estados para filtros y distribuciones de reportes.</summary>
+    Task<List<EstadoReservaReporteResponse>> ObtenerEstadosReporteAsync();
+
+    /// <summary>Agregados de reservas por periodo, sin materializar entidades ni relaciones.</summary>
+    Task<ResumenReporteReservasDatos> ObtenerReporteAsync(DateOnly fechaInicio, DateOnly fechaFin, string? estado);
 
     Task<List<byte>> ObtenerDiasCierreFijoAsync();
     Task<List<DateOnly>> ObtenerFechasCierreEventualAsync(DateOnly desde);

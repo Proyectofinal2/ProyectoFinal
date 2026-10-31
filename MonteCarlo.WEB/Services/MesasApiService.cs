@@ -13,6 +13,12 @@ public class MesasApiService(HttpClient httpClient, ILogger<MesasApiService> log
             "Mesas obtenidas.",
             "No se pudieron obtener las mesas. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, ResumenMesasApiResponse? Data)> ObtenerResumenAsync() =>
+        EjecutarAsync<ResumenMesasApiResponse>(
+            () => httpClient.GetAsync("mesas/resumen"),
+            "Resumen de mesas obtenido.",
+            "No se pudo obtener el resumen de mesas. Intenta de nuevo.");
+
     public Task<(bool Success, string Message, SugerenciaWalkInApiResponse? Data)> ObtenerSugerenciaWalkInAsync(int cantidadPersonas) =>
         EjecutarAsync<SugerenciaWalkInApiResponse>(
             () => httpClient.GetAsync($"mesas/sugerencia-walkin?cantidadPersonas={cantidadPersonas}"),

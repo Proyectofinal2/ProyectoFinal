@@ -1,17 +1,188 @@
-@*
-    Destino tras iniciar sesion (HU-AUT-001, escenario 1).
-    Marcador de posicion hasta que se construyan HU-OPE y HU-REP.
-*@
+@using MonteCarlo.WEB.Models.Panel
+@using MonteCarlo.WEB.Models.UI
+@model PanelIndexViewModel
 @{
     ViewData["Title"] = "Panel administrativo";
-    ViewData["Subtitle"] = "Bienvenido de vuelta.";
+    ViewData["Subtitle"] = "Estado actual y analisis de reservas del restaurante.";
 }
 
-<div class="mc-table-card">
-    <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
-             {
-                 Icono = "bi-speedometer2",
-                 Titulo = "El panel operativo aun no esta disponible",
-                 Descripcion = "Aqui se mostraran las reservas del dia y los indicadores del restaurante en una proxima entrega."
-             })" />
-</div>
+@section PageActions {
+    <button form="filtros-reporte" type="submit" class="btn btn-primary">
+        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i> Actualizar
+    </button>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorResumen))
+{
+    <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>@Model.ErrorResumen</span>
+    </div>
+}
+
+@if (Model.ResumenMesas is not null)
+{
+    <section aria-labelledby="indicadores-mesas">
+        <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+            <h2 id="indicadores-mesas" class="h5 mb-0">Estado actual de las mesas</h2>
+            <p class="mc-dashboard__updated mb-0">
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                Actualizado a las @Model.FechaActualizacion?.ToString("HH:mm")
+            </p>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-sm-6 col-xl-3">
+                <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--neutral"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Mesas habilitadas</p>
+                    <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.MesasHabilitadas</p>
+                    <p class="mc-dashboard-scorecard__help">Disponibles para la operacion.</p>
+                </div></article>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--success"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Mesas disponibles</p>
+                    <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.MesasDisponibles</p>
+                    <p class="mc-dashboard-scorecard__help">Listas para atender ahora.</p>
+                </div></article>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--warning"><i class="bi bi-people" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Mesas ocupadas</p>
+                    <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.MesasOcupadas</p>
+                    <p class="mc-dashboard-scorecard__help">Con una reserva en curso.</p>
+                </div></article>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+                <article class="card mc-dashboard-scorecard mc-accent-top h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--accent"><i class="bi bi-pie-chart" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Ocupacion</p>
+                    <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.PorcentajeOcupacion.ToString("0.#") %</p>
+                    <p class="mc-dashboard-scorecard__help">Sobre mesas habilitadas.</p>
+                </div></article>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ResumenMesas.MensajeContextual))
+        {
+            <p class="alert alert-info mt-3 mb-0" role="status">
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>@Model.ResumenMesas.MensajeContextual
+            </p>
+        }
+    </section>
+}
+
+<section class="mc-dashboard-section" aria-labelledby="analisis-reservas">
+    <div class="mc-dashboard__section-header">
+        <div>
+            <h2 id="analisis-reservas" class="h4 mb-1">Analisis de reservas</h2>
+            <p class="mc-dashboard__section-copy mb-0">Resultados segun la fecha programada de cada reserva.</p>
+        </div>
+
+        <form id="filtros-reporte" asp-action="Index" method="get" class="mc-dashboard-report-filters">
+            <div class="mc-dashboard-report-filters__field">
+                <label asp-for="Filtros.Periodo" class="form-label"></label>
+                <select asp-for="Filtros.Periodo" class="form-select"
+                        asp-items="Html.GetEnumSelectList<PeriodoDashboard>()"></select>
+            </div>
+            <div class="mc-dashboard-report-filters__field mc-dashboard-report-filters__field--estado">
+                <label asp-for="Filtros.EstadoReserva" class="form-label">Estado</label>
+                <select asp-for="Filtros.EstadoReserva" class="form-select">
+                    <option value="">Todos los estados</option>
+                    @foreach (var estado in Model.EstadosReserva)
+                    {
+                        <option value="@estado.Nombre">@estado.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="mc-dashboard-report-filters__action">
+                <button type="submit" class="btn btn-outline-primary">Aplicar</button>
+            </div>
+        </form>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorReporte))
+    {
+        <div class="alert alert-danger mt-4 mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>@Model.ErrorReporte
+        </div>
+    }
+    else if (Model.ReporteReservas is not null)
+    {
+        @if (Model.TieneFiltroEstado)
+        {
+            <p class="mt-4 mb-0"><span class="mc-badge mc-badge--info">Filtro aplicado: @Model.Filtros.EstadoReserva</span></p>
+        }
+
+        @if (Model.ReporteReservas.TotalReservas == 0)
+        {
+            <div class="mc-table-card mt-4">
+                <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                         {
+                             Icono = "bi-calendar-x",
+                             Titulo = "No hay reservas para este periodo",
+                             Descripcion = "No encontramos reservas que coincidan con los filtros seleccionados."
+                         })" />
+            </div>
+        }
+        else
+        {
+            <div class="row g-3 mt-1">
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--neutral"><i class="bi bi-calendar-check" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Total de reservas</p><p class="mc-dashboard-scorecard__value">@Model.ReporteReservas.TotalReservas</p>
+                    <p class="mc-dashboard-scorecard__help">Dentro del periodo seleccionado.</p>
+                </div></article></div>
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--accent"><i class="bi bi-people" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Personas reservadas</p><p class="mc-dashboard-scorecard__value">@Model.ReporteReservas.PersonasReservadas</p>
+                    <p class="mc-dashboard-scorecard__help">Suma de personas en las reservas.</p>
+                </div></article></div>
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--success"><i class="bi bi-person-check" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Reservas atendidas</p><p class="mc-dashboard-scorecard__value">@Model.ReporteReservas.ReservasAtendidas</p>
+                    <p class="mc-dashboard-scorecard__help">Con llegada registrada.</p>
+                </div></article></div>
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--warning"><i class="bi bi-person-x" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">No Shows</p><p class="mc-dashboard-scorecard__value">@Model.ReporteReservas.NoShows</p>
+                    <p class="mc-dashboard-scorecard__help">Con estado actual No Show.</p>
+                </div></article></div>
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--danger"><i class="bi bi-x-circle" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Cancelaciones</p><p class="mc-dashboard-scorecard__value">@Model.ReporteReservas.Cancelaciones</p>
+                    <p class="mc-dashboard-scorecard__help">Con estado actual Cancelada.</p>
+                </div></article></div>
+                <div class="col-sm-6 col-xl-4"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--info"><i class="bi bi-percent" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Porcentaje de asistencia</p>
+                    @if (Model.ReporteReservas.PorcentajeAsistencia is decimal porcentajeAsistencia)
+                    {
+                        <p class="mc-dashboard-scorecard__value">@porcentajeAsistencia.ToString("0.#") %</p>
+                    }
+                    else
+                    {
+                        <p class="mc-dashboard-scorecard__value mc-dashboard-scorecard__value--message">@Model.ReporteReservas.MensajeAsistencia</p>
+                    }
+                    <p class="mc-dashboard-scorecard__help">Atendidas / (atendidas + No Shows).</p>
+                </div></article></div>
+            </div>
+
+            <div class="mc-table-card mt-4">
+                <div class="table-responsive"><table class="table mc-table align-middle">
+                    <caption class="visually-hidden">Distribucion de reservas por estado</caption>
+                    <thead><tr><th scope="col">Estado</th><th scope="col" class="text-end">Cantidad de reservas</th><th scope="col" class="text-end">Porcentaje</th></tr></thead>
+                    <tbody>
+                        @foreach (var fila in Model.ReporteReservas.DistribucionPorEstado)
+                        {
+                            <tr><td>@fila.Estado</td><td class="text-end">@fila.CantidadReservas</td><td class="text-end">@fila.Porcentaje.ToString("0.#") %</td></tr>
+                        }
+                    </tbody>
+                </table></div>
+            </div>
+        }
+    }
+</section>

@@ -14,6 +14,11 @@ public interface IReservasApiService
 
     Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> ObtenerReservasDelDiaAsync(DateOnly fecha);
 
+    Task<(bool Success, string Message, List<EstadoReservaReporteApiResponse>? Data)> ObtenerEstadosReporteAsync();
+
+    Task<(bool Success, string Message, ReporteReservasApiResponse? Data)> ObtenerReporteAsync(
+        DateOnly fechaInicio, DateOnly fechaFin, string? estado);
+
     Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> BuscarAsync(string termino);
     /// HU-OPE-003: registra la llegada del cliente.
     Task<(bool Success, string Message)> RegistrarAtencionAsync(string codigo);

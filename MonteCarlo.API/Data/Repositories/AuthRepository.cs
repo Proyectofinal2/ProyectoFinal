@@ -143,7 +143,6 @@ public class AuthRepository(MonteCarloDbContext context) : IAuthRepository
 
     /// <summary>
     /// Cambia la contraseña e invalida todos los tokens de recuperación activos
-    /// en una única transacción. HU-AUT-004.
     /// </summary>
     public async Task CambiarContrasenaEInvalidarTokensAsync(Usuario usuario, string nuevoHash)
     {

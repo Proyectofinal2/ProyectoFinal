@@ -18,6 +18,14 @@ public class MesasController(IMesasService mesasService, IReservasService reserv
         return Responder(result);
     }
 
+    /// <summary>HU-DASH-001: indicadores actuales de disponibilidad y ocupacion.</summary>
+    [HttpGet("resumen")]
+    public async Task<IActionResult> ObtenerResumen()
+    {
+        var result = await mesasService.ObtenerResumenAsync();
+        return Responder(result);
+    }
+
     /// <summary>HU-OPE-004: sugerencia de mesa/combo para "ahora", sin reserva previa.</summary>
     [HttpGet("sugerencia-walkin")]
     public async Task<IActionResult> SugerenciaWalkIn([FromQuery] int cantidadPersonas)
