@@ -1,0 +1,100 @@
+@*
+    Formulario del panel lateral (HU-CON-001): alta y edicion de un producto.
+    Lo devuelve ProductosController (Nuevo / Editar) para el fetch del panel, y la vista Index lo
+    incluye cuando el POST fallo por validacion.
+
+    - Categoria: solo se elige entre las activas (grupo de opciones; no se escribe).
+    - Precio: en colones; acepta 3500, 3 500, 3.500 o 3500,50.
+    - Historial: linea de tiempo del producto, solo para el Administrador General.
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@model ProductoFormViewModel
+
+@* El panel toma su titulo de aqui cuando el contenido llega por fetch. *@
+<span hidden data-mc-drawer-titulo-valor>@(Model.EsEdicion ? "Editar producto" : "Nuevo producto")</span>
+
+<form method="post" novalidate data-mc-guard-submit
+      asp-area="Admin" asp-controller="Productos"
+      asp-action="@(Model.EsEdicion ? "Actualizar" : "Crear")"
+      asp-route-id="@(Model.EsEdicion ? Model.IdProducto : null)">
+
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Nombre" class="form-label"></label>
+        <input asp-for="Nombre" class="form-control" maxlength="100" autocomplete="off" />
+        <span asp-validation-for="Nombre" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Precio" class="form-label"></label>
+        <div class="input-group">
+            <span class="input-group-text">₡</span>
+            <input asp-for="Precio" class="form-control" inputmode="decimal" autocomplete="off" placeholder="3500" />
+        </div>
+        <span asp-validation-for="Precio" class="text-danger small"></span>
+    </div>
+
+    <fieldset class="mb-3">
+        <legend class="form-label fs-6">Categoría</legend>
+
+        <div class="mc-chips">
+            @foreach (var categoria in Model.Categorias)
+            {
+                <input type="radio" class="btn-check" name="IdCategoria" id="categoria-@categoria.IdCategoria"
+                       value="@categoria.IdCategoria" checked="@(Model.IdCategoria == categoria.IdCategoria)" />
+                <label class="mc-chip @CategoriaEstilo.Clase(categoria.IdCategoria)" for="categoria-@categoria.IdCategoria">
+                    @categoria.Nombre@(categoria.Activa ? null : " (deshabilitada)")
+                </label>
+            }
+        </div>
+
+        <span asp-validation-for="IdCategoria" class="text-danger small d-block mt-1"></span>
+        <p class="form-text mb-0">
+            ¿Falta una? <a asp-controller="CategoriasProducto" asp-action="Index">Administra las categorías</a>.
+        </p>
+    </fieldset>
+
+    @if (Model.EsEdicion)
+    {
+        <div class="alert alert-info small" role="note">
+            Si cambias el precio, las ventas ya registradas conservan el precio con el que se cobraron.
+        </div>
+    }
+    else
+    {
+        <p class="form-text">El producto se registra como disponible.</p>
+    }
+
+    <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+        <button type="submit" class="btn btn-primary">@(Model.EsEdicion ? "Guardar cambios" : "Registrar producto")</button>
+    </div>
+</form>
+
+@if (Model.Historial is not null)
+{
+    <section class="mc-historial-panel" aria-labelledby="historial-titulo">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h3 id="historial-titulo" class="fs-6 mb-0">Historial de cambios</h3>
+            <span class="mc-badge mc-badge--info">Solo Administrador General</span>
+        </div>
+
+        @if (Model.Historial.Count == 0)
+        {
+            <p class="form-text mb-0">Aún no hay cambios registrados.</p>
+        }
+        else
+        {
+            <ol class="mc-timeline">
+                @foreach (var cambio in Model.Historial)
+                {
+                    <li>
+                        <div><partial name="_CambioHistorial" model="cambio" /></div>
+                        <div class="mc-timeline__meta">@cambio.Usuario (@cambio.RolLegible) &middot; @cambio.Fecha.ToString("dd MMM yyyy, HH:mm", new System.Globalization.CultureInfo("es-CR"))</div>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+}

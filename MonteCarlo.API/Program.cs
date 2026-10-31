@@ -51,6 +51,14 @@ builder.Services.AddScoped<ICierresEventualesService, CierresEventualesService>(
 builder.Services.AddScoped<IHistorialCierresRepository, HistorialCierresRepository>();
 builder.Services.AddScoped<IHistorialCierresService, HistorialCierresService>();
 
+// HU-CON-001: catálogo de productos, categorías e historial de cambios
+builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
+builder.Services.AddScoped<ICategoriasProductoRepository, CategoriasProductoRepository>();
+builder.Services.AddScoped<IHistorialCatalogoRepository, HistorialCatalogoRepository>();
+builder.Services.AddScoped<IProductosService, ProductosService>();
+builder.Services.AddScoped<ICategoriasProductoService, CategoriasProductoService>();
+builder.Services.AddScoped<IHistorialCatalogoService, HistorialCatalogoService>();
+
 // HU-CFG-005: horarios regulares de operación
 builder.Services.AddScoped<IHorariosOperacionRepository, HorariosOperacionRepository>();
 builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>();

@@ -1,0 +1,142 @@
+@*
+    HU-CON-001 — Historial de cambios del catalogo (solo Administrador General).
+    Quien, cuando y que cambio en productos y categorias, del mas reciente al mas antiguo,
+    paginado de 10 en 10. El historial no se puede editar ni eliminar.
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@model HistorialCatalogoViewModel
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["Icon"] = "bi-cup-hot";
+    ViewData["Subtitle"] = "Quién modificó productos y categorías, y qué cambió.";
+    var pagina = Model.Pagina;
+}
+
+@section PageActions {
+    <span class="mc-badge mc-badge--info"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Solo Administrador General</span>
+}
+
+<partial name="_ProductosTabs" model='"historial"' />
+
+
+@* Filtros por GET: cada pagina del historial es una URL compartible.
+   Los selects filtran al cambiar; el buscador, con Enter. *@
+<form asp-action="Index" method="get" role="search" class="mc-toolbar">
+    <div class="mc-toolbar__fila">
+        <div class="mc-search">
+            <i class="bi bi-search mc-search__icono" aria-hidden="true"></i>
+            <label for="busqueda" class="visually-hidden">Buscar por nombre</label>
+            <input id="busqueda" name="busqueda" type="search" class="mc-search__input" value="@Model.Busqueda"
+                   placeholder="Buscar producto o categoría" maxlength="100" autocomplete="off" />
+        </div>
+
+        <label for="tipo" class="visually-hidden">Tipo</label>
+        <select id="tipo" name="tipo" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los tipos</option>
+            <option value="Producto" selected="@(Model.Tipo == "Producto")">Productos</option>
+            <option value="Categoria" selected="@(Model.Tipo == "Categoria")">Categorías</option>
+        </select>
+
+        <label for="idUsuario" class="visually-hidden">Usuario</label>
+        <select id="idUsuario" name="idUsuario" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los usuarios</option>
+            @foreach (var usuario in Model.Usuarios)
+            {
+                <option value="@usuario.IdUsuario" selected="@(Model.IdUsuario == usuario.IdUsuario)">@usuario.NombreCompleto</option>
+            }
+        </select>
+
+        <label for="accion" class="visually-hidden">Acción</label>
+        <select id="accion" name="accion" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todas las acciones</option>
+            @foreach (var opcion in new[] { "Creado", "Editado", "Reordenado", "Habilitado", "Deshabilitado", "Eliminado" })
+            {
+                <option value="@opcion" selected="@(Model.Accion == opcion)">@opcion</option>
+            }
+        </select>
+
+        @if (Model.TieneFiltros)
+        {
+            <a asp-action="Index" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar</a>
+        }
+    </div>
+</form>
+
+@if (pagina.Items.Count == 0)
+{
+    <div class="mc-table-card">
+        @if (Model.TieneFiltros)
+        {
+            <partial name="_EstadoVacio" model="EstadoVacioViewModel.SinResultados(Url.Action(nameof(Index)))" />
+        }
+        else
+        {
+            <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                     {
+                         Icono = "bi-clock-history",
+                         Titulo = "Aún no hay cambios registrados",
+                         Descripcion = "Cuando se cree o modifique un producto o una categoría, aparecerá aquí con el usuario responsable."
+                     })" />
+        }
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <caption class="visually-hidden">Cambios en productos y categorías, del más reciente al más antiguo</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Elemento</th>
+                        <th scope="col">Cambio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cambio in pagina.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@cambio.Fecha.ToString("dd MMM yyyy, HH:mm", new System.Globalization.CultureInfo("es-CR"))</td>
+                            <td>
+                                <span class="fw-medium d-block">@cambio.Usuario</span>
+                                <span class="small text-secondary">@cambio.RolLegible</span>
+                            </td>
+                            <td>
+                                <span class="d-inline-flex align-items-center gap-2 @CategoriaEstilo.Clase(cambio.IdCategoriaElemento)">
+                                    <span class="mc-cat-tile mc-cat-tile--sm" aria-hidden="true">@CategoriaEstilo.Inicial(cambio.CategoriaElemento)</span>
+                                    <span>
+                                        <span class="fw-medium d-block">@cambio.NombreElemento</span>
+                                        <span class="small text-secondary">@(cambio.EsCategoria ? "Categoría" : "Producto")</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td class="mc-historial-cambio"><partial name="_CambioHistorial" model="cambio" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <partial name="_Paginacion" model="@(new PaginacionViewModel
+             {
+                 Accion = nameof(Index),
+                 Controlador = "HistorialCatalogo",
+                 Pagina = pagina.Pagina,
+                 TotalPaginas = pagina.TotalPaginas,
+                 Total = pagina.Total,
+                 TamanoPagina = pagina.TamanoPagina,
+                 Sustantivo = "cambios",
+                 Parametros = new Dictionary<string, string?>
+                 {
+                     ["busqueda"] = Model.Busqueda,
+                     ["tipo"] = Model.Tipo,
+                     ["idUsuario"] = Model.IdUsuario?.ToString(),
+                     ["accion"] = Model.Accion
+                 }
+             })" />
+
+    <p class="form-text mt-2">El historial no se puede editar ni eliminar.</p>
+}

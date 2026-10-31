@@ -1,0 +1,30 @@
+@*
+    Pestanas del catalogo (HU-CON-001): Productos, Categorias e Historial de cambios.
+    Cada pestana es su propia pagina. El historial solo lo ve el Administrador General
+    (la API y el controlador lo exigen tambien: ocultar el enlace es solo cortesia).
+
+    Uso:
+        <partial name="_ProductosTabs" model='"productos"' />
+    El modelo es la pestana activa: "productos", "categorias" o "historial".
+*@
+@model string
+@{
+    var esGeneral = User.IsInRole("General");
+}
+
+<nav class="mc-tabs" aria-label="Secciones del catalogo de productos">
+    <a class="mc-tab @(Model == "productos" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="Productos" asp-action="Index"
+       aria-current="@(Model == "productos" ? "page" : null)">Productos</a>
+
+    <a class="mc-tab @(Model == "categorias" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="CategoriasProducto" asp-action="Index"
+       aria-current="@(Model == "categorias" ? "page" : null)">Categorías</a>
+
+    @if (esGeneral)
+    {
+        <a class="mc-tab @(Model == "historial" ? "is-active" : null)"
+           asp-area="Admin" asp-controller="HistorialCatalogo" asp-action="Index"
+           aria-current="@(Model == "historial" ? "page" : null)">Historial de cambios</a>
+    }
+</nav>

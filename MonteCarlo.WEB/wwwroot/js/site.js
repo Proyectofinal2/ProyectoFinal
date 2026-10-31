@@ -177,6 +177,126 @@
   }
 
   /* --------------------------------------------------------
+       Panel lateral con contenido por fetch (HU-CON-001)
+       ------------------------------------------------------------
+       El disparador pide el formulario al servidor y lo muestra
+       en un Offcanvas de Bootstrap:
+         <button data-mc-drawer
+                 data-mc-drawer-target="#mcProductoDrawer"
+                 data-mc-drawer-url="/admin/productos/5/editar">
+       El panel debe tener [data-mc-drawer-body] (donde se inyecta
+       el HTML) y, opcionalmente, [data-mc-drawer-titulo]; el HTML
+       recibido puede traer [data-mc-drawer-titulo-valor] para
+       cambiar el titulo. Con [data-mc-drawer-autoopen] el panel se
+       abre solo al cargar la pagina (formulario con errores).
+       -------------------------------------------------------- */
+  function activarContenidoDelPanel(panel, cuerpo) {
+    var titulo = panel.querySelector("[data-mc-drawer-titulo]");
+    var valor = cuerpo.querySelector("[data-mc-drawer-titulo-valor]");
+    if (titulo && valor) {
+      titulo.textContent = valor.textContent;
+    }
+
+    // El formulario llega despues de cargar la pagina: hay que enlazar su validacion.
+    if (
+      typeof jQuery !== "undefined" &&
+      jQuery.validator &&
+      jQuery.validator.unobtrusive
+    ) {
+      jQuery.validator.unobtrusive.parse(cuerpo);
+    }
+
+    // Tras mostrarse, el foco va al primer campo.
+    var primerCampo = cuerpo.querySelector(
+      "input:not([type=hidden]):not(.btn-check), select, textarea",
+    );
+    if (primerCampo) {
+      panel.addEventListener(
+        "shown.bs.offcanvas",
+        function () {
+          primerCampo.focus();
+        },
+        { once: true },
+      );
+    }
+  }
+
+  /* Tooltips de Bootstrap (data-bs-toggle="tooltip"): aparecen al instante con hover o foco
+     y se cierran al hacer clic, para no quedar flotando sobre un dialogo. */
+  function initTooltips() {
+    if (!window.bootstrap) return;
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      var tip = new bootstrap.Tooltip(el, { trigger: "hover focus", delay: { show: 150, hide: 0 } });
+      el.addEventListener("click", function () { tip.hide(); });
+    });
+  }
+
+  /* [data-mc-autosubmit]: al cambiar el valor se envia el formulario (filtros por GET). */
+  function initAutoSubmit() {
+    document.querySelectorAll("[data-mc-autosubmit]").forEach(function (el) {
+      el.addEventListener("change", function () { if (el.form) el.form.submit(); });
+    });
+  }
+
+  function initDrawers() {
+    if (typeof bootstrap === "undefined") {
+      return;
+    }
+
+    document.querySelectorAll("[data-mc-drawer]").forEach(function (trigger) {
+      trigger.addEventListener("click", function () {
+        var panel = document.querySelector(trigger.dataset.mcDrawerTarget);
+        var cuerpo = panel && panel.querySelector("[data-mc-drawer-body]");
+        if (!panel || !cuerpo) {
+          return;
+        }
+
+        var instancia = bootstrap.Offcanvas.getOrCreateInstance(panel);
+        cuerpo.innerHTML =
+          '<p class="text-secondary mb-0" role="status">Cargando...</p>';
+        instancia.show();
+
+        fetch(trigger.dataset.mcDrawerUrl, {
+          credentials: "same-origin",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(function (response) {
+            // Sesion vencida: la API de login redirige; se sigue esa redireccion en la pagina completa.
+            if (response.redirected) {
+              window.location.href = response.url;
+              return null;
+            }
+            if (!response.ok) {
+              throw new Error("No se pudo cargar el formulario.");
+            }
+            return response.text();
+          })
+          .then(function (html) {
+            if (html === null) {
+              return;
+            }
+            cuerpo.innerHTML = html;
+            activarContenidoDelPanel(panel, cuerpo);
+          })
+          .catch(function () {
+            cuerpo.innerHTML =
+              '<div class="alert alert-danger mb-0" role="alert">No se pudo cargar el formulario. Cierra el panel e intenta de nuevo.</div>';
+          });
+      });
+    });
+
+    document
+      .querySelectorAll("[data-mc-drawer-autoopen]")
+      .forEach(function (panel) {
+        var cuerpo = panel.querySelector("[data-mc-drawer-body]");
+        if (cuerpo) {
+          activarContenidoDelPanel(panel, cuerpo);
+        }
+        bootstrap.Offcanvas.getOrCreateInstance(panel).show();
+      });
+  }
+
+  /* --------------------------------------------------------
        Cuenta regresiva de bloqueo (HU-AUT-001, escenario 3)
        Uso: <span data-mc-countdown="300"> sobre el elemento que
        muestra el tiempo restante; al llegar a cero rehabilita el
@@ -967,6 +1087,9 @@
     initStrengthMeters();
     initSidebar();
     initConfirmDialog();
+    initDrawers();
+    initTooltips();
+    initAutoSubmit();
     initCountdowns();
     initEqualToFields();
     initSubmitEnableOnValid();

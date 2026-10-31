@@ -1,0 +1,202 @@
+@*
+    HU-CON-001 — Categorias del menu.
+
+    Cualquier administrador las crea, renombra, reordena y deshabilita; solo se elimina una sin productos.
+    - Renombrar y crear ocurren en la misma fila (?editar=id / ?nueva=true), sin salir de la lista.
+    - Las flechas cambian el orden del menu y del selector de consumo.
+    - Deshabilitar (o habilitar) una categoria hace lo mismo con todos sus productos; el dialogo
+      de confirmacion dice cuantos son.
+    El color de cada categoria se deriva de su id y el icono es la inicial del nombre.
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@model CategoriasIndexViewModel
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["Icon"] = "bi-cup-hot";
+    ViewData["Subtitle"] = "Las categorías organizan el menú y el selector de consumo.";
+    var total = Model.Categorias.Count;
+}
+
+@section PageActions {
+    <a asp-action="Index" asp-route-nueva="true" class="btn btn-primary mc-btn-add">
+        <i class="bi bi-plus-lg mc-btn-add__icono" aria-hidden="true"></i> Nueva categoría
+    </a>
+}
+
+<partial name="_ProductosTabs" model='"categorias"' />
+
+
+@if (total == 0 && !Model.Nueva)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                 {
+                     Icono = "bi-tags",
+                     Titulo = "Aún no hay categorías",
+                     Descripcion = "Crea la primera categoría para poder organizar los productos del menú.",
+                     TextoAccion = "Nueva categoría",
+                     UrlAccion = Url.Action(nameof(Index), new { nueva = true })
+                 })" />
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        @for (var i = 0; i < total; i++)
+        {
+            var categoria = Model.Categorias[i];
+            var estilo = CategoriaEstilo.Clase(categoria.IdCategoria);
+
+            if (Model.EditarId == categoria.IdCategoria)
+            {
+                @* Fila en edicion: solo se cambia el nombre. *@
+                <form asp-action="Renombrar" asp-route-id="@categoria.IdCategoria" method="post"
+                      class="mc-cat-row mc-cat-row--edicion @estilo" data-mc-guard-submit>
+                    <span class="mc-cat-row__orden"></span>
+                    <span class="mc-cat-tile" aria-hidden="true">@CategoriaEstilo.Inicial(categoria.Nombre)</span>
+                    <div class="mc-cat-row__info">
+                        <label for="nombre-categoria" class="visually-hidden">Nombre de la categoría</label>
+                        <input id="nombre-categoria" name="nombre" class="form-control @(Model.ErrorEdicion is null ? null : "is-invalid")"
+                               value="@Model.NombreEdicion" maxlength="50" autocomplete="off" autofocus
+                               aria-describedby="@(Model.ErrorEdicion is null ? null : "error-categoria")" />
+                        @if (Model.ErrorEdicion is not null)
+                        {
+                            <div id="error-categoria" class="invalid-feedback d-block">@Model.ErrorEdicion</div>
+                        }
+                    </div>
+                    <span></span>
+                    <div class="mc-cat-row__acciones">
+                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                var disponibles = categoria.ProductosDisponibles;
+                var deshabilitados = categoria.ProductosDeshabilitados;
+
+                <div class="mc-cat-row @estilo @(categoria.Activa ? null : "mc-cat-row--off")">
+                    <div class="mc-cat-row__orden">
+                        <form asp-action="Subir" asp-route-id="@categoria.IdCategoria" method="post">
+                            <button type="submit" class="mc-orden-btn" aria-label="Subir @categoria.Nombre" disabled="@(i == 0)">
+                                <i class="bi bi-chevron-up" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                        <form asp-action="Bajar" asp-route-id="@categoria.IdCategoria" method="post">
+                            <button type="submit" class="mc-orden-btn" aria-label="Bajar @categoria.Nombre" disabled="@(i == total - 1)">
+                                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <span class="mc-cat-tile" aria-hidden="true">@CategoriaEstilo.Inicial(categoria.Nombre)</span>
+
+                    <div class="mc-cat-row__info">
+                        <span class="mc-cat-row__nombre">@categoria.Nombre</span>
+                        <span class="mc-cat-row__meta">
+                            @categoria.TotalProductos @(categoria.TotalProductos == 1 ? "producto" : "productos")
+                            @if (categoria.TotalProductos > 0)
+                            {
+                                <text>&middot; @disponibles @(disponibles == 1 ? "disponible" : "disponibles")</text>
+                            }
+                        </span>
+                    </div>
+
+                    <span><partial name="_BadgeEstado" model="BadgeEstadoViewModel.Categoria(categoria.Activa)" /></span>
+
+                    <div class="mc-cat-row__acciones mc-acciones">
+                        <a asp-action="Index" asp-route-editar="@categoria.IdCategoria" class="mc-icon-btn" data-bs-toggle="tooltip" data-bs-title="@($"Renombrar «{categoria.Nombre}»")"
+                           aria-label="Renombrar @categoria.Nombre"><i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Renombrar</span></a>
+
+                        @if (categoria.Activa)
+                        {
+                            var cuerpo = disponibles > 0
+                                ? $"Ahora hay {disponibles} {(disponibles == 1 ? "producto disponible" : "productos disponibles")} en esta categoría. Si continúas, se deshabilitarán todos y dejarán de aparecer en el selector de consumo y de venta. El historial de ventas se conserva. ¿Estás seguro?"
+                                : "La categoría dejará de poder elegirse al crear o editar productos. No tiene productos disponibles. ¿Estás seguro?";
+                            var etiqueta = disponibles > 0
+                                ? $"Deshabilitar categoría y {disponibles} {(disponibles == 1 ? "producto" : "productos")}"
+                                : "Deshabilitar categoría";
+
+                            <button type="button" class="mc-icon-btn mc-icon-btn--danger" data-bs-toggle="tooltip" data-bs-title="@etiqueta"
+                                    data-mc-confirm
+                                    data-mc-confirm-title="@($"Deshabilitar «{categoria.Nombre}»")"
+                                    data-mc-confirm-body="@cuerpo"
+                                    data-mc-confirm-action="@Url.Action("Deshabilitar", new { id = categoria.IdCategoria })"
+                                    data-mc-confirm-label="@etiqueta"
+                                    data-mc-confirm-variant="danger"
+                                    aria-label="Deshabilitar @categoria.Nombre">
+                                <i class="bi bi-slash-circle" aria-hidden="true"></i><span class="visually-hidden">Deshabilitar</span>
+                            </button>
+                        }
+                        else
+                        {
+                            var cuerpo = deshabilitados > 0
+                                ? $"Esta categoría tiene {deshabilitados} {(deshabilitados == 1 ? "producto deshabilitado" : "productos deshabilitados")}. Si continúas, se habilitarán todos y volverán a aparecer en el selector de consumo y de venta, incluso los que se hubieran deshabilitado por separado. ¿Estás seguro?"
+                                : "La categoría volverá a poder elegirse al crear o editar productos.";
+                            var etiqueta = deshabilitados > 0
+                                ? $"Habilitar categoría y {deshabilitados} {(deshabilitados == 1 ? "producto" : "productos")}"
+                                : "Habilitar categoría";
+
+                            <button type="button" class="mc-icon-btn mc-icon-btn--ok" data-bs-toggle="tooltip" data-bs-title="@etiqueta"
+                                    data-mc-confirm
+                                    data-mc-confirm-title="@($"Habilitar «{categoria.Nombre}»")"
+                                    data-mc-confirm-body="@cuerpo"
+                                    data-mc-confirm-action="@Url.Action("Habilitar", new { id = categoria.IdCategoria })"
+                                    data-mc-confirm-label="@etiqueta"
+                                    data-mc-confirm-variant="primary"
+                                    aria-label="Habilitar @categoria.Nombre">
+                                <i class="bi bi-check-circle" aria-hidden="true"></i><span class="visually-hidden">Habilitar</span>
+                            </button>
+                        }
+
+                        @if (categoria.TotalProductos == 0)
+                        {
+                            @* Solo se puede eliminar una categoria sin productos (la API tambien lo exige). *@
+                            <button type="button" class="mc-icon-btn mc-icon-btn--danger"
+                                    data-bs-toggle="tooltip" data-bs-title="@($"Eliminar «{categoria.Nombre}»: no tiene productos")"
+                                    data-mc-confirm
+                                    data-mc-confirm-title="@($"Eliminar «{categoria.Nombre}»")"
+                                    data-mc-confirm-body="Esta categoría no tiene productos. Se eliminará de forma definitiva y dejará de aparecer en el menú y en el selector de consumo. Su historial de cambios se conserva. ¿Estás seguro?"
+                                    data-mc-confirm-action="@Url.Action("Eliminar", new { id = categoria.IdCategoria })"
+                                    data-mc-confirm-label="Eliminar categoría"
+                                    data-mc-confirm-variant="danger"
+                                    aria-label="Eliminar @categoria.Nombre">
+                                <i class="bi bi-trash3" aria-hidden="true"></i><span class="visually-hidden">Eliminar</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+
+        @if (Model.Nueva)
+        {
+            @* Fila vacia al final para crear una categoria; queda al final del menu. *@
+            <form asp-action="Crear" method="post" class="mc-cat-row mc-cat-row--edicion mc-cat-6" data-mc-guard-submit>
+                <span class="mc-cat-row__orden"></span>
+                <span class="mc-cat-tile" aria-hidden="true">+</span>
+                <div class="mc-cat-row__info">
+                    <label for="nombre-categoria" class="visually-hidden">Nombre de la nueva categoría</label>
+                    <input id="nombre-categoria" name="nombre" class="form-control @(Model.ErrorEdicion is null ? null : "is-invalid")"
+                           value="@Model.NombreEdicion" maxlength="50" autocomplete="off" autofocus placeholder="Nombre de la categoría"
+                           aria-describedby="@(Model.ErrorEdicion is null ? null : "error-categoria")" />
+                    @if (Model.ErrorEdicion is not null)
+                    {
+                        <div id="error-categoria" class="invalid-feedback d-block">@Model.ErrorEdicion</div>
+                    }
+                </div>
+                <span></span>
+                <div class="mc-cat-row__acciones">
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-sm btn-primary">Crear categoría</button>
+                </div>
+            </form>
+        }
+    </div>
+
+    <p class="form-text mt-3">
+        El orden de esta lista es el del menú y el del selector de consumo. Solo se elimina una categoría sin productos;
+        deshabilitar una categoría deshabilita todos sus productos, y habilitarla los habilita de nuevo.
+    </p>
+}

@@ -1,0 +1,255 @@
+@*
+    HU-CON-001 — Catalogo de productos.
+
+    Escenario 1  "+ Nuevo producto" abre el panel lateral; al guardar queda disponible y se confirma
+    Escenario 2  "Editar" abre el mismo panel; cambiar el precio no altera las ventas ya registradas
+    Escenario 3  "Deshabilitar" (con confirmacion) lo retira del selector de consumo; solo se elimina si no tiene ventas
+
+    Los productos se agrupan por categoria, en el orden del menu. Una categoria deshabilitada se ve
+    apagada (rayado gris); habilitar uno de sus productos pide confirmar que tambien se habilita la categoria.
+    Maqueta aprobada: .claude/plans/HU-CON-001-ui.html (propuesta D).
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@model ProductosIndexViewModel
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["Icon"] = "bi-cup-hot";
+    ViewData["Subtitle"] = "Catálogo del menú: precios y disponibilidad.";
+}
+
+@section PageActions {
+    <button type="button" class="btn btn-primary mc-btn-add"
+            data-mc-drawer
+            data-mc-drawer-target="#mcProductoDrawer"
+            data-mc-drawer-url="@Url.Action("Nuevo", new { idCategoria = Model.IdCategoria })">
+        <i class="bi bi-plus-lg mc-btn-add__icono" aria-hidden="true"></i> Nuevo producto
+    </button>
+}
+
+<partial name="_ProductosTabs" model='"productos"' />
+
+
+@* Filtros por GET: un listado filtrado es una URL compartible y Atras se comporta como se espera.
+   Buscar se envia con Enter; disponibilidad y categoria son enlaces (sin JavaScript). *@
+<div class="mc-toolbar">
+    <div class="mc-toolbar__fila">
+        <form asp-action="Index" method="get" role="search" class="mc-search">
+            <i class="bi bi-search mc-search__icono" aria-hidden="true"></i>
+            <label for="busqueda" class="visually-hidden">Buscar producto</label>
+            <input id="busqueda" name="busqueda" type="search" class="mc-search__input" value="@Model.Busqueda"
+                   placeholder="Buscar producto" maxlength="100" autocomplete="off" />
+            @if (!string.IsNullOrEmpty(Model.Estado))
+            {
+                <input type="hidden" name="estado" value="@Model.Estado" />
+            }
+            @if (Model.IdCategoria.HasValue)
+            {
+                <input type="hidden" name="idCategoria" value="@Model.IdCategoria" />
+            }
+        </form>
+
+        @* Disponibilidad como control segmentado. *@
+        <nav class="mc-segment" aria-label="Disponibilidad">
+            @foreach (var (valor, texto) in new[] { ("", "Todas"), ("disponible", "Disponibles"), ("deshabilitado", "No disponibles") })
+            {
+                var activo = (Model.Estado ?? "") == valor;
+                <a class="mc-segment__op @(activo ? "is-active" : null)"
+                   asp-action="Index" asp-route-busqueda="@Model.Busqueda" asp-route-idCategoria="@Model.IdCategoria"
+                   asp-route-estado="@(valor == "" ? null : valor)"
+                   aria-current="@(activo ? "true" : null)">@texto</a>
+            }
+        </nav>
+
+        @if (Model.TieneFiltros)
+        {
+            <a asp-action="Index" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar</a>
+        }
+    </div>
+
+    @* Chips por categoria con el total de productos. Son enlaces, no JavaScript. *@
+    <div class="mc-chips mc-chips--filtro" role="group" aria-label="Filtrar por categoría">
+        <a class="mc-chip @(Model.IdCategoria is null ? "is-active" : null)"
+           asp-action="Index" asp-route-busqueda="@Model.Busqueda" asp-route-estado="@Model.Estado"
+           aria-current="@(Model.IdCategoria is null ? "true" : null)">
+            Todas <span class="mc-chip__count">@Model.TotalProductos</span>
+        </a>
+
+        @foreach (var categoria in Model.Categorias.Where(c => c.Activa || c.TotalProductos > 0))
+        {
+            <a class="mc-chip @CategoriaEstilo.Clase(categoria.IdCategoria) @(Model.IdCategoria == categoria.IdCategoria ? "is-active" : null)"
+               asp-action="Index" asp-route-busqueda="@Model.Busqueda" asp-route-estado="@Model.Estado"
+               asp-route-idCategoria="@categoria.IdCategoria"
+               aria-current="@(Model.IdCategoria == categoria.IdCategoria ? "true" : null)">
+                @categoria.Nombre <span class="mc-chip__count">@categoria.TotalProductos</span>
+            </a>
+        }
+    </div>
+</div>
+
+@if (Model.TotalProductos == 0)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                 {
+                     Icono = "bi-cup-hot",
+                     Titulo = "Aún no hay productos en el catálogo",
+                     Descripcion = "Registra el primer producto para poder cobrar consumos y ventas para llevar."
+                 })" />
+    </div>
+}
+else if (Model.Productos.Count == 0)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="EstadoVacioViewModel.SinResultados(Url.Action(nameof(Index)))" />
+    </div>
+}
+else
+{
+    <div class="d-grid gap-3">
+        @foreach (var grupo in Model.Grupos)
+        {
+            var categoria = grupo.Categoria;
+            var idSeccion = $"seccion-categoria-{categoria.IdCategoria}";
+            var nombreSeccion = $"{categoria.Nombre}: {grupo.Productos.Count} {(grupo.Productos.Count == 1 ? "producto" : "productos")}";
+
+            <section class="mc-cat-section @CategoriaEstilo.Clase(categoria.IdCategoria) @(categoria.Activa ? null : "mc-cat-section--off")"
+                     aria-label="@nombreSeccion">
+                <button type="button" class="mc-cat-section__head"
+                        data-bs-toggle="collapse" data-bs-target="#@idSeccion"
+                        aria-expanded="true" aria-controls="@idSeccion">
+                    <span class="mc-cat-tile" aria-hidden="true">@CategoriaEstilo.Inicial(categoria.Nombre)</span>
+                    <span class="mc-cat-section__titulo">
+                        <span class="mc-cat-section__nombre">@categoria.Nombre</span>
+                        @if (!categoria.Activa)
+                        {
+                            <span class="mc-badge mc-badge--neutral ms-2">Categoría deshabilitada</span>
+                        }
+                        <span class="mc-cat-section__meta">
+                            @grupo.Productos.Count @(grupo.Productos.Count == 1 ? "producto" : "productos")
+                            @if (categoria.ProductosDeshabilitados > 0)
+                            {
+                                <text>&middot; @categoria.ProductosDeshabilitados no @(categoria.ProductosDeshabilitados == 1 ? "disponible" : "disponibles")</text>
+                            }
+                            @if (!categoria.Activa)
+                            {
+                                <text>&middot; habilítala para vender sus productos</text>
+                            }
+                        </span>
+                    </span>
+                    <i class="bi bi-chevron-down mc-cat-section__chev" aria-hidden="true"></i>
+                </button>
+
+                <div id="@idSeccion" class="collapse show">
+                    <div class="table-responsive">
+                        <table class="table mc-table align-middle">
+                            <caption class="visually-hidden">Productos de la categoría @categoria.Nombre</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col" class="text-end">Precio</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col" class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var producto in grupo.Productos)
+                                {
+                                    <tr class="@(producto.Disponible ? null : "mc-row-off")">
+                                        <td class="fw-medium">@producto.Nombre</td>
+                                        <td class="text-end text-nowrap">@Colones.Formato(producto.Precio)</td>
+                                        <td><partial name="_BadgeEstado" model="BadgeEstadoViewModel.Producto(producto.Disponible)" /></td>
+                                        <td class="text-end">
+                                          <div class="mc-acciones">
+                                            <button type="button" class="mc-icon-btn" data-bs-toggle="tooltip" data-bs-title="@($"Editar «{producto.Nombre}»")"
+                                                    data-mc-drawer
+                                                    data-mc-drawer-target="#mcProductoDrawer"
+                                                    data-mc-drawer-url="@Url.Action("Editar", new { id = producto.IdProducto })"
+                                                    aria-label="Editar @producto.Nombre">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Editar</span>
+                                            </button>
+
+                                            @if (producto.Disponible)
+                                            {
+                                                <button type="button" class="mc-icon-btn mc-icon-btn--danger" data-bs-toggle="tooltip" data-bs-title="@($"Deshabilitar «{producto.Nombre}»: dejará de venderse")"
+                                                        data-mc-confirm
+                                                        data-mc-confirm-title="Deshabilitar producto"
+                                                        data-mc-confirm-body="@($"«{producto.Nombre}» dejará de aparecer en el selector de consumo y de venta. No se elimina: el historial de ventas se conserva y puedes habilitarlo de nuevo cuando quieras.")"
+                                                        data-mc-confirm-action="@Url.Action("Deshabilitar", new { id = producto.IdProducto })"
+                                                        data-mc-confirm-label="Deshabilitar"
+                                                        data-mc-confirm-variant="danger"
+                                                        aria-label="Deshabilitar @producto.Nombre">
+                                                    <i class="bi bi-slash-circle" aria-hidden="true"></i><span class="visually-hidden">Deshabilitar</span>
+                                                </button>
+                                            }
+                                            else if (producto.CategoriaActiva)
+                                            {
+                                                <form asp-action="Habilitar" asp-route-id="@producto.IdProducto" method="post" class="mc-acciones__form" data-mc-guard-submit>
+                                                    <button type="submit" class="mc-icon-btn mc-icon-btn--ok" data-bs-toggle="tooltip" data-bs-title="@($"Habilitar «{producto.Nombre}»: volverá a estar disponible")" aria-label="Habilitar @producto.Nombre">
+                                                        <i class="bi bi-check-circle" aria-hidden="true"></i><span class="visually-hidden">Habilitar</span>
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                @* Categoria deshabilitada: habilitar el producto habilita tambien la categoria. *@
+                                                <button type="button" class="mc-icon-btn mc-icon-btn--ok" data-bs-toggle="tooltip" data-bs-title="@($"Habilitar «{producto.Nombre}» y la categoría «{categoria.Nombre}»")"
+                                                        data-mc-confirm
+                                                        data-mc-confirm-title="Habilitar producto y categoría"
+                                                        data-mc-confirm-body="@($"«{producto.Nombre}» pertenece a la categoría deshabilitada «{categoria.Nombre}». Si continúas, se habilitarán el producto y la categoría. Los demás productos de la categoría seguirán deshabilitados hasta que los habilites. ¿Estás seguro?")"
+                                                        data-mc-confirm-action="@Url.Action("Habilitar", new { id = producto.IdProducto, habilitarCategoria = true })"
+                                                        data-mc-confirm-label="Habilitar producto y categoría"
+                                                        data-mc-confirm-variant="primary"
+                                                        aria-label="Habilitar @producto.Nombre">
+                                                    <i class="bi bi-check-circle" aria-hidden="true"></i><span class="visually-hidden">Habilitar</span>
+                                                </button>
+                                            }
+
+                                            @if (producto.Eliminable)
+                                            {
+                                                @* Solo si el producto no tiene ventas asociadas (la API tambien lo exige). *@
+                                                <button type="button" class="mc-icon-btn mc-icon-btn--danger"
+                                                        data-bs-toggle="tooltip" data-bs-title="@($"Eliminar «{producto.Nombre}»: no tiene ventas")"
+                                                        data-mc-confirm
+                                                        data-mc-confirm-title="@($"Eliminar «{producto.Nombre}»")"
+                                                        data-mc-confirm-body="Este producto no tiene ventas registradas. Se eliminará de forma definitiva y dejará de aparecer en el menú y en el selector de consumo. Su historial de cambios se conserva. ¿Estás seguro?"
+                                                        data-mc-confirm-action="@Url.Action("Eliminar", new { id = producto.IdProducto })"
+                                                        data-mc-confirm-label="Eliminar producto"
+                                                        data-mc-confirm-variant="danger"
+                                                        aria-label="Eliminar @producto.Nombre">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i><span class="visually-hidden">Eliminar</span>
+                                                </button>
+                                            }
+                                        </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        }
+    </div>
+
+    <p class="form-text mt-3">
+        Mostrando @Model.Productos.Count de @Model.TotalProductos @(Model.TotalProductos == 1 ? "producto" : "productos").
+        Un producto con ventas no se elimina, solo se deshabilita: el historial de ventas se conserva.
+    </p>
+}
+
+@* Panel lateral de alta y edicion. Su contenido llega por fetch (data-mc-drawer) o, si el POST falla, ya renderizado. *@
+<div class="offcanvas offcanvas-end mc-drawer" tabindex="-1" id="mcProductoDrawer"
+     aria-labelledby="mcProductoDrawerTitulo" @(Model.Formulario is not null ? "data-mc-drawer-autoopen" : null)>
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title fs-5" id="mcProductoDrawerTitulo" data-mc-drawer-titulo>
+            @(Model.Formulario?.EsEdicion == true ? "Editar producto" : "Nuevo producto")
+        </h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body" data-mc-drawer-body>
+        @if (Model.Formulario is not null)
+        {
+            <partial name="_ProductoFormulario" model="Model.Formulario" />
+        }
+    </div>
+</div>

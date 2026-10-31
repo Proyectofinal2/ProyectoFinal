@@ -1,0 +1,24 @@
+@*
+    Descripcion de un cambio del historial del catalogo (HU-CON-001):
+    "Precio: ₡7 000 → ₡7 500", "Deshabilitado · Por deshabilitar la categoria «Bebidas»", etc.
+    La comparten la tabla del historial general y la linea de tiempo del panel del producto.
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@model HistorialCatalogoApiResponse
+
+@if (Model.Accion is "Editado" or "Reordenado")
+{
+    <strong>@Model.CampoLegible:</strong>
+    <span>@Model.FormatearValor(Model.ValorAnterior)</span>
+    <i class="bi bi-arrow-right mx-1" aria-label="cambió a"></i>
+    <span>@Model.FormatearValor(Model.ValorNuevo)</span>
+}
+else
+{
+    <strong>@Model.Accion</strong>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Motivo))
+{
+    <span class="text-secondary">&middot; @Model.Motivo</span>
+}

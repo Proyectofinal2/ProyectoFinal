@@ -203,7 +203,6 @@ public class ReservasService(
         }
 
         reserva.EstadoReserva = estadoCancelada;
-        reserva.ReservaMesas.Clear();
         reserva.MotivoCancelacion = "Cancelada por el cliente";
 
         await reservasRepository.GuardarCambiosAsync();
@@ -460,7 +459,6 @@ public class ReservasService(
         if (estadoFinalizada is null) return Result.InternalError("El estado \"Finalizada\" no esta configurado.");
 
         reserva.EstadoReserva = estadoFinalizada;
-        reserva.ReservaMesas.Clear();
         reserva.MotivoCancelacion = "Liberada sin consumo";
 
         await reservasRepository.GuardarCambiosAsync();
@@ -505,7 +503,6 @@ public class ReservasService(
 
         // Actualizar estado y liberar mesas asignadas
         reserva.EstadoReserva = estadoNoShow;
-        reserva.ReservaMesas.Clear();
         reserva.MotivoCancelacion = "Marcada como No Show por el administrador";
 
         await reservasRepository.GuardarCambiosAsync();
@@ -744,7 +741,6 @@ public class ReservasService(
 
         if (nuevoEstado == Cancelada)
         {
-            reserva.ReservaMesas.Clear();
             reserva.MotivoCancelacion = "Cancelada por el administrador";
         }
 

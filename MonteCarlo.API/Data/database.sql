@@ -62,6 +62,15 @@
       intervalo entre horarios de llegada ofrecidos en el
       calendario de disponibilidad (HU-RES-002), antes
       hardcodeado en 30 minutos en el codigo.
+   13. Catalogo de productos (HU-CON-001): nueva tabla
+      CategoriaProducto (categorias que cualquier administrador
+      crea, renombra, reordena y deshabilita; solo se elimina una
+      sin productos). Producto reemplaza la columna de texto Categoria por
+      IdCategoria (FK) y su Nombre pasa a ser unico. Nueva tabla
+      HistorialCatalogo: auditoria de cambios de productos y
+      categorias (quien, cuando y que cambio). Para una base ya
+      creada, ver alter_database-3.sql (incluye datos de prueba
+      opcionales).
    ============================================================ */
 
 IF DB_ID('MonteCarlo') IS NULL
@@ -75,6 +84,7 @@ GO
    Limpieza (orden inverso a las dependencias) para permitir
    re-ejecutar el script cuantas veces sea necesario
    ------------------------------------------------------------ */
+IF OBJECT_ID('dbo.HistorialCatalogo', 'U') IS NOT NULL DROP TABLE dbo.HistorialCatalogo;
 IF OBJECT_ID('dbo.DetalleVenta', 'U') IS NOT NULL DROP TABLE dbo.DetalleVenta;
 IF OBJECT_ID('dbo.Venta', 'U') IS NOT NULL DROP TABLE dbo.Venta;
 IF OBJECT_ID('dbo.TokenRecuperacionContrasena', 'U') IS NOT NULL DROP TABLE dbo.TokenRecuperacionContrasena;
@@ -86,6 +96,7 @@ IF OBJECT_ID('dbo.Reserva', 'U') IS NOT NULL DROP TABLE dbo.Reserva;
 IF OBJECT_ID('dbo.CierreEventual', 'U') IS NOT NULL DROP TABLE dbo.CierreEventual;
 IF OBJECT_ID('dbo.CierreFijo', 'U') IS NOT NULL DROP TABLE dbo.CierreFijo;
 IF OBJECT_ID('dbo.Producto', 'U') IS NOT NULL DROP TABLE dbo.Producto;
+IF OBJECT_ID('dbo.CategoriaProducto', 'U') IS NOT NULL DROP TABLE dbo.CategoriaProducto;
 IF OBJECT_ID('dbo.MetodoPago', 'U') IS NOT NULL DROP TABLE dbo.MetodoPago;
 IF OBJECT_ID('dbo.HorarioOperacion', 'U') IS NOT NULL DROP TABLE dbo.HorarioOperacion;
 IF OBJECT_ID('dbo.Usuario', 'U') IS NOT NULL DROP TABLE dbo.Usuario;
@@ -194,18 +205,92 @@ CREATE TABLE dbo.MetodoPago (
 GO
 
 /* ------------------------------------------------------------
+   Catalogo: CategoriaProducto (HU-CON-001)
+   Categorias del menu. Cualquier administrador las crea,
+   renombra, reordena y deshabilita; solo se elimina una sin
+   productos. Deshabilitar
+   una categoria deshabilita todos sus productos (regla de la
+   aplicacion). El color de la interfaz se deriva de IdCategoria
+   (no se guarda). Orden no es unico para poder intercambiar
+   posiciones entre dos categorias.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.CategoriaProducto (
+    IdCategoria   INT IDENTITY(1,1) NOT NULL,
+    Nombre        NVARCHAR(50) NOT NULL,
+    Orden         INT          NOT NULL,
+    Activa        BIT          NOT NULL DEFAULT 1,
+    FechaCreacion DATETIME2    NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_CategoriaProducto PRIMARY KEY (IdCategoria),
+    CONSTRAINT UQ_CategoriaProducto_Nombre UNIQUE (Nombre),
+    CONSTRAINT CK_CategoriaProducto_Orden CHECK (Orden > 0)
+);
+GO
+
+/* ------------------------------------------------------------
    Entidad: Producto (HU-CON-001)
-   Catalogo de productos vendibles (consumo en mesa o takeout)
+   Catalogo de productos vendibles (consumo en mesa o takeout).
+   Precio en colones (CRC). Un producto con ventas no se
+   elimina: se deshabilita (Disponible = 0) para conservar el historial
+   de ventas. Solo se elimina uno sin ventas.
    ------------------------------------------------------------ */
 CREATE TABLE dbo.Producto (
     IdProducto    INT IDENTITY(1,1) NOT NULL,
     Nombre        NVARCHAR(100)  NOT NULL,
-    Categoria     NVARCHAR(50)   NULL,
+    IdCategoria   INT            NOT NULL,
     Precio        DECIMAL(10,2)  NOT NULL,
     Disponible    BIT            NOT NULL DEFAULT 1,
     FechaCreacion DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
     CONSTRAINT PK_Producto PRIMARY KEY (IdProducto),
-    CONSTRAINT CK_Producto_Precio CHECK (Precio >= 0)
+    CONSTRAINT UQ_Producto_Nombre UNIQUE (Nombre),
+    CONSTRAINT CK_Producto_Precio CHECK (Precio >= 0),
+    CONSTRAINT FK_Producto_Categoria
+        FOREIGN KEY (IdCategoria) REFERENCES dbo.CategoriaProducto (IdCategoria)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: HistorialCatalogo (HU-CON-001)
+   Auditoria de productos y categorias. Una fila por campo
+   cambiado.
+   - Producto: Creado, Editado (Campo = Nombre / Precio /
+     Categoria), Habilitado, Deshabilitado.
+   - Categoria: Creado, Editado (Campo = Nombre), Reordenado
+     (Campo = Posicion), Habilitado, Deshabilitado.
+   Precio se guarda como numero en colones sin formato. Motivo
+   explica los cambios en cascada (ej. un producto deshabilitado
+   porque se deshabilito su categoria). Una sola tabla para
+   paginar y filtrar el historial general sin UNION.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.HistorialCatalogo (
+    IdHistorialCatalogo INT IDENTITY(1,1) NOT NULL,
+    TipoElemento        NVARCHAR(10)  NOT NULL, -- 'Producto' / 'Categoria'
+    IdProducto          INT           NULL, -- NULL si el producto se elimino
+    IdCategoria         INT           NULL, -- NULL si la categoria se elimino
+    NombreElemento      NVARCHAR(100) NULL, -- nombre del producto o categoria eliminados
+    Accion              NVARCHAR(20)  NOT NULL,
+    Campo               NVARCHAR(30)  NULL,
+    ValorAnterior       NVARCHAR(200) NULL,
+    ValorNuevo          NVARCHAR(200) NULL,
+    Motivo              NVARCHAR(300) NULL,
+    IdUsuario           INT           NOT NULL, -- administrador responsable
+    Fecha               DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_HistorialCatalogo PRIMARY KEY (IdHistorialCatalogo),
+    CONSTRAINT CK_HistorialCatalogo_Tipo CHECK (TipoElemento IN ('Producto', 'Categoria')),
+    CONSTRAINT CK_HistorialCatalogo_Accion CHECK (Accion IN ('Creado', 'Editado', 'Reordenado', 'Habilitado', 'Deshabilitado', 'Eliminado')),
+    CONSTRAINT CK_HistorialCatalogo_Elemento CHECK (
+        (TipoElemento = 'Producto'  AND (IdProducto  IS NOT NULL OR NombreElemento IS NOT NULL) AND IdCategoria IS NULL) OR
+        (TipoElemento = 'Categoria' AND (IdCategoria IS NOT NULL OR NombreElemento IS NOT NULL) AND IdProducto  IS NULL)
+    ),
+    CONSTRAINT CK_HistorialCatalogo_Campo CHECK (
+        (Accion IN ('Editado', 'Reordenado') AND Campo IS NOT NULL) OR
+        (Accion NOT IN ('Editado', 'Reordenado'))
+    ),
+    CONSTRAINT FK_HistorialCatalogo_Producto
+        FOREIGN KEY (IdProducto) REFERENCES dbo.Producto (IdProducto) ON DELETE SET NULL,
+    CONSTRAINT FK_HistorialCatalogo_Categoria
+        FOREIGN KEY (IdCategoria) REFERENCES dbo.CategoriaProducto (IdCategoria) ON DELETE SET NULL,
+    CONSTRAINT FK_HistorialCatalogo_Usuario
+        FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
 
@@ -484,6 +569,13 @@ CREATE INDEX IX_DetalleVenta_Producto ON dbo.DetalleVenta (IdProducto);
 CREATE INDEX IX_HistorialCierre_Fecha ON dbo.HistorialCierre (Fecha);
 CREATE INDEX IX_HistorialCierre_Tipo ON dbo.HistorialCierre (TipoCierre);
 CREATE INDEX IX_HistorialCierre_Usuario ON dbo.HistorialCierre (IdUsuario);
+CREATE INDEX IX_CategoriaProducto_Orden ON dbo.CategoriaProducto (Orden);
+CREATE INDEX IX_Producto_Categoria ON dbo.Producto (IdCategoria);
+CREATE INDEX IX_HistorialCatalogo_Fecha ON dbo.HistorialCatalogo (Fecha DESC);
+CREATE INDEX IX_HistorialCatalogo_Tipo ON dbo.HistorialCatalogo (TipoElemento, Fecha DESC);
+CREATE INDEX IX_HistorialCatalogo_Usuario ON dbo.HistorialCatalogo (IdUsuario);
+CREATE INDEX IX_HistorialCatalogo_Producto ON dbo.HistorialCatalogo (IdProducto, Fecha DESC) WHERE IdProducto IS NOT NULL;
+CREATE INDEX IX_HistorialCatalogo_Categoria ON dbo.HistorialCatalogo (IdCategoria, Fecha DESC) WHERE IdCategoria IS NOT NULL;
 GO
 
 /* ------------------------------------------------------------
@@ -528,6 +620,69 @@ INSERT INTO dbo.MetodoPago (Nombre) VALUES
     ('Tarjeta'),
     ('SINPE');
 GO
+
+/* ------------------------------------------------------------
+   Datos base: categorias iniciales del menu (HU-CON-001).
+   Luego cualquier administrador las gestiona desde la
+   aplicacion. El menu de prueba completo (productos e
+   historial) esta en alter_database-3.sql, seccion opcional de
+   datos de prueba.
+   ------------------------------------------------------------ */
+INSERT INTO dbo.CategoriaProducto (Nombre, Orden) VALUES
+    ('Entradas', 1),
+    ('Platos fuertes', 2),
+    ('Postres', 3),
+    ('Bebidas', 4),
+    ('Cervezas y licores', 5);
+GO
+
+
+
+    -- 6.2 Productos (menu costarricense, precios en colones). Disponible = 0 en los marcados como deshabilitados.
+    INSERT INTO dbo.Producto (Nombre, IdCategoria, Precio, Disponible)
+    SELECT v.Nombre, c.IdCategoria, v.Precio, v.Disponible
+    FROM (VALUES
+        (1, N'Ceviche de pescado', N'Entradas', 4500, 1),
+        (2, N'Patacones con frijoles molidos', N'Entradas', 3200, 1),
+        (3, N'Sopa de mondongo', N'Entradas', 3800, 0),
+        (4, N'Casado con pollo', N'Platos fuertes', 5500, 1),
+        (5, N'Casado con bistec encebollado', N'Platos fuertes', 6500, 1),
+        (6, N'Arroz con pollo', N'Platos fuertes', 4800, 1),
+        (7, N'Tres leches', N'Postres', 2800, 1),
+        (8, N'Flan de coco', N'Postres', 2600, 0),
+        (9, N'Fresco natural de mora', N'Bebidas', 1800, 1),
+        (10, N'Café chorreado', N'Bebidas', 1500, 1),
+        (11, N'Copa de vino tinto', N'Cervezas y licores', 4200, 1),
+        (12, N'Cerveza Imperial', N'Cervezas y licores', 1800, 1),
+        (13, N'Cerveza Pilsen', N'Cervezas y licores', 1800, 1),
+        (14, N'Cerveza Bavaria Gold', N'Cervezas y licores', 2000, 1),
+        (15, N'Trago de guaro Cacique', N'Cervezas y licores', 1500, 0),
+        (16, N'Chifrijo', N'Entradas', 4800, 1),
+        (17, N'Yuca frita con chicharrón', N'Entradas', 3800, 1),
+        (18, N'Empanada de queso', N'Entradas', 1500, 1),
+        (19, N'Sopa negra', N'Entradas', 3200, 1),
+        (20, N'Gallo pinto con huevo', N'Platos fuertes', 3200, 1),
+        (21, N'Olla de carne', N'Platos fuertes', 5800, 1),
+        (22, N'Casado con pescado', N'Platos fuertes', 6200, 1),
+        (23, N'Arroz con camarones', N'Platos fuertes', 8500, 1),
+        (24, N'Chuleta de cerdo', N'Platos fuertes', 5800, 1),
+        (25, N'Picadillo de papa', N'Platos fuertes', 3500, 1),
+        (26, N'Arroz con leche', N'Postres', 2200, 1),
+        (27, N'Cajeta de coco', N'Postres', 1200, 1),
+        (28, N'Queque seco', N'Postres', 1800, 1),
+        (29, N'Capuchino', N'Bebidas', 2400, 1),
+        (30, N'Shot de espresso', N'Bebidas', 1000, 1),
+        (31, N'Agua de pipa', N'Bebidas', 2500, 1),
+        (32, N'Shot de guaro Cacique', N'Cervezas y licores', 1500, 1),
+        (33, N'Shot de tequila', N'Cervezas y licores', 2500, 1),
+        (34, N'Shot de ron Centenario', N'Cervezas y licores', 2500, 1),
+        (35, N'Shot de whisky', N'Cervezas y licores', 3000, 1),
+        (36, N'Shot de vodka', N'Cervezas y licores', 2500, 1),
+        (37, N'Cerveza Rock Ice', N'Cervezas y licores', 2000, 1)
+    ) AS v(N, Nombre, Categoria, Precio, Disponible)
+    JOIN dbo.CategoriaProducto c ON c.Nombre = v.Categoria
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.Producto p WHERE p.Nombre = v.Nombre)
+    ORDER BY v.N;
 
 /* ------------------------------------------------------------
    Datos base: parametros de ConfiguracionSistema.

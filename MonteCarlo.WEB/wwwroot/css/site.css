@@ -146,6 +146,28 @@ body {
   --bs-btn-focus-shadow-rgb: 126, 76, 31;
 }
 
+/* Boton de alta ("Nuevo producto", "Nueva categoria"): primario sobrio, 36px de alto,
+   icono simple + texto, sin sombras decorativas. */
+.mc-btn-add {
+  --bs-btn-padding-y: 0;
+  --bs-btn-padding-x: 0.875rem;
+  --bs-btn-border-radius: 8px;
+  --bs-btn-font-size: 14px;
+  --bs-btn-font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  white-space: nowrap;
+  box-shadow: none;
+  transition: background-color var(--mc-transition), border-color var(--mc-transition);
+}
+
+.mc-btn-add__icono {
+  font-size: 14px;
+  line-height: 1;
+}
+
 /* Boton que envuelve una accion destructiva dentro de una tabla
    o menu, sin el peso visual de un .btn-danger solido. */
 .btn-ghost-danger {
@@ -169,19 +191,6 @@ body {
   --bs-card-border-radius: var(--mc-radius-lg);
   --bs-card-cap-bg: transparent;
   box-shadow: var(--mc-shadow-sm);
-}
-
-.mc-page-title {
-  font-size: var(--mc-text-2xl);
-  font-weight: var(--mc-weight-semibold);
-  color: var(--mc-ink);
-  margin: 0;
-}
-
-.mc-page-subtitle {
-  font-size: var(--mc-text-sm);
-  color: var(--mc-ink-muted);
-  margin: var(--mc-space-1) 0 0;
 }
 
 /* Filete de cobre: firma visual de la marca. Se usa con
@@ -1020,14 +1029,6 @@ body {
   margin: 0 auto;
 }
 
-.mc-page-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--mc-space-4);
-  margin-bottom: var(--mc-space-5);
-}
 
 .mc-backdrop {
   display: none;
@@ -1434,6 +1435,748 @@ body {
 
   .mc-reservation__month {
     min-width: 0;
+  }
+}
+
+/* ------------------------------------------------------------
+   13b. Catalogo de productos (HU-CON-001)
+   ------------------------------------------------------------
+   Pestanas, chips de categoria, secciones por categoria,
+   filas de categorias, paginacion y linea de tiempo.
+   El color de una categoria llega por .mc-cat-1 ... .mc-cat-6,
+   que definen --mc-cat-bg y --mc-cat-fg.
+   ------------------------------------------------------------ */
+.mc-cat-1 { --mc-cat-bg: var(--mc-cat-1-bg); --mc-cat-fg: var(--mc-cat-1-fg); }
+.mc-cat-2 { --mc-cat-bg: var(--mc-cat-2-bg); --mc-cat-fg: var(--mc-cat-2-fg); }
+.mc-cat-3 { --mc-cat-bg: var(--mc-cat-3-bg); --mc-cat-fg: var(--mc-cat-3-fg); }
+.mc-cat-4 { --mc-cat-bg: var(--mc-cat-4-bg); --mc-cat-fg: var(--mc-cat-4-fg); }
+.mc-cat-5 { --mc-cat-bg: var(--mc-cat-5-bg); --mc-cat-fg: var(--mc-cat-5-fg); }
+.mc-cat-6 { --mc-cat-bg: var(--mc-cat-6-bg); --mc-cat-fg: var(--mc-cat-6-fg); }
+.mc-cat-off { --mc-cat-bg: var(--mc-surface); --mc-cat-fg: var(--mc-ink-subtle); }
+
+/* Pestanas */
+.mc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-1);
+  margin-bottom: var(--mc-space-5);
+  border-bottom: 1px solid var(--mc-border);
+}
+
+/* Encabezado de pagina (layout Admin): identidad, titulo y acciones en una sola superficie */
+.mc-pagehead {
+  margin-bottom: var(--mc-space-5);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background-color: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.mc-pagehead__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-4);
+  padding: var(--mc-space-5);
+}
+
+.mc-pagehead__icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-600);
+  font-size: 20px;
+}
+
+.mc-pagehead__titulo {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.mc-pagehead__titulo h1 {
+  margin: 0;
+  color: var(--mc-ink);
+  font-size: var(--mc-text-xl, 1.25rem);
+  font-weight: var(--mc-weight-semibold);
+  line-height: 1.3;
+}
+
+.mc-pagehead__titulo p {
+  margin: 2px 0 0;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-pagehead__accion {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--mc-space-2);
+}
+
+.mc-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: -1px;
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border-bottom: 3px solid transparent;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-semibold);
+  text-decoration: none;
+}
+
+.mc-tab:hover {
+  color: var(--mc-ink);
+}
+
+.mc-tab.is-active {
+  border-bottom-color: var(--mc-green-500);
+  color: var(--mc-green-500);
+}
+
+/* Chips: enlaces de filtro y opciones de formulario (radio con .btn-check) */
+.mc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-2);
+}
+
+.mc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+  min-height: 36px;
+  padding: var(--mc-space-1) var(--mc-space-3);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 999px;
+  background-color: var(--mc-elevated);
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mc-chip::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--mc-cat-fg, var(--mc-ink-subtle));
+}
+
+.mc-chip:hover {
+  border-color: var(--mc-cat-fg, var(--mc-green-500));
+  color: var(--mc-ink);
+}
+
+.mc-chip.is-active,
+.btn-check:checked + .mc-chip {
+  border-color: var(--mc-cat-fg, var(--mc-green-500));
+  background-color: var(--mc-cat-bg, var(--mc-green-50));
+  color: var(--mc-cat-fg, var(--mc-green-500));
+  font-weight: var(--mc-weight-semibold);
+}
+
+.btn-check:focus-visible + .mc-chip {
+  outline: 3px solid var(--mc-copper-500);
+  outline-offset: 2px;
+}
+
+.mc-chip__count {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-chip.is-active .mc-chip__count {
+  color: inherit;
+}
+
+/* Barra de filtros del catalogo: sin tarjeta, buscador con icono, disponibilidad segmentada y chips discretos */
+.mc-toolbar {
+  display: grid;
+  gap: var(--mc-space-3);
+  margin-bottom: var(--mc-space-4);
+  padding: var(--mc-space-4);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background-color: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.mc-toolbar__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-3);
+}
+
+.mc-search {
+  position: relative;
+  flex: 1 1 16rem;
+  max-width: 26rem;
+  margin: 0;
+}
+
+.mc-search__icono {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--mc-ink-subtle);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.mc-search__input {
+  width: 100%;
+  height: 38px;
+  padding: 0 var(--mc-space-3) 0 36px;
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 8px;
+  background-color: var(--mc-surface);
+  color: var(--mc-ink);
+  font-size: 14px;
+}
+
+.mc-search__input::placeholder {
+  color: var(--mc-ink-subtle);
+}
+
+.mc-search__input:focus {
+  border-color: var(--mc-green-500);
+  background-color: var(--mc-elevated);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--mc-green-50);
+}
+
+/* Select compacto para barras de filtros */
+.mc-select {
+  height: 38px;
+  width: auto;
+  padding: 0 2.25rem 0 var(--mc-space-3);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 8px;
+  background-color: var(--mc-surface);
+  color: var(--mc-ink);
+  font-size: 14px;
+}
+
+.mc-select:focus {
+  border-color: var(--mc-green-500);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--mc-green-50);
+}
+
+.mc-segment {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--mc-border);
+  border-radius: 8px;
+  background-color: var(--mc-surface);
+}
+
+.mc-segment__op {
+  padding: 5px var(--mc-space-3);
+  border-radius: 6px;
+  color: var(--mc-ink-muted);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mc-segment__op:hover {
+  color: var(--mc-ink);
+}
+
+.mc-segment__op.is-active {
+  background-color: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
+  color: var(--mc-ink);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-segment__op:focus-visible,
+.mc-chip:focus-visible,
+.mc-toolbar__limpiar:focus-visible {
+  outline: 2px solid var(--mc-green-500);
+  outline-offset: 2px;
+}
+
+.mc-toolbar__limpiar {
+  color: var(--mc-ink-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.mc-toolbar__limpiar:hover {
+  color: var(--mc-ink);
+  text-decoration: underline;
+}
+
+/* Chips de filtro: mas pequenos, sin borde en reposo; el color de la categoria solo en el punto y al activarse */
+.mc-chips--filtro .mc-chip {
+  min-height: 30px;
+  padding: 2px var(--mc-space-3);
+  border-color: var(--mc-border);
+  background-color: var(--mc-elevated);
+  color: var(--mc-ink-muted);
+  font-size: 13px;
+}
+
+.mc-chips--filtro .mc-chip:hover {
+  border-color: var(--mc-border-strong);
+  color: var(--mc-ink);
+}
+
+.mc-chips--filtro .mc-chip.is-active {
+  border-color: var(--mc-cat-fg, var(--mc-ink));
+  background-color: var(--mc-cat-bg, var(--mc-elevated));
+  color: var(--mc-cat-fg, var(--mc-ink));
+}
+
+.mc-chips--filtro .mc-chip__count {
+  opacity: 0.7;
+}
+
+/* Ficha con la inicial de la categoria */
+.mc-cat-tile {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: var(--mc-cat-fg, var(--mc-ink-subtle));
+  color: var(--mc-ink-inverse);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-cat-tile--sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: var(--mc-text-xs);
+}
+
+/* Seccion de productos por categoria */
+.mc-cat-section {
+  overflow: hidden;
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background-color: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
+}
+
+.mc-cat-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border: 0;
+  background-color: var(--mc-cat-bg);
+  color: var(--mc-ink);
+  text-align: left;
+}
+
+.mc-cat-section__head:hover {
+  filter: brightness(0.97);
+}
+
+.mc-cat-section__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--mc-space-3);
+  min-width: 0;
+}
+
+.mc-cat-section__nombre {
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-cat-section__meta {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-cat-section__chev {
+  margin-left: auto;
+  color: var(--mc-ink-muted);
+  transition: transform var(--mc-transition);
+}
+
+.mc-cat-section__head[aria-expanded="false"] .mc-cat-section__chev {
+  transform: rotate(-90deg);
+}
+
+/* Categoria deshabilitada: encabezado rayado y gris, borde punteado, tabla atenuada */
+.mc-cat-section--off {
+  border-style: dashed;
+  border-color: var(--mc-border-strong);
+}
+
+.mc-cat-section--off .mc-cat-section__head {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--mc-surface) 0 10px,
+    var(--mc-border) 10px 11px
+  );
+}
+
+.mc-cat-section--off .mc-cat-tile {
+  background-color: var(--mc-ink-subtle);
+}
+
+.mc-cat-section--off .mc-cat-section__nombre {
+  color: var(--mc-ink-muted);
+}
+
+.mc-cat-section--off .table-responsive {
+  opacity: 0.75;
+}
+
+/* Producto no disponible: fila atenuada (fondo gris, texto y precio apagados).
+   El badge y los botones de accion conservan su color para poder habilitarlo. */
+.mc-table > tbody > tr.mc-row-off {
+  background-color: var(--mc-surface);
+}
+
+.mc-table > tbody > tr.mc-row-off:hover {
+  background-color: var(--mc-border);
+}
+
+.mc-table > tbody > tr.mc-row-off td:first-child {
+  color: var(--mc-ink-muted);
+}
+
+.mc-table > tbody > tr.mc-row-off td:nth-child(2) {
+  color: var(--mc-ink-subtle);
+  text-decoration: line-through;
+  text-decoration-color: var(--mc-ink-subtle);
+}
+
+/* Lista de categorias */
+.mc-cat-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border-bottom: 1px solid var(--mc-border);
+}
+
+.mc-cat-row:last-child {
+  border-bottom: 0;
+}
+
+.mc-cat-row__orden {
+  display: grid;
+  gap: 2px;
+  min-width: 28px;
+}
+
+.mc-orden-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--mc-border);
+  border-radius: 4px;
+  background: none;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+}
+
+.mc-orden-btn:hover:not(:disabled) {
+  background-color: var(--mc-green-50);
+}
+
+.mc-orden-btn:disabled {
+  opacity: 0.3;
+}
+
+.mc-cat-row__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mc-cat-row__nombre {
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-cat-row__meta {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-cat-row__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mc-space-1);
+}
+
+/* Acciones de fila (editar + habilitar/deshabilitar): mismo estilo de contorno,
+   mismo ancho y alineadas a la derecha en tablas y en filas de categoria. */
+.mc-acciones {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--mc-space-1);
+}
+
+.mc-acciones__form {
+  display: contents;
+  margin: 0;
+}
+
+/* Boton de icono discreto: sin borde en reposo, color al pasar el cursor.
+   El texto va en .visually-hidden, en title y en aria-label. */
+.mc-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--mc-ink-muted);
+  font-size: 15px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mc-icon-btn:hover {
+  border-color: var(--mc-border-strong);
+  background-color: var(--mc-green-50);
+  color: var(--mc-ink);
+}
+
+.mc-icon-btn--danger:hover {
+  border-color: transparent;
+  background-color: var(--mc-danger-bg);
+  color: var(--mc-danger);
+}
+
+.mc-icon-btn--ok {
+  color: var(--mc-green-600);
+}
+
+.mc-icon-btn--ok:hover {
+  border-color: transparent;
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-700);
+}
+
+.mc-icon-btn:focus-visible {
+  outline: 2px solid var(--mc-green-500);
+  outline-offset: 1px;
+}
+
+/* Tablas de producto: texto de 14px, filas delgadas y columnas iguales en todas las secciones */
+.mc-cat-section .table-responsive {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.mc-cat-section .mc-table {
+  table-layout: fixed;
+  min-width: 36rem;
+}
+
+.mc-cat-section .mc-table > thead > tr > th:nth-child(2),
+.mc-cat-section .mc-table > tbody > tr > td:nth-child(2) {
+  width: 8rem;
+  text-align: right;
+}
+
+.mc-cat-section .mc-table > thead > tr > th:nth-child(3),
+.mc-cat-section .mc-table > tbody > tr > td:nth-child(3) {
+  width: 10rem;
+}
+
+.mc-cat-section .mc-table {
+  font-size: 14px;
+}
+
+.mc-cat-section .mc-table > tbody > tr > td {
+  padding-block: var(--mc-space-2);
+}
+
+.mc-cat-section .mc-table > thead > tr > th:last-child,
+.mc-cat-section .mc-table > tbody > tr > td:last-child {
+  width: 9rem;
+  text-align: right;
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--mc-danger);
+  --bs-btn-border-color: var(--mc-danger);
+  --bs-btn-hover-color: var(--mc-ink-inverse);
+  --bs-btn-hover-bg: var(--mc-danger);
+  --bs-btn-hover-border-color: var(--mc-danger);
+  --bs-btn-active-color: var(--mc-ink-inverse);
+  --bs-btn-active-bg: var(--mc-danger);
+  --bs-btn-active-border-color: var(--mc-danger);
+}
+
+.mc-cat-row--off {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--mc-surface) 0 10px,
+    var(--mc-border) 10px 11px
+  );
+}
+
+.mc-cat-row--off .mc-cat-tile {
+  background-color: var(--mc-ink-subtle);
+}
+
+.mc-cat-row--off .mc-cat-row__nombre {
+  color: var(--mc-ink-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--mc-ink-subtle);
+}
+
+.mc-cat-row--edicion {
+  background-color: var(--mc-green-50);
+}
+
+/* Columna "Cambio" del historial general */
+.mc-historial-cambio {
+  font-size: 14px;
+}
+
+/* Panel lateral */
+.mc-drawer {
+  --bs-offcanvas-width: min(440px, 100vw);
+}
+
+.mc-historial-panel {
+  margin-top: var(--mc-space-5);
+  padding-top: var(--mc-space-4);
+  border-top: 1px solid var(--mc-border);
+}
+
+/* Linea de tiempo del historial de un producto */
+.mc-timeline {
+  display: grid;
+  gap: var(--mc-space-3);
+  margin: 0;
+  padding: 0 0 0 var(--mc-space-4);
+  border-left: 2px solid var(--mc-border);
+  font-size: var(--mc-text-sm);
+  list-style: none;
+}
+
+.mc-timeline > li {
+  position: relative;
+}
+
+.mc-timeline > li::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: calc(-1 * var(--mc-space-4) - 6px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--mc-border-strong);
+  border-radius: 50%;
+  background-color: var(--mc-elevated);
+}
+
+.mc-timeline__meta {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+}
+
+/* Paginacion */
+.mc-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+  margin-top: var(--mc-space-4);
+}
+
+.mc-pager__resumen {
+  margin: 0;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-pager__lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mc-pager__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 var(--mc-space-3);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 6px;
+  background-color: var(--mc-elevated);
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+a.mc-pager__btn:hover {
+  background-color: var(--mc-green-50);
+}
+
+.mc-pager__btn.is-current {
+  border-color: var(--mc-green-500);
+  background-color: var(--mc-green-500);
+  color: var(--mc-ink-inverse);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-pager__btn.is-disabled {
+  opacity: 0.4;
+}
+
+.mc-pager__gap {
+  padding: 0 var(--mc-space-1);
+  color: var(--mc-ink-muted);
+}
+
+@media (max-width: 575.98px) {
+  .mc-cat-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .mc-cat-row__orden {
+    grid-row: span 2;
+  }
+
+  .mc-cat-row__acciones {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
   }
 }
 

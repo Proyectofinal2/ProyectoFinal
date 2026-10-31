@@ -23,6 +23,15 @@
         => string.Equals(controladorActual, controlador, StringComparison.OrdinalIgnoreCase)
             ? "mc-sidebar__link is-active"
             : "mc-sidebar__link";
+
+    /// <summary>
+    /// Igual que ClaseActiva, para un modulo que reparte sus pantallas en varios controladores
+    /// (el catalogo: productos, categorias e historial).
+    /// </summary>
+    private string ClaseActivaModulo(string? controladorActual, params string[] controladores)
+        => controladores.Any(c => string.Equals(controladorActual, c, StringComparison.OrdinalIgnoreCase))
+            ? "mc-sidebar__link is-active"
+            : "mc-sidebar__link";
 }
 
 <nav class="mc-sidebar" data-mc-sidebar aria-label="Navegacion del panel administrativo">
@@ -55,6 +64,12 @@
                 <a class="@ClaseActiva(controladorActual, "Mesas")"
                    asp-area="Admin" asp-controller="Mesas" asp-action="Index">
                     <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Mesas
+                </a>
+            </li>
+            <li>
+                <a class="@ClaseActivaModulo(controladorActual, "Productos", "CategoriasProducto", "HistorialCatalogo")"
+                   asp-area="Admin" asp-controller="Productos" asp-action="Index">
+                    <i class="bi bi-cup-hot" aria-hidden="true"></i> Productos
                 </a>
             </li>
             <li>
