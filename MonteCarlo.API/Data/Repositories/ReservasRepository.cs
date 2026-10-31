@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MonteCarlo.API.Data.Entities;
 using MonteCarlo.API.Data.Repositories.Interfaces;
+using MonteCarlo.API.DTOs;
 
 namespace MonteCarlo.API.Data.Repositories;
 
@@ -21,6 +22,50 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
 
     public Task<EstadoReserva?> ObtenerEstadoAsync(string nombre) =>
         context.EstadosReserva.FirstOrDefaultAsync(e => e.Nombre == nombre);
+
+    public Task<List<EstadoReservaReporteResponse>> ObtenerEstadosReporteAsync() =>
+        context.EstadosReserva
+            .AsNoTracking()
+            .OrderBy(e => e.IdEstadoReserva)
+            .Select(e => new EstadoReservaReporteResponse { Nombre = e.Nombre })
+            .ToListAsync();
+
+    public async Task<ResumenReporteReservasDatos> ObtenerReporteAsync(
+        DateOnly fechaInicio, DateOnly fechaFin, string? estado)
+    {
+        var consulta = context.Reservas
+            .AsNoTracking()
+            .Where(r => r.FechaReserva >= fechaInicio && r.FechaReserva <= fechaFin);
+
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            consulta = consulta.Where(r => r.EstadoReserva.Nombre == estado);
+        }
+
+        var resumen = await consulta
+            .GroupBy(_ => 1)
+            .Select(grupo => new ResumenReporteReservasDatos
+            {
+                TotalReservas = grupo.Count(),
+                PersonasReservadas = grupo.Sum(r => r.CantidadPersonas),
+                ReservasAtendidas = grupo.Count(r => r.FechaAtencion != null),
+                NoShows = grupo.Count(r => r.EstadoReserva.Nombre == "No Show"),
+                Cancelaciones = grupo.Count(r => r.EstadoReserva.Nombre == "Cancelada")
+            })
+            .FirstOrDefaultAsync()
+            ?? new ResumenReporteReservasDatos();
+
+        resumen.ConteosPorEstado = await consulta
+            .GroupBy(r => r.EstadoReserva.Nombre)
+            .Select(grupo => new ConteoEstadoReservaDatos
+            {
+                Estado = grupo.Key,
+                CantidadReservas = grupo.Count()
+            })
+            .ToListAsync();
+
+        return resumen;
+    }
 
     public Task<List<byte>> ObtenerDiasCierreFijoAsync() =>
         context.CierresFijos.AsNoTracking().Select(c => c.DiaSemana).ToListAsync();

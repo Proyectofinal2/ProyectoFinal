@@ -28,6 +28,29 @@ public class ReservasApiService(HttpClient httpClient, ILogger<ReservasApiServic
             "Reservas del dia obtenidas.",
             "No se pudieron obtener las reservas del dia. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, List<EstadoReservaReporteApiResponse>? Data)> ObtenerEstadosReporteAsync() =>
+        EjecutarAsync<List<EstadoReservaReporteApiResponse>>(
+            () => httpClient.GetAsync("reservas/estados"),
+            "Estados de reserva obtenidos.",
+            "No se pudieron obtener los estados de reserva. Intenta de nuevo.");
+
+    public Task<(bool Success, string Message, ReporteReservasApiResponse? Data)> ObtenerReporteAsync(
+        DateOnly fechaInicio, DateOnly fechaFin, string? estado)
+    {
+        var ruta = $"reservas/reporte?fechaInicio={fechaInicio.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}" +
+                   $"&fechaFin={fechaFin.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            ruta += $"&estado={Uri.EscapeDataString(estado)}";
+        }
+
+        return EjecutarAsync<ReporteReservasApiResponse>(
+            () => httpClient.GetAsync(ruta),
+            "Reporte de reservas obtenido.",
+            "No se pudo obtener el reporte de reservas. Intenta de nuevo.");
+    }
+
     public Task<(bool Success, string Message, ReservaApiResponse? Data)> ObtenerPorCodigoAsync(string codigo) =>
         EjecutarAsync<ReservaApiResponse>(
             () => httpClient.GetAsync($"reservas/{Uri.EscapeDataString(codigo)}"),

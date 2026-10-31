@@ -15,6 +15,7 @@ public class ReservasService(
     private const string Confirmada = "Confirmada";
     private const string Cancelada = "Cancelada";
     private const string Finalizada = "Finalizada";
+    private const string NoShow = "No Show";
     private const string Deshabilitada = "Deshabilitada";
 
     /// <summary>Telefono del cliente centinela "Walk-in" sembrado en database.sql -- nunca una persona real.</summary>
@@ -102,6 +103,82 @@ public class ReservasService(
         return reserva is null
             ? Result<ReservaResponse>.NotFound("No se encontro ninguna reserva con ese codigo.")
             : Result<ReservaResponse>.Ok(Mapear(reserva), "Reserva encontrada.");
+    }
+
+    // ============================================================
+    // HU-REP-001: analisis historico por FechaReserva.
+    // ============================================================
+
+    public async Task<Result<List<EstadoReservaReporteResponse>>> ObtenerEstadosReporteAsync()
+    {
+        var estados = await reservasRepository.ObtenerEstadosReporteAsync();
+        return Result<List<EstadoReservaReporteResponse>>.Ok(estados, "Estados de reserva obtenidos exitosamente.");
+    }
+
+    public async Task<Result<ReporteReservasResponse>> ObtenerReporteAsync(
+        DateOnly? fechaInicio, DateOnly? fechaFin, string? estado)
+    {
+        if (fechaInicio is null || fechaFin is null)
+        {
+            return Result<ReporteReservasResponse>.BadRequest("Debes indicar fecha inicial y fecha final.");
+        }
+
+        if (fechaInicio > fechaFin)
+        {
+            return Result<ReporteReservasResponse>.BadRequest("La fecha inicial no puede ser posterior a la fecha final.");
+        }
+
+        var estados = await reservasRepository.ObtenerEstadosReporteAsync();
+        var estadoNormalizado = string.IsNullOrWhiteSpace(estado) ? null : estado.Trim();
+
+        if (estadoNormalizado is not null)
+        {
+            var estadoCatalogo = estados.FirstOrDefault(e =>
+                string.Equals(e.Nombre, estadoNormalizado, StringComparison.OrdinalIgnoreCase));
+
+            if (estadoCatalogo is null)
+            {
+                return Result<ReporteReservasResponse>.BadRequest("El estado de reserva seleccionado no es valido.");
+            }
+
+            estadoNormalizado = estadoCatalogo.Nombre;
+        }
+
+        var datos = await reservasRepository.ObtenerReporteAsync(fechaInicio.Value, fechaFin.Value, estadoNormalizado);
+        var conteos = datos.ConteosPorEstado.ToDictionary(x => x.Estado, x => x.CantidadReservas);
+        var estadosMostrados = estadoNormalizado is null
+            ? estados
+            : estados.Where(e => e.Nombre == estadoNormalizado).ToList();
+
+        var denominadorAsistencia = datos.ReservasAtendidas + datos.NoShows;
+        var asistenciaEsAplicable = estadoNormalizado is null && denominadorAsistencia > 0;
+
+        var respuesta = new ReporteReservasResponse
+        {
+            TotalReservas = datos.TotalReservas,
+            PersonasReservadas = datos.PersonasReservadas,
+            ReservasAtendidas = datos.ReservasAtendidas,
+            NoShows = datos.NoShows,
+            Cancelaciones = datos.Cancelaciones,
+            PorcentajeAsistencia = asistenciaEsAplicable
+                ? Math.Round(datos.ReservasAtendidas * 100m / denominadorAsistencia, 1)
+                : null,
+            MensajeAsistencia = estadoNormalizado is not null
+                ? "No aplicable con filtro de estado."
+                : denominadorAsistencia == 0 ? "Sin datos." : null,
+            DistribucionPorEstado = estadosMostrados
+                .Select(e => new DistribucionEstadoReservaResponse
+                {
+                    Estado = e.Nombre,
+                    CantidadReservas = conteos.GetValueOrDefault(e.Nombre),
+                    Porcentaje = datos.TotalReservas == 0
+                        ? 0
+                        : Math.Round(conteos.GetValueOrDefault(e.Nombre) * 100m / datos.TotalReservas, 1)
+                })
+                .ToList()
+        };
+
+        return Result<ReporteReservasResponse>.Ok(respuesta, "Reporte de reservas obtenido exitosamente.");
     }
 
     public async Task<Result<ReservaResponse>> CancelarAsync(string codigo)

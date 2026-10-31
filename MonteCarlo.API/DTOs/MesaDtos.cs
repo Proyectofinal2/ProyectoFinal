@@ -32,6 +32,25 @@ public class MesaResponse
     public int DuracionReservaMinutos { get; set; }
 }
 
+/// <summary>Indicadores actuales de mesas para el panel administrativo.</summary>
+public class ResumenMesasResponse
+{
+    /// <summary>Total de mesas cuyo estado persistido permite operar.</summary>
+    public int MesasHabilitadas { get; set; }
+
+    /// <summary>Mesas habilitadas sin una ocupacion en curso.</summary>
+    public int MesasDisponibles { get; set; }
+
+    /// <summary>Mesas habilitadas con una ocupacion en curso.</summary>
+    public int MesasOcupadas { get; set; }
+
+    /// <summary>Porcentaje de mesas ocupadas sobre las habilitadas.</summary>
+    public decimal PorcentajeOcupacion { get; set; }
+
+    /// <summary>Se informa cuando no hay mesas habilitadas para calcular la ocupacion.</summary>
+    public string? MensajeContextual { get; set; }
+}
+
 // HU-MES-001/002/003/006: CRUD minimo de mesas, alcance del
 // companero de equipo (ver MesasService para el detalle).
 

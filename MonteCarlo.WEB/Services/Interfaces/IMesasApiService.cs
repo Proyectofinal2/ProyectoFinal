@@ -6,6 +6,8 @@ public interface IMesasApiService
 {
     Task<(bool Success, string Message, List<MesaApiResponse>? Data)> ObtenerMesasAsync(bool incluirDeshabilitadas);
 
+    Task<(bool Success, string Message, ResumenMesasApiResponse? Data)> ObtenerResumenAsync();
+
     Task<(bool Success, string Message, SugerenciaWalkInApiResponse? Data)> ObtenerSugerenciaWalkInAsync(int cantidadPersonas);
 
     Task<(bool Success, string Message, ReservaWalkInApiResponse? Data)> CrearWalkInAsync(int cantidadPersonas, List<int> idsMesa);

@@ -6,11 +6,10 @@ using MonteCarlo.API.Services.Interfaces;
 
 namespace MonteCarlo.API.Controllers;
 
-/// <summary>
+
 /// Controlador de autenticación.
 /// Maneja el login de administradores y la recuperación de contraseña.
 /// HU-AUT-001: Inicio de sesión seguro. HU-AUT-003: Recuperación de contraseña.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController(IAuthService authService) : ControllerBase
@@ -38,7 +37,7 @@ public class AuthController(IAuthService authService) : ControllerBase
             ApiResponse.SuccessResponse(result.Message, result.Data));
     }
 
-    /// <summary>Cambia la contraseña de la cuenta identificada por el JWT vigente. HU-AUT-004.</summary>
+    /// <summary>Cambia la contraseña de la cuenta identificada vigente HU-AUT-004.</summary>
     [Authorize]
     [HttpPost("cambiar-contrasena")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
