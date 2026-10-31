@@ -1,0 +1,84 @@
+@*
+    Paginacion por enlaces (GET): cada pagina es una URL que conserva los filtros.
+    Primera paginacion del proyecto; la usa el historial del catalogo (HU-CON-001).
+
+    Uso:
+        <partial name="_Paginacion" model="new PaginacionViewModel {
+            Accion = "Index", Controlador = "HistorialCatalogo",
+            Pagina = ..., TotalPaginas = ..., Total = ..., TamanoPagina = 10,
+            Sustantivo = "cambios", Parametros = new() { ["tipo"] = Model.Tipo } }" />
+*@
+@using MonteCarlo.WEB.Models.UI
+@model PaginacionViewModel
+
+@functions {
+    private RouteValueDictionary Ruta(PaginacionViewModel m, int pagina)
+    {
+        var valores = new RouteValueDictionary();
+        foreach (var (clave, valor) in m.Parametros)
+        {
+            if (!string.IsNullOrWhiteSpace(valor))
+            {
+                valores[clave] = valor;
+            }
+        }
+
+        valores["pagina"] = pagina;
+        return valores;
+    }
+}
+
+@if (Model.Total > 0)
+{
+    <nav class="mc-pager" aria-label="Paginacion de @Model.Sustantivo">
+        <p class="mc-pager__resumen">
+            Mostrando @Model.Desde&ndash;@Model.Hasta de @Model.Total @Model.Sustantivo.
+        </p>
+
+        @if (Model.TotalPaginas > 1)
+        {
+            <ul class="mc-pager__lista">
+                <li>
+                    @if (Model.TieneAnterior)
+                    {
+                        <a class="mc-pager__btn" href="@Url.Action(Model.Accion, Model.Controlador, Ruta(Model, Model.Pagina - 1))">Anterior</a>
+                    }
+                    else
+                    {
+                        <span class="mc-pager__btn is-disabled" aria-disabled="true">Anterior</span>
+                    }
+                </li>
+
+                @foreach (var numero in Model.Numeros())
+                {
+                    <li>
+                        @if (numero is null)
+                        {
+                            <span class="mc-pager__gap" aria-hidden="true">&hellip;</span>
+                        }
+                        else if (numero == Model.Pagina)
+                        {
+                            <span class="mc-pager__btn is-current" aria-current="page" aria-label="Pagina @numero, actual">@numero</span>
+                        }
+                        else
+                        {
+                            <a class="mc-pager__btn" aria-label="Ir a la pagina @numero"
+                               href="@Url.Action(Model.Accion, Model.Controlador, Ruta(Model, numero.Value))">@numero</a>
+                        }
+                    </li>
+                }
+
+                <li>
+                    @if (Model.TieneSiguiente)
+                    {
+                        <a class="mc-pager__btn" href="@Url.Action(Model.Accion, Model.Controlador, Ruta(Model, Model.Pagina + 1))">Siguiente</a>
+                    }
+                    else
+                    {
+                        <span class="mc-pager__btn is-disabled" aria-disabled="true">Siguiente</span>
+                    }
+                </li>
+            </ul>
+        }
+    </nav>
+}

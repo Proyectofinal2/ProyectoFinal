@@ -42,6 +42,21 @@ public class BadgeEstadoViewModel
         : new BadgeEstadoViewModel { Texto = "Inactiva", Tono = TonoBadge.Neutral };
 
     /// <summary>
+    /// Disponibilidad de un producto del catalogo (HU-CON-001).
+    /// </summary>
+    public static BadgeEstadoViewModel Producto(bool disponible) => disponible
+        ? new BadgeEstadoViewModel { Texto = "Disponible", Tono = TonoBadge.Exito }
+        : new BadgeEstadoViewModel { Texto = "No disponible", Tono = TonoBadge.Advertencia };
+
+    /// <summary>
+    /// Estado de una categoria del menu (HU-CON-001). Deshabilitada es neutra, no una alerta:
+    /// es una decision del administrador, no un problema.
+    /// </summary>
+    public static BadgeEstadoViewModel Categoria(bool activa) => activa
+        ? new BadgeEstadoViewModel { Texto = "Activa", Tono = TonoBadge.Exito }
+        : new BadgeEstadoViewModel { Texto = "Deshabilitada", Tono = TonoBadge.Neutral };
+
+    /// <summary>
     /// Estado de una reserva. Aun sin pantallas que lo usen; queda
     /// definido aqui para que los modulos RES y OPE no vuelvan a
     /// elegir colores por su cuenta.

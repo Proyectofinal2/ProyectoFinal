@@ -109,6 +109,25 @@
   --mc-shadow-lg: 0 8px 24px rgba(27, 31, 29, 0.12);
 
   /* --------------------------------------------------------
+       Categorias del menu (HU-CON-001): 6 pares fondo/texto,
+       sobrios. El color de una categoria se deriva de su id.
+       Texto sobre su fondo >= 5:1; el texto blanco sobre
+       el color (fichas) tambien supera AA.
+       -------------------------------------------------------- */
+  --mc-cat-1-bg: #eef2ef;
+  --mc-cat-1-fg: #3d5a4e;
+  --mc-cat-2-bg: #f3eee7;
+  --mc-cat-2-fg: #6e5a43;
+  --mc-cat-3-bg: #f1ecee;
+  --mc-cat-3-fg: #6b4d58;
+  --mc-cat-4-bg: #ebeff1;
+  --mc-cat-4-fg: #476272;
+  --mc-cat-5-bg: #f2efe4;
+  --mc-cat-5-fg: #6b6338;
+  --mc-cat-6-bg: #eeeeea;
+  --mc-cat-6-fg: #5a615d;
+
+  /* --------------------------------------------------------
        Layout administrativo
        -------------------------------------------------------- */
   --mc-sidebar-width: 260px;

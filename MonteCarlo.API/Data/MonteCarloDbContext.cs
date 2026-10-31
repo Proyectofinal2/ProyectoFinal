@@ -20,7 +20,9 @@ public class MonteCarloDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<HorarioOperacion> HorariosOperacion => Set<HorarioOperacion>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
+    public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<HistorialCatalogo> HistorialCatalogo => Set<HistorialCatalogo>();
     public DbSet<CierreFijo> CierresFijos => Set<CierreFijo>();
     public DbSet<CierreEventual> CierresEventuales => Set<CierreEventual>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
@@ -45,7 +47,9 @@ public class MonteCarloDbContext : DbContext
         ConfigurarUsuario(modelBuilder);
         ConfigurarHorarioOperacion(modelBuilder);
         ConfigurarMetodoPago(modelBuilder);
+        ConfigurarCategoriaProducto(modelBuilder);
         ConfigurarProducto(modelBuilder);
+        ConfigurarHistorialCatalogo(modelBuilder);
         ConfigurarCierreFijo(modelBuilder);
         ConfigurarCierreEventual(modelBuilder);
         ConfigurarReserva(modelBuilder);
@@ -158,10 +162,79 @@ public class MonteCarloDbContext : DbContext
             entity.HasKey(e => e.IdProducto).HasName("PK_Producto");
 
             entity.Property(e => e.Nombre).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.Categoria).HasMaxLength(50);
+            entity.HasIndex(e => e.Nombre).IsUnique().HasDatabaseName("UQ_Producto_Nombre");
+            entity.HasIndex(e => e.IdCategoria).HasDatabaseName("IX_Producto_Categoria");
             entity.Property(e => e.Precio).HasColumnType("decimal(10,2)");
             entity.Property(e => e.Disponible).HasDefaultValue(true);
             entity.Property(e => e.FechaCreacion).HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(e => e.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(e => e.IdCategoria)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_Producto_Categoria");
+        });
+    }
+
+    private static void ConfigurarCategoriaProducto(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CategoriaProducto>(entity =>
+        {
+            entity.ToTable("CategoriaProducto", t => t.HasCheckConstraint("CK_CategoriaProducto_Orden", "Orden > 0"));
+            entity.HasKey(e => e.IdCategoria).HasName("PK_CategoriaProducto");
+            entity.HasIndex(e => e.Nombre).IsUnique().HasDatabaseName("UQ_CategoriaProducto_Nombre");
+            entity.HasIndex(e => e.Orden).HasDatabaseName("IX_CategoriaProducto_Orden");
+
+            entity.Property(e => e.Nombre).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Activa).HasDefaultValue(true);
+            entity.Property(e => e.FechaCreacion).HasDefaultValueSql("SYSDATETIME()");
+        });
+    }
+
+    private static void ConfigurarHistorialCatalogo(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<HistorialCatalogo>(entity =>
+        {
+            entity.ToTable("HistorialCatalogo", t =>
+            {
+                t.HasCheckConstraint("CK_HistorialCatalogo_Tipo", "TipoElemento IN ('Producto', 'Categoria')");
+                t.HasCheckConstraint("CK_HistorialCatalogo_Accion", "Accion IN ('Creado', 'Editado', 'Reordenado', 'Habilitado', 'Deshabilitado', 'Eliminado')");
+                t.HasCheckConstraint("CK_HistorialCatalogo_Elemento",
+                    "(TipoElemento = 'Producto' AND (IdProducto IS NOT NULL OR NombreElemento IS NOT NULL) AND IdCategoria IS NULL) OR " +
+                    "(TipoElemento = 'Categoria' AND (IdCategoria IS NOT NULL OR NombreElemento IS NOT NULL) AND IdProducto IS NULL)");
+                t.HasCheckConstraint("CK_HistorialCatalogo_Campo",
+                    "(Accion IN ('Editado', 'Reordenado') AND Campo IS NOT NULL) OR (Accion NOT IN ('Editado', 'Reordenado'))");
+            });
+            entity.HasKey(e => e.IdHistorialCatalogo).HasName("PK_HistorialCatalogo");
+            entity.HasIndex(e => e.Fecha).IsDescending().HasDatabaseName("IX_HistorialCatalogo_Fecha");
+            entity.HasIndex(e => e.IdUsuario).HasDatabaseName("IX_HistorialCatalogo_Usuario");
+
+            entity.Property(e => e.TipoElemento).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.NombreElemento).HasMaxLength(100);
+            entity.Property(e => e.Campo).HasMaxLength(30);
+            entity.Property(e => e.ValorAnterior).HasMaxLength(200);
+            entity.Property(e => e.ValorNuevo).HasMaxLength(200);
+            entity.Property(e => e.Motivo).HasMaxLength(300);
+            entity.Property(e => e.Fecha).HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(e => e.Producto)
+                .WithMany(p => p.Historial)
+                .HasForeignKey(e => e.IdProducto)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_HistorialCatalogo_Producto");
+
+            entity.HasOne(e => e.Categoria)
+                .WithMany(c => c.Historial)
+                .HasForeignKey(e => e.IdCategoria)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialCatalogo_Categoria");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany(u => u.HistorialCatalogos)
+                .HasForeignKey(e => e.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialCatalogo_Usuario");
         });
     }
 

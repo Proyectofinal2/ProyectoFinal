@@ -66,6 +66,15 @@ builder.Services
     })
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+// HU-CON-001: catalogo de productos, categorias e historial, requiere token.
+builder.Services
+    .AddHttpClient<ICatalogoApiService, CatalogoApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
 // Consulta y cancelacion publica de reservas. El token solo se agrega
 // si hay sesion; el listado de reservas del dia lo necesita.
 builder.Services

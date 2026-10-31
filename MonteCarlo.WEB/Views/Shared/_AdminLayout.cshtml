@@ -9,8 +9,9 @@
 
     Cada vista define:
       ViewData["Title"]      titulo de la pestana y encabezado
-      ViewData["Subtitle"]   bajada opcional bajo el encabezado
-      section PageActions    botones del encabezado (opcional)
+      ViewData["Subtitle"]   bajada opcional bajo el titulo
+      ViewData["Icon"]       clase de Bootstrap Icons (ej. "bi-cup-hot") para el recuadro de identidad (opcional)
+      section PageActions    accion(es) principal(es), a la derecha del titulo (opcional)
 *@
 <!DOCTYPE html>
 <html lang="es">
@@ -37,22 +38,30 @@
             <partial name="_AdminTopbar" />
 
             <main id="contenido" class="mc-admin__content">
-                <div class="mc-page-header">
-                    <div>
-                        <h1 class="mc-page-title">@ViewData["Title"]</h1>
-                        @if (ViewData["Subtitle"] is string subtitle && !string.IsNullOrWhiteSpace(subtitle))
+                @* Encabezado de pagina comun a todas las pantallas del area Admin. *@
+                <header class="mc-pagehead">
+                    <div class="mc-pagehead__top">
+                        @if (ViewData["Icon"] is string icono && !string.IsNullOrWhiteSpace(icono))
                         {
-                            <p class="mc-page-subtitle">@subtitle</p>
+                            <span class="mc-pagehead__icono" aria-hidden="true"><i class="bi @icono"></i></span>
+                        }
+                        <div class="mc-pagehead__titulo">
+                            <h1>@ViewData["Title"]</h1>
+                            @if (ViewData["Subtitle"] is string subtitle && !string.IsNullOrWhiteSpace(subtitle))
+                            {
+                                <p>@subtitle</p>
+                            }
+                        </div>
+
+                        @if (IsSectionDefined("PageActions"))
+                        {
+                            <div class="mc-pagehead__accion">
+                                @await RenderSectionAsync("PageActions", required: false)
+                            </div>
                         }
                     </div>
 
-                    @if (IsSectionDefined("PageActions"))
-                    {
-                        <div class="d-flex flex-wrap gap-2">
-                            @await RenderSectionAsync("PageActions", required: false)
-                        </div>
-                    }
-                </div>
+                </header>
 
                 <partial name="_Alerts" />
                 @RenderBody()
