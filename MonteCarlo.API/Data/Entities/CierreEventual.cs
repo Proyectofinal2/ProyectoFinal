@@ -10,7 +10,7 @@ public class CierreEventual
     public DateTime FechaCreacion { get; set; }
     public int IdUsuarioCreacion { get; set; }
 
-    /// False cuando el cierre fue quitado; la fila se conserva como registro.
+    /// False cuando el cierre fue eliminado; la fila se conserva como registro.
     public bool Activo { get; set; } = true;
     public DateTime? FechaEliminacion { get; set; }
     public int? IdUsuarioEliminacion { get; set; }

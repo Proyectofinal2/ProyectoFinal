@@ -7,7 +7,8 @@ namespace MonteCarlo.API.Services;
 
 public class CierresEventualesService(
     ICierresEventualesRepository cierresEventualesRepository,
-    IReservasRepository reservasRepository) : ICierresEventualesService
+    IReservasRepository reservasRepository,
+    INotificacionesService notificacionesService) : ICierresEventualesService
 {
     private const string Pendiente = "Pendiente";
     private const string Confirmada = "Confirmada";
@@ -53,6 +54,7 @@ public class CierresEventualesService(
             reserva.ReservaMesas.Clear();
             reserva.MotivoCancelacion = "Cierre administrativo";
             reserva.CierreEventual = cierre;
+            notificacionesService.Encolar(reserva, reserva.Cliente.CorreoElectronico, NotificacionesService.Cancelacion);
         }
 
         cierresEventualesRepository.AgregarHistorial(new HistorialCierre
@@ -81,7 +83,7 @@ public class CierresEventualesService(
             return Result<CierreEventualResponse>.NotFound("No se encontro el cierre indicado.");
 
         if (cierre.Fecha < DateOnly.FromDateTime(DateTime.Now))
-            return Result<CierreEventualResponse>.Conflict("No se puede quitar un cierre de una fecha pasada.");
+            return Result<CierreEventualResponse>.Conflict("No se puede eliminar un cierre de una fecha pasada.");
 
         cierre.Activo = false;
         cierre.FechaEliminacion = DateTime.Now;
@@ -101,7 +103,7 @@ public class CierresEventualesService(
         await cierresEventualesRepository.GuardarCambiosAsync();
 
         return Result<CierreEventualResponse>.Ok(Mapear(cierre),
-            "El cierre fue quitado. Las reservas que ya se cancelaron por este cierre no se restablecen.");
+            "El cierre fue eliminado. Las reservas que ya se cancelaron por este cierre no se restablecen.");
     }
 
     private static CierreEventualResponse Mapear(CierreEventual cierre) => new()
