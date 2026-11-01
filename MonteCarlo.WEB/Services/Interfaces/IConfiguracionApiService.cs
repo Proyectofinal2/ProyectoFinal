@@ -29,4 +29,7 @@ public interface IConfiguracionApiService
 
     Task<(bool Success, string Message, HorarioOperacionApiResponse? Data)> GuardarHorarioOperacionAsync(
         int diaSemana, TimeOnly horaApertura, TimeOnly horaCierre);
+
+    Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> GuardarHorariosOperacionLoteAsync(
+        IEnumerable<HorarioOperacionDiaViewModel> horarios);
 }

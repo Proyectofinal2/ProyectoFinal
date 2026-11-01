@@ -132,13 +132,43 @@ public class HorarioOperacionApiResponse
 }
 
 /// HU-CFG-005: datos de un día mostrados en la configuración de horarios.
-public class HorarioOperacionDiaViewModel
+public class HorarioOperacionDiaViewModel : IValidatableObject
 {
     public int DiaSemana { get; set; }
     public string NombreDia { get; set; } = string.Empty;
     public TimeOnly? HoraApertura { get; set; }
     public TimeOnly? HoraCierre { get; set; }
     public bool EsCierreFijo { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (EsCierreFijo)
+        {
+            yield break;
+        }
+
+        // Un dia sin ambas horas permanece sin configurar. Si se indica una de
+        // ellas, la otra pasa a ser obligatoria para evitar rangos incompletos.
+        if (!HoraApertura.HasValue && !HoraCierre.HasValue)
+        {
+            yield break;
+        }
+
+        if (!HoraApertura.HasValue)
+        {
+            yield return new ValidationResult("La hora de apertura es obligatoria.", [nameof(HoraApertura)]);
+        }
+
+        if (!HoraCierre.HasValue)
+        {
+            yield return new ValidationResult("La hora de cierre es obligatoria.", [nameof(HoraCierre)]);
+        }
+
+        if (HoraApertura.HasValue && HoraCierre.HasValue && HoraCierre <= HoraApertura)
+        {
+            yield return new ValidationResult("La hora de cierre debe ser posterior a la hora de apertura.", [nameof(HoraCierre)]);
+        }
+    }
 }
 
 public class HorariosOperacionViewModel

@@ -27,4 +27,14 @@ public class HorariosOperacionController(IHorariosOperacionService horariosOpera
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
             : ApiResponse.ErrorResponse(result.Message));
     }
+
+    /// <summary>Guarda varios horarios como una sola operacion atomica.</summary>
+    [HttpPut("lote")]
+    public async Task<IActionResult> GuardarLote([FromBody] GuardarHorariosOperacionLoteRequest? request)
+    {
+        var result = await horariosOperacionService.GuardarLoteAsync(request?.Horarios);
+        return StatusCode(result.StatusCode, result.Success
+            ? ApiResponse.SuccessResponse(result.Message, result.Data)
+            : ApiResponse.ErrorResponse(result.Message));
+    }
 }

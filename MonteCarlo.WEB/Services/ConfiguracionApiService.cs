@@ -88,6 +88,16 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
             "El horario de operación fue guardado.",
             "No se pudo guardar el horario de operación. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, List<HorarioOperacionApiResponse>? Data)> GuardarHorariosOperacionLoteAsync(
+        IEnumerable<HorarioOperacionDiaViewModel> horarios) =>
+        EjecutarAsync<List<HorarioOperacionApiResponse>>(
+            () => httpClient.PutAsJsonAsync("horarios-operacion/lote", new
+            {
+                horarios = horarios.Select(h => new { h.DiaSemana, h.HoraApertura, h.HoraCierre })
+            }),
+            "Los horarios de operacion fueron guardados.",
+            "No se pudieron guardar los horarios de operacion. Intenta de nuevo.");
+
     private async Task<(bool Success, string Message, T? Data)> EjecutarAsync<T>(
         Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)
     {

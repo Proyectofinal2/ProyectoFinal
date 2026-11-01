@@ -377,7 +377,10 @@
     document
       .querySelectorAll("form[data-mc-enable-submit]")
       .forEach(function (form) {
-        var boton = form.querySelector('[type="submit"]');
+        var boton =
+          form.querySelector('[type="submit"]') ||
+          (form.id &&
+            document.querySelector('[form="' + form.id + '"][type="submit"]'));
         if (!boton) {
           return;
         }
@@ -387,6 +390,7 @@
         }
 
         form.addEventListener("input", actualizar);
+        form.addEventListener("change", actualizar);
         actualizar();
       });
   }
@@ -401,7 +405,10 @@
     document
       .querySelectorAll("form[data-mc-enable-on-change]")
       .forEach(function (form) {
-        var boton = form.querySelector('[type="submit"]');
+        var boton =
+          form.querySelector('[type="submit"]') ||
+          (form.id &&
+            document.querySelector('[form="' + form.id + '"][type="submit"]'));
         var campos = form.querySelectorAll("[data-mc-original]");
         if (!boton || campos.length === 0) {
           return;
@@ -418,6 +425,7 @@
         }
 
         form.addEventListener("input", actualizar);
+        form.addEventListener("change", actualizar);
         actualizar();
       });
   }
@@ -450,7 +458,10 @@
             return;
           }
 
-          var button = form.querySelector('[type="submit"]');
+          var button =
+            form.querySelector('[type="submit"]') ||
+            (form.id &&
+              document.querySelector('[form="' + form.id + '"][type="submit"]'));
           if (!button) {
             return;
           }
@@ -915,15 +926,17 @@
       );
     }
 
-    function createStandardValues() {
+    function createStandardValues(minimum, maximum) {
       var values = [];
       for (var hour = 0; hour < 24; hour++) {
         [0, 30].forEach(function (minute) {
-          values.push(
+          var value =
             String(hour).padStart(2, "0") +
               ":" +
-              String(minute).padStart(2, "0"),
-          );
+              String(minute).padStart(2, "0");
+          if ((!minimum || value >= minimum) && (!maximum || value <= maximum)) {
+            values.push(value);
+          }
         });
       }
       return values;
@@ -941,10 +954,16 @@
           return;
         }
 
-        var values = createStandardValues();
+        var minimum = picker.dataset.mcTimePickerMin;
+        var maximum = picker.dataset.mcTimePickerMax;
+        var tieneRango = !!minimum || !!maximum;
+        var values = createStandardValues(minimum, maximum);
         // Los datos anteriores pueden contener una hora valida fuera de
-        // los intervalos nuevos. Se muestran sin habilitar minutos libres.
+        // los intervalos nuevos. En selectores sin rango se conservan como
+        // opcion; en Horarios se mantienen visibles en el trigger, pero no
+        // se ofrecen como una nueva opcion seleccionable.
         if (
+          !tieneRango &&
           valueInput.value &&
           values.indexOf(valueInput.value) === -1 &&
           formatTime(valueInput.value) !== "Selecciona una hora"
@@ -986,6 +1005,8 @@
             option.setAttribute("aria-selected", String(selected));
             option.tabIndex = selected ? 0 : -1;
           });
+          valueInput.dispatchEvent(new Event("input", { bubbles: true }));
+          valueInput.dispatchEvent(new Event("change", { bubbles: true }));
         }
 
         function close() {

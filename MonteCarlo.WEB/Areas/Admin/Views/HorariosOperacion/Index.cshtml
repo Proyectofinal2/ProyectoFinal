@@ -2,71 +2,90 @@
 @model HorariosOperacionViewModel
 @{
     ViewData["Title"] = "Horarios";
-    ViewData["Subtitle"] = "Define el horario regular de operación para cada día de la semana.";
+    ViewData["Icon"] = "bi-clock";
+    ViewData["Subtitle"] = "Define el horario regular de operacion para cada dia de la semana.";
 }
 
-<div class="row">
-    <div class="col-xl-9">
-        <div class="card">
-            <div class="card-body">
-                <p class="text-secondary mb-4">Configura un único rango de atención por día. Los días con cierre fijo deben habilitarse desde Cierres antes de asignar un horario.</p>
-                <div asp-validation-summary="All" class="alert alert-danger fade show" role="alert" data-mc-autodismiss="5000"></div>
-                <div class="vstack gap-3">
-                    @foreach (var dia in Model.Dias)
-                    {
-                        <form asp-action="Guardar" method="post" data-mc-guard-submit class="border rounded p-3">
-                            <input type="hidden" name="DiaSemana" value="@dia.DiaSemana" />
-                            <div class="row align-items-end g-3">
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold">@dia.NombreDia</label>
-                                    @if (dia.EsCierreFijo)
-                                    {
-                                        <div><span class="badge text-bg-secondary">Cierre fijo</span></div>
-                                    }
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label" for="apertura-@dia.DiaSemana">Hora de apertura</label>
-                                    <div class="mc-time-picker" data-mc-time-picker>
-                                        <input type="hidden" name="HoraApertura" value="@(dia.HoraApertura?.ToString("HH:mm"))" disabled="@dia.EsCierreFijo" data-mc-time-picker-value />
-                                        <button id="apertura-@dia.DiaSemana" type="button" class="form-control mc-time-picker__trigger"
-                                                aria-haspopup="listbox" aria-expanded="false" aria-controls="apertura-opciones-@dia.DiaSemana"
-                                                disabled="@dia.EsCierreFijo" data-mc-time-picker-trigger>
-                                            <span data-mc-time-picker-label>Selecciona una hora</span>
-                                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                                        </button>
-                                        <div id="apertura-opciones-@dia.DiaSemana" class="mc-time-picker__menu" role="listbox"
-                                             aria-labelledby="apertura-@dia.DiaSemana" hidden data-mc-time-picker-menu></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label" for="cierre-@dia.DiaSemana">Hora de cierre</label>
-                                    <div class="mc-time-picker" data-mc-time-picker>
-                                        <input type="hidden" name="HoraCierre" value="@(dia.HoraCierre?.ToString("HH:mm"))" disabled="@dia.EsCierreFijo" data-mc-time-picker-value />
-                                        <button id="cierre-@dia.DiaSemana" type="button" class="form-control mc-time-picker__trigger"
-                                                aria-haspopup="listbox" aria-expanded="false" aria-controls="cierre-opciones-@dia.DiaSemana"
-                                                disabled="@dia.EsCierreFijo" data-mc-time-picker-trigger>
-                                            <span data-mc-time-picker-label>Selecciona una hora</span>
-                                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                                        </button>
-                                        <div id="cierre-opciones-@dia.DiaSemana" class="mc-time-picker__menu" role="listbox"
-                                             aria-labelledby="cierre-@dia.DiaSemana" hidden data-mc-time-picker-menu></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    @if (dia.EsCierreFijo)
-                                    {
-                                        <p class="form-text mb-0">Elimine el cierre fijo desde Cierres para configurar este día.</p>
-                                    }
-                                    else
-                                    {
-                                        <button type="submit" class="btn btn-primary">Guardar horario</button>
-                                    }
-                                </div>
+@section PageActions {
+    <button form="horarios-operacion-form" type="submit" class="btn btn-primary" disabled>
+        <i class="bi bi-save me-1" aria-hidden="true"></i> Guardar cambios
+    </button>
+}
+
+<div class="card mc-schedule-card">
+    <div class="card-body">
+        <p class="text-secondary mc-schedule-card__intro">Configura un unico rango de atencion por dia. Los dias con cierre fijo deben habilitarse desde Cierres antes de asignar un horario.</p>
+
+        <form id="horarios-operacion-form" asp-action="Guardar" method="post" data-mc-guard-submit data-mc-enable-on-change>
+            <div asp-validation-summary="All" class="alert alert-danger fade show" role="alert"></div>
+
+            <div class="mc-schedule-list">
+                @for (var i = 0; i < Model.Dias.Count; i++)
+                {
+                    var dia = Model.Dias[i];
+                    <div class="mc-schedule-row">
+                        <input type="hidden" asp-for="Dias[i].DiaSemana" />
+                        <input type="hidden" asp-for="Dias[i].NombreDia" />
+                        <input type="hidden" asp-for="Dias[i].EsCierreFijo" />
+                        @if (dia.EsCierreFijo)
+                        {
+                            <input type="hidden" asp-for="Dias[i].HoraApertura" />
+                            <input type="hidden" asp-for="Dias[i].HoraCierre" />
+                        }
+
+                        <div class="mc-schedule-row__day">
+                            <span class="form-label fw-semibold mb-0">@dia.NombreDia</span>
+                            @if (dia.EsCierreFijo)
+                            {
+                                <span class="badge text-bg-secondary">Cierre fijo</span>
+                            }
+                        </div>
+
+                        <div>
+                            <label class="form-label" for="apertura-@dia.DiaSemana">Hora de apertura</label>
+                            <div class="mc-time-picker" data-mc-time-picker data-mc-time-picker-min="08:00" data-mc-time-picker-max="22:00">
+                                <input type="hidden" id="Dias_@(i)__HoraApertura" name="Dias[@i].HoraApertura"
+                                       value="@(dia.HoraApertura?.ToString("HH:mm") ?? string.Empty)"
+                                       disabled="@dia.EsCierreFijo" data-mc-time-picker-value
+                                       data-mc-original="@(dia.HoraApertura?.ToString("HH:mm"))" />
+                                <button id="apertura-@dia.DiaSemana" type="button" class="form-control mc-time-picker__trigger"
+                                        aria-haspopup="listbox" aria-expanded="false" aria-controls="apertura-opciones-@dia.DiaSemana"
+                                        disabled="@dia.EsCierreFijo" data-mc-time-picker-trigger>
+                                    <span data-mc-time-picker-label>Selecciona una hora</span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <div id="apertura-opciones-@dia.DiaSemana" class="mc-time-picker__menu" role="listbox"
+                                     aria-labelledby="apertura-@dia.DiaSemana" hidden data-mc-time-picker-menu></div>
                             </div>
-                        </form>
-                    }
-                </div>
+                            <span asp-validation-for="Dias[i].HoraApertura" class="text-danger small"></span>
+                        </div>
+
+                        <div>
+                            <label class="form-label" for="cierre-@dia.DiaSemana">Hora de cierre</label>
+                            <div class="mc-time-picker" data-mc-time-picker data-mc-time-picker-min="08:00" data-mc-time-picker-max="22:00">
+                                <input type="hidden" id="Dias_@(i)__HoraCierre" name="Dias[@i].HoraCierre"
+                                       value="@(dia.HoraCierre?.ToString("HH:mm") ?? string.Empty)"
+                                       disabled="@dia.EsCierreFijo" data-mc-time-picker-value
+                                       data-mc-original="@(dia.HoraCierre?.ToString("HH:mm"))" />
+                                <button id="cierre-@dia.DiaSemana" type="button" class="form-control mc-time-picker__trigger"
+                                        aria-haspopup="listbox" aria-expanded="false" aria-controls="cierre-opciones-@dia.DiaSemana"
+                                        disabled="@dia.EsCierreFijo" data-mc-time-picker-trigger>
+                                    <span data-mc-time-picker-label>Selecciona una hora</span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <div id="cierre-opciones-@dia.DiaSemana" class="mc-time-picker__menu" role="listbox"
+                                     aria-labelledby="cierre-@dia.DiaSemana" hidden data-mc-time-picker-menu></div>
+                            </div>
+                            <span asp-validation-for="Dias[i].HoraCierre" class="text-danger small"></span>
+                        </div>
+
+                        @if (dia.EsCierreFijo)
+                        {
+                            <p class="form-text mc-schedule-row__notice">Elimine el cierre fijo desde Cierres para configurar este dia.</p>
+                        }
+                    </div>
+                }
             </div>
-        </div>
+        </form>
     </div>
 </div>

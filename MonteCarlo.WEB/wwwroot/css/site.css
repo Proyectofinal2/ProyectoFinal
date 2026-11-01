@@ -1518,6 +1518,55 @@ body {
   gap: var(--mc-space-2);
 }
 
+/* Horarios de operacion: una sola superficie amplia y filas compactas, sin
+   duplicar acciones por dia. */
+.mc-schedule-card .card-body {
+  padding: var(--mc-space-4);
+}
+
+.mc-schedule-card__intro {
+  margin-bottom: var(--mc-space-4);
+}
+
+.mc-schedule-list {
+  display: grid;
+  gap: var(--mc-space-2);
+}
+
+.mc-schedule-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 1fr) minmax(12rem, 1fr);
+  align-items: end;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
+}
+
+.mc-schedule-row__day {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-2);
+  min-height: 2.5rem;
+}
+
+.mc-schedule-row__notice {
+  grid-column: 2 / -1;
+  margin: calc(-1 * var(--mc-space-1)) 0 0;
+}
+
+@media (max-width: 767.98px) {
+  .mc-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mc-schedule-row__notice {
+    grid-column: auto;
+    margin-top: 0;
+  }
+}
+
 .mc-tab {
   display: inline-flex;
   align-items: center;

@@ -6,4 +6,6 @@ public interface IHorariosOperacionService
 {
     Task<Result<List<HorarioOperacionResponse>>> ObtenerAsync();
     Task<Result<HorarioOperacionResponse>> GuardarAsync(int? diaSemana, TimeOnly? horaApertura, TimeOnly? horaCierre);
+    Task<Result<List<HorarioOperacionResponse>>> GuardarLoteAsync(
+        IEnumerable<GuardarHorarioOperacionLoteItemRequest>? horarios);
 }

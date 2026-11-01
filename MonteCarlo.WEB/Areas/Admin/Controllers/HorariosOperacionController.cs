@@ -18,25 +18,55 @@ public class HorariosOperacionController(IConfiguracionApiService configuracionA
 
     [HttpPost("guardar")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Guardar(GuardarHorarioOperacionViewModel modelo)
+    public async Task<IActionResult> Guardar(HorariosOperacionViewModel modelo)
     {
-        if (!ModelState.IsValid)
+        if (modelo.Dias.Count != HorariosOperacionViewModel.DiasSemana.Count
+            || modelo.Dias.Select(d => d.DiaSemana).Distinct().Count() != HorariosOperacionViewModel.DiasSemana.Count)
         {
-            var pagina = await ConstruirModeloAsync();
-            var dia = pagina.Dias.SingleOrDefault(d => d.DiaSemana == modelo.DiaSemana);
-            if (dia is not null)
-            {
-                dia.HoraApertura = modelo.HoraApertura;
-                dia.HoraCierre = modelo.HoraCierre;
-            }
-
-            return View("Index", pagina);
+            ModelState.AddModelError(string.Empty, "La configuracion de horarios esta incompleta.");
         }
 
-        var (success, message, _) = await configuracionApiService.GuardarHorarioOperacionAsync(
-            modelo.DiaSemana, modelo.HoraApertura!.Value, modelo.HoraCierre!.Value);
-        TempData[success ? Alerta.Exito : Alerta.Error] = message;
+        if (!ModelState.IsValid)
+        {
+            await ActualizarMetadatosAsync(modelo);
+            return View("Index", modelo);
+        }
+
+        // Los cierres fijos se excluyen del envio normal; la API vuelve a
+        // validarlos para no confiar en este valor enviado por el navegador.
+        var horariosEditables = modelo.Dias
+            .Where(d => !d.EsCierreFijo && d.HoraApertura.HasValue && d.HoraCierre.HasValue)
+            .ToList();
+        var (success, message, _) = await configuracionApiService.GuardarHorariosOperacionLoteAsync(horariosEditables);
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, message);
+            await ActualizarMetadatosAsync(modelo);
+            return View("Index", modelo);
+        }
+
+        TempData[Alerta.Exito] = message;
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task ActualizarMetadatosAsync(HorariosOperacionViewModel modelo)
+    {
+        var actual = await ConstruirModeloAsync();
+        var porDia = actual.Dias.ToDictionary(d => d.DiaSemana);
+
+        for (var indice = 0; indice < modelo.Dias.Count; indice++)
+        {
+            var dia = modelo.Dias[indice];
+            if (!porDia.TryGetValue(dia.DiaSemana, out var estadoActual))
+            {
+                continue;
+            }
+
+            dia.NombreDia = estadoActual.NombreDia;
+            dia.EsCierreFijo = estadoActual.EsCierreFijo;
+            ModelState.Remove($"Dias[{indice}].NombreDia");
+            ModelState.Remove($"Dias[{indice}].EsCierreFijo");
+        }
     }
 
     private async Task<HorariosOperacionViewModel> ConstruirModeloAsync()
