@@ -9,7 +9,8 @@ public class ReservasService(
     IReservasRepository reservasRepository,
     IMesasRepository mesasRepository,
     IClientesRepository clientesRepository,
-    IConfiguracionService configuracionService) : IReservasService
+    IConfiguracionService configuracionService,
+    INotificacionesService notificacionesService) : IReservasService
 {
     private const string Pendiente = "Pendiente";
     private const string Confirmada = "Confirmada";
@@ -204,6 +205,7 @@ public class ReservasService(
 
         reserva.EstadoReserva = estadoCancelada;
         reserva.MotivoCancelacion = "Cancelada por el cliente";
+        notificacionesService.Encolar(reserva, reserva.Cliente.CorreoElectronico, NotificacionesService.Cancelacion);
 
         await reservasRepository.GuardarCambiosAsync();
 
@@ -297,6 +299,11 @@ public class ReservasService(
         }
 
         reservasRepository.Agregar(reserva);
+
+        // El correo indicado en el formulario tiene prioridad sobre el que ya tenia el cliente.
+        var correo = string.IsNullOrWhiteSpace(request.CorreoElectronico) ? cliente.CorreoElectronico : request.CorreoElectronico;
+        notificacionesService.Encolar(reserva, correo, NotificacionesService.Confirmacion);
+
         await reservasRepository.GuardarCambiosAsync();
 
         var creada = await reservasRepository.ObtenerPorCodigoAsync(codigo);
@@ -365,6 +372,10 @@ public class ReservasService(
 
         reserva.ReservaMesas.Clear();
         foreach (var mesa in mesas) reserva.ReservaMesas.Add(new ReservaMesa { IdMesa = mesa.IdMesa });
+
+        // Una reserva pendiente queda confirmada al asignarle mesa: se avisa al cliente.
+        if (reserva.EstadoReserva.Nombre == Pendiente)
+            notificacionesService.Encolar(reserva, reserva.Cliente.CorreoElectronico, NotificacionesService.Confirmacion);
 
         reserva.EstadoReserva = estadoConfirmada;
         reserva.RequiereAsignacionManual = false;
@@ -742,6 +753,11 @@ public class ReservasService(
         if (nuevoEstado == Cancelada)
         {
             reserva.MotivoCancelacion = "Cancelada por el administrador";
+            notificacionesService.Encolar(reserva, reserva.Cliente.CorreoElectronico, NotificacionesService.Cancelacion);
+        }
+        else if (estadoActual == Pendiente)
+        {
+            notificacionesService.Encolar(reserva, reserva.Cliente.CorreoElectronico, NotificacionesService.Confirmacion);
         }
 
         await reservasRepository.GuardarCambiosAsync();

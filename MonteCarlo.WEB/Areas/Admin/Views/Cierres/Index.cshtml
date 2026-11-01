@@ -97,12 +97,12 @@
                                     <td class="text-end">
                                         <button type="button" class="btn btn-sm btn-ghost-danger"
                                                 data-mc-confirm
-                                                data-mc-confirm-title="Quitar cierre"
+                                                data-mc-confirm-title="Eliminar cierre"
                                                 data-mc-confirm-body="@($"La fecha {cierre.Fecha:dd/MM/yyyy} volvera a estar disponible para reservas. Las reservas que ya se cancelaron por este cierre no se restablecen.")"
                                                 data-mc-confirm-action="@Url.Action(nameof(CierresController.EliminarEventual), new { id = cierre.IdCierreEventual })"
-                                                data-mc-confirm-label="Quitar cierre"
+                                                data-mc-confirm-label="Eliminar cierre"
                                                 data-mc-confirm-variant="danger">
-                                            Quitar
+                                            Eliminar
                                         </button>
                                     </td>
                                 </tr>

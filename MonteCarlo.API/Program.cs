@@ -51,6 +51,11 @@ builder.Services.AddScoped<ICierresEventualesService, CierresEventualesService>(
 builder.Services.AddScoped<IHistorialCierresRepository, HistorialCierresRepository>();
 builder.Services.AddScoped<IHistorialCierresService, HistorialCierresService>();
 
+// Notificaciones por correo al cliente (confirmacion, cancelacion y recordatorio)
+builder.Services.AddScoped<INotificacionesRepository, NotificacionesRepository>();
+builder.Services.AddScoped<INotificacionesService, NotificacionesService>();
+builder.Services.AddHostedService<NotificacionesHostedService>();
+
 // HU-CON-001: catálogo de productos, categorías e historial de cambios
 builder.Services.AddScoped<IProductosRepository, ProductosRepository>();
 builder.Services.AddScoped<ICategoriasProductoRepository, CategoriasProductoRepository>();

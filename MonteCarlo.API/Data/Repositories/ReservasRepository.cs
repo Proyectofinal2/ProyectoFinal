@@ -16,6 +16,7 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
 
     public Task<Reserva?> ObtenerPorIdAsync(int id) =>
         context.Reservas
+            .Include(r => r.Cliente)
             .Include(r => r.EstadoReserva)
             .Include(r => r.ReservaMesas)
             .FirstOrDefaultAsync(r => r.IdReserva == id);

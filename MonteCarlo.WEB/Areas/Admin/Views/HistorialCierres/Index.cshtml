@@ -1,6 +1,6 @@
 @*
     Historial de cambios en cierres fijos y eventuales.
-    Muestra quien, cuando y por que se registro o quito cada cierre.
+    Muestra quien, cuando y por que se registro o elimino cada cierre.
 *@
 @using MonteCarlo.WEB.Models.Configuracion
 @model HistorialCierresViewModel
@@ -25,7 +25,7 @@
                 <select id="accion" name="accion" class="form-select">
                     <option value="">Todas</option>
                     <option value="Registrado" selected="@(Model.Accion == "Registrado")">Registrado</option>
-                    <option value="Eliminado" selected="@(Model.Accion == "Eliminado")">Quitado</option>
+                    <option value="Eliminado" selected="@(Model.Accion == "Eliminado")">Eliminado</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -99,7 +99,7 @@ else
                                 }
                                 else
                                 {
-                                    <span class="mc-badge mc-badge--neutral">Quitado</span>
+                                    <span class="mc-badge mc-badge--neutral">Eliminado</span>
                                 }
                             </td>
                             <td class="text-break">@(string.IsNullOrWhiteSpace(item.Motivo) ? "-" : item.Motivo)</td>

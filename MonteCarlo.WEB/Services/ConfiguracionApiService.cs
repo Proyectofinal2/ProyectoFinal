@@ -57,8 +57,8 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
     public Task<(bool Success, string Message, CierreEventualApiResponse? Data)> EliminarCierreEventualAsync(int id) =>
         EjecutarAsync<CierreEventualApiResponse>(
             () => httpClient.DeleteAsync($"cierres-eventuales/{id}"),
-            "El cierre fue quitado.",
-            "No se pudo quitar el cierre. Intenta de nuevo.");
+            "El cierre fue eliminado.",
+            "No se pudo eliminar el cierre. Intenta de nuevo.");
 
     public Task<(bool Success, string Message, List<HistorialCierreApiResponse>? Data)> ObtenerHistorialCierresAsync(
         string? tipo, string? accion, DateOnly? desde, DateOnly? hasta)
