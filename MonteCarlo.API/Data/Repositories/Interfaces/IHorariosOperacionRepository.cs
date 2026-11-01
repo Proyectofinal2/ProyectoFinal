@@ -6,6 +6,13 @@ public interface IHorariosOperacionRepository
 {
     Task<List<HorarioOperacion>> ObtenerTodosAsync();
     Task<HorarioOperacion?> ObtenerPorDiaAsync(byte diaSemana);
+    Task<List<HorarioOperacion>> ObtenerPorDiasAsync(IEnumerable<byte> diasSemana);
     void Agregar(HorarioOperacion horarioOperacion);
     Task GuardarCambiosAsync();
+
+    /// <summary>
+    /// Vuelve a consultar los cierres fijos bajo una transaccion serializable y,
+    /// si no existen, persiste todos los cambios rastreados en una sola escritura.
+    /// </summary>
+    Task<List<byte>> ValidarCierresYGuardarCambiosLoteAsync(IEnumerable<byte> diasSemana);
 }

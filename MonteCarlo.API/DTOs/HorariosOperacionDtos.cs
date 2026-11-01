@@ -23,3 +23,20 @@ public class GuardarHorarioOperacionRequest
     [Required(ErrorMessage = "La hora de cierre es obligatoria.")]
     public TimeOnly? HoraCierre { get; set; }
 }
+
+/// <summary>Solicitud para guardar varios horarios de operacion en una sola transaccion.</summary>
+public class GuardarHorariosOperacionLoteRequest
+{
+    public List<GuardarHorarioOperacionLoteItemRequest>? Horarios { get; set; }
+}
+
+/// <summary>
+/// Un horario dentro de un lote. La validacion se realiza en el servicio para que
+/// el lote completo reciba una respuesta ApiResponse uniforme.
+/// </summary>
+public class GuardarHorarioOperacionLoteItemRequest
+{
+    public int? DiaSemana { get; set; }
+    public TimeOnly? HoraApertura { get; set; }
+    public TimeOnly? HoraCierre { get; set; }
+}
