@@ -1,0 +1,177 @@
+@using System.Globalization
+@using MonteCarlo.WEB.Models.Configuracion
+@model HistorialHorariosOperacionViewModel
+@{
+    ViewData["Title"] = "Horarios";
+    ViewData["Icon"] = "bi-clock";
+    ViewData["Subtitle"] = "Consulta quién modificó los horarios regulares de operación.";
+    var pagina = Model.Pagina;
+}
+
+@functions {
+    private static string FormatearHorario(TimeOnly? apertura, TimeOnly? cierre) =>
+        apertura.HasValue && cierre.HasValue
+            ? $"{apertura.Value:HH\\:mm} – {cierre.Value:HH\\:mm}"
+            : "Sin horario anterior";
+
+    private static string Estado(bool? activo) => activo.HasValue ? (activo.Value ? "Activo" : "Inactivo") : "Sin estado anterior";
+}
+
+<partial name="_HorariosOperacionTabs" model='"historial"' />
+
+<div class="mc-table-card mb-3" hidden data-mc-historial-cargando role="status" aria-live="polite">
+    <p class="text-secondary m-3"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando historial...</p>
+</div>
+
+<form asp-action="Historial" method="get" role="search" class="mc-toolbar" data-mc-historial-filtros>
+    <div class="mc-toolbar__fila">
+        <div class="mc-search">
+            <i class="bi bi-search mc-search__icono" aria-hidden="true"></i>
+            <label for="busqueda" class="visually-hidden">Buscar por día</label>
+            <input id="busqueda" name="busqueda" type="search" class="mc-search__input" value="@Model.Busqueda"
+                   placeholder="Buscar día" maxlength="20" autocomplete="off" />
+        </div>
+
+        <label for="diaSemana" class="visually-hidden">Día de la semana</label>
+        <select id="diaSemana" name="diaSemana" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los días</option>
+            @foreach (var dia in HorariosOperacionViewModel.DiasSemana)
+            {
+                <option value="@dia.Valor" selected="@(Model.DiaSemana == dia.Valor)">@dia.Nombre</option>
+            }
+        </select>
+
+        <label for="idUsuario" class="visually-hidden">Usuario</label>
+        <select id="idUsuario" name="idUsuario" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los usuarios</option>
+            @foreach (var usuario in Model.Usuarios)
+            {
+                <option value="@usuario.IdUsuario" selected="@(Model.IdUsuario == usuario.IdUsuario)">@usuario.NombreCompleto</option>
+            }
+        </select>
+
+        <label for="accion" class="visually-hidden">Acción</label>
+        <select id="accion" name="accion" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todas las acciones</option>
+            <option value="Creado" selected="@(Model.Accion == "Creado")">Creado</option>
+            <option value="Modificado" selected="@(Model.Accion == "Modificado")">Modificado</option>
+        </select>
+
+        <label for="desde" class="visually-hidden">Desde</label>
+        <input id="desde" name="desde" type="date" class="form-control mc-select" value="@(Model.Desde?.ToString("yyyy-MM-dd"))" data-mc-autosubmit />
+
+        <label for="hasta" class="visually-hidden">Hasta</label>
+        <input id="hasta" name="hasta" type="date" class="form-control mc-select" value="@(Model.Hasta?.ToString("yyyy-MM-dd"))" data-mc-autosubmit />
+
+        @if (Model.TieneFiltros)
+        {
+            <a asp-action="Historial" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar</a>
+        }
+    </div>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="mc-table-card">
+        <div class="alert alert-danger m-3" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>@Model.Error
+            <a asp-action="Historial" class="alert-link ms-2">Intentar de nuevo</a>
+        </div>
+    </div>
+}
+else if (pagina.Items.Count == 0)
+{
+    <div class="mc-table-card">
+        @if (Model.TieneFiltros)
+        {
+            <partial name="_EstadoVacio" model="EstadoVacioViewModel.SinResultados(Url.Action(nameof(HorariosOperacionController.Historial)))" />
+        }
+        else
+        {
+            <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                     {
+                         Icono = "bi-clock-history",
+                         Titulo = "Aún no hay cambios registrados",
+                         Descripcion = "Cuando se cree o modifique un horario de operación, aparecerá aquí con el usuario responsable."
+                     })" />
+        }
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <caption class="visually-hidden">Cambios en horarios de operación, del más reciente al más antiguo</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Día</th>
+                        <th scope="col">Acción</th>
+                        <th scope="col">Horario anterior</th>
+                        <th scope="col">Horario nuevo</th>
+                        <th scope="col">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cambio in pagina.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@cambio.Fecha.ToString("dd MMM yyyy, HH:mm", CultureInfo.GetCultureInfo("es-CR"))</td>
+                            <td>
+                                <span class="fw-medium d-block">@cambio.Usuario</span>
+                                @if (!string.IsNullOrWhiteSpace(cambio.RolUsuario))
+                                {
+                                    <span class="small text-secondary">Administrador @cambio.RolUsuario</span>
+                                }
+                            </td>
+                            <td>@cambio.NombreDia</td>
+                            <td><span class="badge @(cambio.Accion == "Creado" ? "text-bg-success" : "text-bg-primary")">@cambio.Accion</span></td>
+                            <td class="text-nowrap">@FormatearHorario(cambio.HoraAperturaAnterior, cambio.HoraCierreAnterior)</td>
+                            <td class="text-nowrap">@FormatearHorario(cambio.HoraAperturaNueva, cambio.HoraCierreNuevo)</td>
+                            <td class="text-nowrap">@Estado(cambio.ActivoAnterior) <i class="bi bi-arrow-right" aria-hidden="true"></i> @Estado(cambio.ActivoNuevo)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <partial name="_Paginacion" model="@(new PaginacionViewModel
+             {
+                 Accion = nameof(HorariosOperacionController.Historial),
+                 Controlador = "HorariosOperacion",
+                 Pagina = pagina.Pagina,
+                 TotalPaginas = pagina.TotalPaginas,
+                 Total = pagina.Total,
+                 TamanoPagina = pagina.TamanoPagina,
+                 Sustantivo = "cambios",
+                 Parametros = new Dictionary<string, string?>
+                 {
+                     ["busqueda"] = Model.Busqueda,
+                     ["diaSemana"] = Model.DiaSemana?.ToString(),
+                     ["idUsuario"] = Model.IdUsuario?.ToString(),
+                     ["accion"] = Model.Accion,
+                     ["desde"] = Model.Desde?.ToString("yyyy-MM-dd"),
+                     ["hasta"] = Model.Hasta?.ToString("yyyy-MM-dd")
+                 }
+             })" />
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var filtros = document.querySelector("[data-mc-historial-filtros]");
+            var cargando = document.querySelector("[data-mc-historial-cargando]");
+            if (!filtros || !cargando) return;
+
+            function mostrarCarga() {
+                cargando.hidden = false;
+            }
+
+            filtros.addEventListener("submit", mostrarCarga);
+            filtros.addEventListener("mc:autosubmit", mostrarCarga);
+        })();
+    </script>
+}

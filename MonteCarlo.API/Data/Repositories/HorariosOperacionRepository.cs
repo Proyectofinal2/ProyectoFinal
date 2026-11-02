@@ -28,7 +28,7 @@ public class HorariosOperacionRepository(MonteCarloDbContext context) : IHorario
 
     public Task GuardarCambiosAsync() => context.SaveChangesAsync();
 
-    public async Task<List<byte>> ValidarCierresYGuardarCambiosLoteAsync(IEnumerable<byte> diasSemana)
+    public async Task<List<byte>> ValidarCierresYGuardarCambiosAsync(IEnumerable<byte> diasSemana)
     {
         var dias = diasSemana.Distinct().ToList();
 

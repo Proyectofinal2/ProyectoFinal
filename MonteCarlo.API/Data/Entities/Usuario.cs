@@ -24,6 +24,7 @@ public class Usuario
     public ICollection<CierreEventual> CierresEventuales { get; set; } = new List<CierreEventual>();
     public ICollection<HistorialCierre> HistorialCierres { get; set; } = new List<HistorialCierre>();
     public ICollection<HistorialCatalogo> HistorialCatalogos { get; set; } = new List<HistorialCatalogo>();
+    public ICollection<HistorialHorarioOperacion> HistorialHorariosOperacion { get; set; } = new List<HistorialHorarioOperacion>();
     public ICollection<ConfiguracionSistema> ConfiguracionesModificadas { get; set; } = new List<ConfiguracionSistema>();
     public ICollection<TokenRecuperacionContrasena> TokensRecuperacion { get; set; } = new List<TokenRecuperacionContrasena>();
     public ICollection<Venta> VentasRegistradas { get; set; } = new List<Venta>();

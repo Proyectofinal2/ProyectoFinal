@@ -19,6 +19,7 @@ public class MonteCarloDbContext : DbContext
     public DbSet<Mesa> Mesas => Set<Mesa>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<HorarioOperacion> HorariosOperacion => Set<HorarioOperacion>();
+    public DbSet<HistorialHorarioOperacion> HistorialHorariosOperacion => Set<HistorialHorarioOperacion>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
     public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<Producto> Productos => Set<Producto>();
@@ -46,6 +47,7 @@ public class MonteCarloDbContext : DbContext
         ConfigurarMesa(modelBuilder);
         ConfigurarUsuario(modelBuilder);
         ConfigurarHorarioOperacion(modelBuilder);
+        ConfigurarHistorialHorarioOperacion(modelBuilder);
         ConfigurarMetodoPago(modelBuilder);
         ConfigurarCategoriaProducto(modelBuilder);
         ConfigurarProducto(modelBuilder);
@@ -138,6 +140,50 @@ public class MonteCarloDbContext : DbContext
             entity.HasKey(e => e.IdHorarioOperacion).HasName("PK_HorarioOperacion");
 
             entity.Property(e => e.Activo).HasDefaultValue(true);
+        });
+    }
+
+    private static void ConfigurarHistorialHorarioOperacion(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<HistorialHorarioOperacion>(entity =>
+        {
+            entity.ToTable("HistorialHorarioOperacion", t =>
+            {
+                t.HasCheckConstraint("CK_HistorialHorarioOperacion_Dia", "DiaSemana BETWEEN 0 AND 6");
+                t.HasCheckConstraint("CK_HistorialHorarioOperacion_Accion", "Accion IN ('Creado', 'Modificado')");
+                t.HasCheckConstraint("CK_HistorialHorarioOperacion_RangoNuevo", "HoraCierreNuevo > HoraAperturaNueva");
+                t.HasCheckConstraint("CK_HistorialHorarioOperacion_ValoresAnteriores",
+                    "(Accion = 'Creado' AND HoraAperturaAnterior IS NULL AND HoraCierreAnterior IS NULL AND ActivoAnterior IS NULL) OR " +
+                    "(Accion = 'Modificado' AND HoraAperturaAnterior IS NOT NULL AND HoraCierreAnterior IS NOT NULL AND " +
+                    "ActivoAnterior IS NOT NULL AND HoraCierreAnterior > HoraAperturaAnterior)");
+                t.HasCheckConstraint("CK_HistorialHorarioOperacion_CambioEfectivo",
+                    "Accion = 'Creado' OR HoraAperturaAnterior <> HoraAperturaNueva OR " +
+                    "HoraCierreAnterior <> HoraCierreNuevo OR ActivoAnterior <> ActivoNuevo");
+            });
+            entity.HasKey(e => e.IdHistorialHorarioOperacion).HasName("PK_HistorialHorarioOperacion");
+            entity.HasIndex(e => new { e.Fecha, e.IdHistorialHorarioOperacion })
+                .IsDescending().HasDatabaseName("IX_HistorialHorarioOperacion_Fecha");
+            entity.HasIndex(e => new { e.DiaSemana, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialHorarioOperacion_Dia_Fecha");
+            entity.HasIndex(e => new { e.IdUsuario, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialHorarioOperacion_Usuario_Fecha");
+            entity.HasIndex(e => new { e.IdOperacion, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialHorarioOperacion_Operacion");
+
+            entity.Property(e => e.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Fecha).HasColumnType("datetime2").HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(e => e.HorarioOperacion)
+                .WithMany(h => h.Historial)
+                .HasForeignKey(e => e.IdHorarioOperacion)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialHorarioOperacion_Horario");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany(u => u.HistorialHorariosOperacion)
+                .HasForeignKey(e => e.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialHorarioOperacion_Usuario");
         });
     }
 

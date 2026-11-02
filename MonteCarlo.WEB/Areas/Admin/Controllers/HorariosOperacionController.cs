@@ -49,6 +49,49 @@ public class HorariosOperacionController(IConfiguracionApiService configuracionA
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpGet("historial")]
+    public async Task<IActionResult> Historial(
+        string? busqueda, int? diaSemana, int? idUsuario, string? accion,
+        DateOnly? desde, DateOnly? hasta, int pagina = 1)
+    {
+        var paginaSolicitada = Math.Max(pagina, 1);
+        var modelo = new HistorialHorariosOperacionViewModel
+        {
+            Busqueda = busqueda,
+            DiaSemana = diaSemana,
+            IdUsuario = idUsuario,
+            Accion = accion,
+            Desde = desde,
+            Hasta = hasta
+        };
+
+        var historialTask = configuracionApiService.ObtenerHistorialHorariosOperacionAsync(
+            busqueda, diaSemana, idUsuario, accion, desde, hasta, paginaSolicitada);
+        var usuariosTask = configuracionApiService.ObtenerUsuariosHistorialHorariosOperacionAsync();
+        await Task.WhenAll(historialTask, usuariosTask);
+
+        var (success, message, resultado) = await historialTask;
+        if (success)
+        {
+            modelo.Pagina = resultado ?? new();
+            if (modelo.Pagina.Items.Count == 0 && modelo.Pagina.Total > 0 && paginaSolicitada > modelo.Pagina.TotalPaginas)
+            {
+                return RedirectToAction(nameof(Historial), new
+                {
+                    busqueda, diaSemana, idUsuario, accion, desde, hasta, pagina = modelo.Pagina.TotalPaginas
+                });
+            }
+        }
+        else
+        {
+            modelo.Error = message;
+        }
+
+        var (usuariosOk, _, usuarios) = await usuariosTask;
+        modelo.Usuarios = usuariosOk ? usuarios ?? [] : [];
+        return View(modelo);
+    }
+
     private async Task ActualizarMetadatosAsync(HorariosOperacionViewModel modelo)
     {
         var actual = await ConstruirModeloAsync();

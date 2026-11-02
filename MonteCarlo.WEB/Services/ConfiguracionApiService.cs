@@ -98,6 +98,27 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
             "Los horarios de operacion fueron guardados.",
             "No se pudieron guardar los horarios de operacion. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, PaginaHistorialHorarioOperacionApiResponse? Data)> ObtenerHistorialHorariosOperacionAsync(
+        string? busqueda, int? diaSemana, int? idUsuario, string? accion, DateOnly? desde, DateOnly? hasta, int pagina)
+    {
+        var filtros = new List<string> { $"pagina={pagina.ToString(CultureInfo.InvariantCulture)}" };
+        if (!string.IsNullOrWhiteSpace(busqueda)) filtros.Add($"busqueda={Uri.EscapeDataString(busqueda.Trim())}");
+        if (diaSemana.HasValue) filtros.Add($"diaSemana={diaSemana.Value}");
+        if (idUsuario.HasValue) filtros.Add($"idUsuario={idUsuario.Value}");
+        if (!string.IsNullOrWhiteSpace(accion)) filtros.Add($"accion={Uri.EscapeDataString(accion)}");
+        if (desde.HasValue) filtros.Add($"desde={desde.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        if (hasta.HasValue) filtros.Add($"hasta={hasta.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+
+        return EjecutarAsync<PaginaHistorialHorarioOperacionApiResponse>(
+            () => httpClient.GetAsync("historial-horarios-operacion?" + string.Join("&", filtros)),
+            "Historial obtenido.", "No se pudo obtener el historial de horarios. Intenta de nuevo.");
+    }
+
+    public Task<(bool Success, string Message, List<UsuarioHistorialHorarioOperacionApiResponse>? Data)> ObtenerUsuariosHistorialHorariosOperacionAsync() =>
+        EjecutarAsync<List<UsuarioHistorialHorarioOperacionApiResponse>>(
+            () => httpClient.GetAsync("historial-horarios-operacion/usuarios"),
+            "Usuarios obtenidos.", "No se pudieron obtener los usuarios del historial. Intenta de nuevo.");
+
     private async Task<(bool Success, string Message, T? Data)> EjecutarAsync<T>(
         Func<Task<HttpResponseMessage>> llamada, string mensajeExito, string mensajeError)
     {

@@ -12,4 +12,6 @@ public class HorarioOperacion
     public TimeOnly HoraApertura { get; set; }
     public TimeOnly HoraCierre { get; set; }
     public bool Activo { get; set; } = true;
+
+    public ICollection<HistorialHorarioOperacion> Historial { get; set; } = new List<HistorialHorarioOperacion>();
 }

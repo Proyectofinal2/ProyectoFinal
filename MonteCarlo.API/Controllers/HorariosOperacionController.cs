@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MonteCarlo.API.DTOs;
@@ -11,6 +12,9 @@ namespace MonteCarlo.API.Controllers;
 [Authorize(Roles = "General")]
 public class HorariosOperacionController(IHorariosOperacionService horariosOperacionService) : ControllerBase
 {
+    private int IdUsuarioAutenticado =>
+        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
     [HttpGet]
     public async Task<IActionResult> Obtener()
     {
@@ -22,7 +26,7 @@ public class HorariosOperacionController(IHorariosOperacionService horariosOpera
     public async Task<IActionResult> Guardar([FromBody] GuardarHorarioOperacionRequest request)
     {
         var result = await horariosOperacionService.GuardarAsync(request.DiaSemana,
-            request.HoraApertura, request.HoraCierre);
+            request.HoraApertura, request.HoraCierre, IdUsuarioAutenticado);
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
             : ApiResponse.ErrorResponse(result.Message));
@@ -32,7 +36,7 @@ public class HorariosOperacionController(IHorariosOperacionService horariosOpera
     [HttpPut("lote")]
     public async Task<IActionResult> GuardarLote([FromBody] GuardarHorariosOperacionLoteRequest? request)
     {
-        var result = await horariosOperacionService.GuardarLoteAsync(request?.Horarios);
+        var result = await horariosOperacionService.GuardarLoteAsync(request?.Horarios, IdUsuarioAutenticado);
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
             : ApiResponse.ErrorResponse(result.Message));
