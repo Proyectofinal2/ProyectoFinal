@@ -1,0 +1,11 @@
+@* Pestañas del módulo de horarios de operación (HU-CFG-005). *@
+@model string
+
+<nav class="mc-tabs" aria-label="Secciones de horarios de operación">
+    <a class="mc-tab @(Model == "configurar" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="HorariosOperacion" asp-action="Index"
+       aria-current="@(Model == "configurar" ? "page" : null)">Configurar horarios</a>
+    <a class="mc-tab @(Model == "historial" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="HorariosOperacion" asp-action="Historial"
+       aria-current="@(Model == "historial" ? "page" : null)">Historial de cambios</a>
+</nav>

@@ -5,7 +5,8 @@ namespace MonteCarlo.API.Services.Interfaces;
 public interface IHorariosOperacionService
 {
     Task<Result<List<HorarioOperacionResponse>>> ObtenerAsync();
-    Task<Result<HorarioOperacionResponse>> GuardarAsync(int? diaSemana, TimeOnly? horaApertura, TimeOnly? horaCierre);
+    Task<Result<HorarioOperacionResponse>> GuardarAsync(
+        int? diaSemana, TimeOnly? horaApertura, TimeOnly? horaCierre, int idUsuario);
     Task<Result<List<HorarioOperacionResponse>>> GuardarLoteAsync(
-        IEnumerable<GuardarHorarioOperacionLoteItemRequest>? horarios);
+        IEnumerable<GuardarHorarioOperacionLoteItemRequest>? horarios, int idUsuario);
 }

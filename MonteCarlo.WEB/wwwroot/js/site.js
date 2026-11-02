@@ -234,7 +234,12 @@
   /* [data-mc-autosubmit]: al cambiar el valor se envia el formulario (filtros por GET). */
   function initAutoSubmit() {
     document.querySelectorAll("[data-mc-autosubmit]").forEach(function (el) {
-      el.addEventListener("change", function () { if (el.form) el.form.submit(); });
+      el.addEventListener("change", function () {
+        if (el.form) {
+          el.form.dispatchEvent(new Event("mc:autosubmit"));
+          el.form.submit();
+        }
+      });
     });
   }
 

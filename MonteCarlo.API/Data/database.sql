@@ -71,6 +71,10 @@
       categorias (quien, cuando y que cambio). Para una base ya
       creada, ver alter_database-3.sql (incluye datos de prueba
       opcionales).
+   14. HistorialHorarioOperacion (HU-CFG-005): auditoria por cada
+      dia creado o modificado, con valores anteriores/nuevos,
+      administrador responsable e identificador comun del guardado
+      por lote. Para una base ya creada, ver alter_database-4.sql.
    ============================================================ */
 
 IF DB_ID('MonteCarlo') IS NULL
@@ -98,6 +102,7 @@ IF OBJECT_ID('dbo.CierreFijo', 'U') IS NOT NULL DROP TABLE dbo.CierreFijo;
 IF OBJECT_ID('dbo.Producto', 'U') IS NOT NULL DROP TABLE dbo.Producto;
 IF OBJECT_ID('dbo.CategoriaProducto', 'U') IS NOT NULL DROP TABLE dbo.CategoriaProducto;
 IF OBJECT_ID('dbo.MetodoPago', 'U') IS NOT NULL DROP TABLE dbo.MetodoPago;
+IF OBJECT_ID('dbo.HistorialHorarioOperacion', 'U') IS NOT NULL DROP TABLE dbo.HistorialHorarioOperacion;
 IF OBJECT_ID('dbo.HorarioOperacion', 'U') IS NOT NULL DROP TABLE dbo.HorarioOperacion;
 IF OBJECT_ID('dbo.Usuario', 'U') IS NOT NULL DROP TABLE dbo.Usuario;
 IF OBJECT_ID('dbo.Mesa', 'U') IS NOT NULL DROP TABLE dbo.Mesa;
@@ -189,6 +194,46 @@ CREATE TABLE dbo.HorarioOperacion (
     CONSTRAINT PK_HorarioOperacion PRIMARY KEY (IdHorarioOperacion),
     CONSTRAINT CK_HorarioOperacion_Rango CHECK (HoraCierre > HoraApertura),
     CONSTRAINT CK_HorarioOperacion_Dia CHECK (DiaSemana BETWEEN 0 AND 6)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: HistorialHorarioOperacion (HU-CFG-005)
+   Auditoria de cada dia de operacion creado o modificado.
+   Una operacion de guardado por lote comparte IdOperacion entre
+   sus filas; no se registran cambios sin diferencias efectivas.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.HistorialHorarioOperacion (
+    IdHistorialHorarioOperacion INT IDENTITY(1,1) NOT NULL,
+    IdOperacion                 UNIQUEIDENTIFIER NOT NULL,
+    IdHorarioOperacion          INT              NOT NULL,
+    DiaSemana                   TINYINT          NOT NULL, -- 0=Domingo ... 6=Sabado
+    Accion                      NVARCHAR(20)     NOT NULL, -- 'Creado' / 'Modificado'
+    HoraAperturaAnterior        TIME             NULL,
+    HoraAperturaNueva           TIME             NOT NULL,
+    HoraCierreAnterior          TIME             NULL,
+    HoraCierreNuevo             TIME             NOT NULL,
+    ActivoAnterior              BIT              NULL,
+    ActivoNuevo                 BIT              NOT NULL,
+    IdUsuario                   INT              NOT NULL, -- administrador responsable
+    Fecha                       DATETIME2        NOT NULL CONSTRAINT DF_HistorialHorarioOperacion_Fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_HistorialHorarioOperacion PRIMARY KEY (IdHistorialHorarioOperacion),
+    CONSTRAINT CK_HistorialHorarioOperacion_Dia CHECK (DiaSemana BETWEEN 0 AND 6),
+    CONSTRAINT CK_HistorialHorarioOperacion_Accion CHECK (Accion IN ('Creado', 'Modificado')),
+    CONSTRAINT CK_HistorialHorarioOperacion_RangoNuevo CHECK (HoraCierreNuevo > HoraAperturaNueva),
+    CONSTRAINT CK_HistorialHorarioOperacion_ValoresAnteriores CHECK (
+        (Accion = 'Creado' AND HoraAperturaAnterior IS NULL AND HoraCierreAnterior IS NULL AND ActivoAnterior IS NULL) OR
+        (Accion = 'Modificado' AND HoraAperturaAnterior IS NOT NULL AND HoraCierreAnterior IS NOT NULL AND
+         ActivoAnterior IS NOT NULL AND HoraCierreAnterior > HoraAperturaAnterior)
+    ),
+    CONSTRAINT CK_HistorialHorarioOperacion_CambioEfectivo CHECK (
+        Accion = 'Creado' OR HoraAperturaAnterior <> HoraAperturaNueva OR
+        HoraCierreAnterior <> HoraCierreNuevo OR ActivoAnterior <> ActivoNuevo
+    ),
+    CONSTRAINT FK_HistorialHorarioOperacion_Horario
+        FOREIGN KEY (IdHorarioOperacion) REFERENCES dbo.HorarioOperacion (IdHorarioOperacion),
+    CONSTRAINT FK_HistorialHorarioOperacion_Usuario
+        FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
 
@@ -576,6 +621,10 @@ CREATE INDEX IX_HistorialCatalogo_Tipo ON dbo.HistorialCatalogo (TipoElemento, F
 CREATE INDEX IX_HistorialCatalogo_Usuario ON dbo.HistorialCatalogo (IdUsuario);
 CREATE INDEX IX_HistorialCatalogo_Producto ON dbo.HistorialCatalogo (IdProducto, Fecha DESC) WHERE IdProducto IS NOT NULL;
 CREATE INDEX IX_HistorialCatalogo_Categoria ON dbo.HistorialCatalogo (IdCategoria, Fecha DESC) WHERE IdCategoria IS NOT NULL;
+CREATE INDEX IX_HistorialHorarioOperacion_Fecha ON dbo.HistorialHorarioOperacion (Fecha DESC, IdHistorialHorarioOperacion DESC);
+CREATE INDEX IX_HistorialHorarioOperacion_Dia_Fecha ON dbo.HistorialHorarioOperacion (DiaSemana, Fecha DESC);
+CREATE INDEX IX_HistorialHorarioOperacion_Usuario_Fecha ON dbo.HistorialHorarioOperacion (IdUsuario, Fecha DESC);
+CREATE INDEX IX_HistorialHorarioOperacion_Operacion ON dbo.HistorialHorarioOperacion (IdOperacion, Fecha DESC);
 GO
 
 /* ------------------------------------------------------------

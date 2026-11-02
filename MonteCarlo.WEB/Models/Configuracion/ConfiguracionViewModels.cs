@@ -194,3 +194,58 @@ public class GuardarHorarioOperacionViewModel : IValidatableObject
             yield return new ValidationResult("La hora de cierre debe ser posterior a la hora de apertura.", [nameof(HoraCierre)]);
     }
 }
+
+/// <summary>Fila de GET api/historial-horarios-operacion.</summary>
+public class HistorialHorarioOperacionApiResponse
+{
+    public int IdHistorialHorarioOperacion { get; set; }
+    public int DiaSemana { get; set; }
+    public string NombreDia { get; set; } = string.Empty;
+    public string Accion { get; set; } = string.Empty;
+    public TimeOnly? HoraAperturaAnterior { get; set; }
+    public TimeOnly HoraAperturaNueva { get; set; }
+    public TimeOnly? HoraCierreAnterior { get; set; }
+    public TimeOnly HoraCierreNuevo { get; set; }
+    public bool? ActivoAnterior { get; set; }
+    public bool ActivoNuevo { get; set; }
+    public int IdUsuario { get; set; }
+    public string Usuario { get; set; } = string.Empty;
+    public string RolUsuario { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+}
+
+/// <summary>Administrador disponible para el filtro del historial de horarios.</summary>
+public class UsuarioHistorialHorarioOperacionApiResponse
+{
+    public int IdUsuario { get; set; }
+    public string NombreCompleto { get; set; } = string.Empty;
+}
+
+/// <summary>Resultado paginado de GET api/historial-horarios-operacion.</summary>
+public class PaginaHistorialHorarioOperacionApiResponse
+{
+    public List<HistorialHorarioOperacionApiResponse> Items { get; set; } = [];
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; }
+    public int Total { get; set; }
+    public int TotalPaginas { get; set; }
+}
+
+/// <summary>Pestaña de auditoría de los horarios de operación.</summary>
+public class HistorialHorariosOperacionViewModel
+{
+    public string? Busqueda { get; set; }
+    public int? DiaSemana { get; set; }
+    public int? IdUsuario { get; set; }
+    public string? Accion { get; set; }
+    public DateOnly? Desde { get; set; }
+    public DateOnly? Hasta { get; set; }
+    public string? Error { get; set; }
+
+    public List<UsuarioHistorialHorarioOperacionApiResponse> Usuarios { get; set; } = [];
+    public PaginaHistorialHorarioOperacionApiResponse Pagina { get; set; } = new();
+
+    public bool TieneFiltros =>
+        !string.IsNullOrWhiteSpace(Busqueda) || DiaSemana.HasValue || IdUsuario.HasValue ||
+        !string.IsNullOrWhiteSpace(Accion) || Desde.HasValue || Hasta.HasValue;
+}

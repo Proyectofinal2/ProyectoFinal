@@ -7,6 +7,7 @@ namespace MonteCarlo.API.Services;
 
 public class HorariosOperacionService(
     IHorariosOperacionRepository horariosOperacionRepository,
+    IHistorialHorarioOperacionRepository historialRepository,
     ICierresFijosService cierresFijosService) : IHorariosOperacionService
 {
     public async Task<Result<List<HorarioOperacionResponse>>> ObtenerAsync()
@@ -16,7 +17,8 @@ public class HorariosOperacionService(
         return Result<List<HorarioOperacionResponse>>.Ok(respuesta, "Horarios de operación obtenidos exitosamente.");
     }
 
-    public async Task<Result<HorarioOperacionResponse>> GuardarAsync(int? diaSemana, TimeOnly? horaApertura, TimeOnly? horaCierre)
+    public async Task<Result<HorarioOperacionResponse>> GuardarAsync(
+        int? diaSemana, TimeOnly? horaApertura, TimeOnly? horaCierre, int idUsuario)
     {
         if (diaSemana is null || diaSemana is < 0 or > 6)
             return Result<HorarioOperacionResponse>.BadRequest("El día debe estar entre 0 (domingo) y 6 (sábado).");
@@ -35,7 +37,8 @@ public class HorariosOperacionService(
         }
 
         var horario = await horariosOperacionRepository.ObtenerPorDiaAsync(dia);
-        if (horario is null)
+        var esNuevo = horario is null;
+        if (esNuevo)
         {
             horario = new HorarioOperacion
             {
@@ -45,22 +48,51 @@ public class HorariosOperacionService(
                 Activo = true
             };
             horariosOperacionRepository.Agregar(horario);
-            await horariosOperacionRepository.GuardarCambiosAsync();
+            historialRepository.Agregar(CrearHistorialCreado(horario, idUsuario, Guid.NewGuid()));
+        }
+        else
+        {
+            if (horario!.HoraApertura == horaApertura.Value
+                && horario.HoraCierre == horaCierre.Value
+                && horario.Activo)
+            {
+                return Result<HorarioOperacionResponse>.Ok(Mapear(horario), "No hay cambios que guardar.");
+            }
 
-            return Result<HorarioOperacionResponse>.Ok(Mapear(horario),
-                "El horario de operación fue configurado correctamente.");
+            var horaAperturaAnterior = horario.HoraApertura;
+            var horaCierreAnterior = horario.HoraCierre;
+            var activoAnterior = horario.Activo;
+
+            horario.HoraApertura = horaApertura.Value;
+            horario.HoraCierre = horaCierre.Value;
+            horario.Activo = true;
+            historialRepository.Agregar(CrearHistorialModificado(
+                horario, idUsuario, Guid.NewGuid(), horaAperturaAnterior, horaCierreAnterior, activoAnterior));
         }
 
-        horario.HoraApertura = horaApertura.Value;
-        horario.HoraCierre = horaCierre.Value;
-        horario.Activo = true;
-        await horariosOperacionRepository.GuardarCambiosAsync();
+        try
+        {
+            var diasCerrados = await horariosOperacionRepository.ValidarCierresYGuardarCambiosAsync([dia]);
+            if (diasCerrados.Count > 0)
+            {
+                return Result<HorarioOperacionResponse>.Conflict(
+                    "Este día pasó a estar configurado como cierre fijo. No se guardó ningún cambio.");
+            }
+        }
+        catch
+        {
+            return Result<HorarioOperacionResponse>.InternalError(
+                "No se pudo guardar el horario. Intenta de nuevo.");
+        }
 
-        return Result<HorarioOperacionResponse>.Ok(Mapear(horario), "El horario de operación fue actualizado correctamente.");
+        return Result<HorarioOperacionResponse>.Ok(
+            Mapear(horario!),
+            esNuevo ? "El horario de operación fue configurado correctamente."
+                : "El horario de operación fue actualizado correctamente.");
     }
 
     public async Task<Result<List<HorarioOperacionResponse>>> GuardarLoteAsync(
-        IEnumerable<GuardarHorarioOperacionLoteItemRequest>? horarios)
+        IEnumerable<GuardarHorarioOperacionLoteItemRequest>? horarios, int idUsuario)
     {
         var solicitudes = horarios?.ToList();
         if (solicitudes is null || solicitudes.Count == 0)
@@ -108,47 +140,53 @@ public class HorariosOperacionService(
             .GroupBy(h => h.DiaSemana)
             .ToDictionary(g => g.Key, g => g.First());
         var modificados = new List<HorarioOperacion>();
+        var idOperacion = Guid.NewGuid();
 
         foreach (var solicitud in solicitudes)
         {
             var dia = (byte)solicitud.DiaSemana!.Value;
-            var horaApertura = solicitud.HoraApertura!.Value;
-            var horaCierre = solicitud.HoraCierre!.Value;
+            var apertura = solicitud.HoraApertura!.Value;
+            var cierre = solicitud.HoraCierre!.Value;
             if (!existentesPorDia.TryGetValue(dia, out var horario))
             {
                 horario = new HorarioOperacion
                 {
                     DiaSemana = dia,
-                    HoraApertura = horaApertura,
-                    HoraCierre = horaCierre,
+                    HoraApertura = apertura,
+                    HoraCierre = cierre,
                     Activo = true
                 };
                 horariosOperacionRepository.Agregar(horario);
+                historialRepository.Agregar(CrearHistorialCreado(horario, idUsuario, idOperacion));
                 modificados.Add(horario);
                 continue;
             }
 
-            if (horario.HoraApertura == horaApertura
-                && horario.HoraCierre == horaCierre
+            if (horario.HoraApertura == apertura
+                && horario.HoraCierre == cierre
                 && horario.Activo)
             {
                 continue;
             }
 
-            horario.HoraApertura = horaApertura;
-            horario.HoraCierre = horaCierre;
+            var horaAperturaAnterior = horario.HoraApertura;
+            var horaCierreAnterior = horario.HoraCierre;
+            var activoAnterior = horario.Activo;
+
+            horario.HoraApertura = apertura;
+            horario.HoraCierre = cierre;
             horario.Activo = true;
+            historialRepository.Agregar(CrearHistorialModificado(
+                horario, idUsuario, idOperacion, horaAperturaAnterior, horaCierreAnterior, activoAnterior));
             modificados.Add(horario);
         }
 
         if (modificados.Count == 0)
-        {
             return Result<List<HorarioOperacionResponse>>.Ok([], "No habia cambios que guardar.");
-        }
 
         try
         {
-            var diasCerrados = await horariosOperacionRepository.ValidarCierresYGuardarCambiosLoteAsync(dias);
+            var diasCerrados = await horariosOperacionRepository.ValidarCierresYGuardarCambiosAsync(dias);
             if (diasCerrados.Count > 0)
             {
                 return Result<List<HorarioOperacionResponse>>.Conflict(
@@ -165,6 +203,39 @@ public class HorariosOperacionService(
             modificados.Select(Mapear).ToList(),
             "Los horarios de operacion fueron guardados correctamente.");
     }
+
+    private static HistorialHorarioOperacion CrearHistorialCreado(
+        HorarioOperacion horario, int idUsuario, Guid idOperacion) => new()
+    {
+        IdOperacion = idOperacion,
+        DiaSemana = horario.DiaSemana,
+        Accion = HistorialHorarioOperacionAcciones.Creado,
+        HoraAperturaNueva = horario.HoraApertura,
+        HoraCierreNuevo = horario.HoraCierre,
+        ActivoNuevo = horario.Activo,
+        IdUsuario = idUsuario,
+        Fecha = DateTime.Now,
+        // La relacion, no un IdHorarioOperacion provisional, permite a EF usar el IDENTITY real.
+        HorarioOperacion = horario
+    };
+
+    private static HistorialHorarioOperacion CrearHistorialModificado(
+        HorarioOperacion horario, int idUsuario, Guid idOperacion,
+        TimeOnly horaAperturaAnterior, TimeOnly horaCierreAnterior, bool activoAnterior) => new()
+    {
+        IdOperacion = idOperacion,
+        DiaSemana = horario.DiaSemana,
+        Accion = HistorialHorarioOperacionAcciones.Modificado,
+        HoraAperturaAnterior = horaAperturaAnterior,
+        HoraAperturaNueva = horario.HoraApertura,
+        HoraCierreAnterior = horaCierreAnterior,
+        HoraCierreNuevo = horario.HoraCierre,
+        ActivoAnterior = activoAnterior,
+        ActivoNuevo = horario.Activo,
+        IdUsuario = idUsuario,
+        Fecha = DateTime.Now,
+        HorarioOperacion = horario
+    };
 
     private static HorarioOperacionResponse Mapear(HorarioOperacion horario) => new()
     {

@@ -12,7 +12,8 @@ public interface IHorariosOperacionRepository
 
     /// <summary>
     /// Vuelve a consultar los cierres fijos bajo una transaccion serializable y,
-    /// si no existen, persiste todos los cambios rastreados en una sola escritura.
+    /// si no existen, persiste todos los cambios rastreados (horarios e historial)
+    /// en una sola escritura atomica.
     /// </summary>
-    Task<List<byte>> ValidarCierresYGuardarCambiosLoteAsync(IEnumerable<byte> diasSemana);
+    Task<List<byte>> ValidarCierresYGuardarCambiosAsync(IEnumerable<byte> diasSemana);
 }
