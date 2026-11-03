@@ -39,6 +39,11 @@ public class ProductosRepository(MonteCarloDbContext context) : IProductosReposi
             .OrderBy(p => p.Categoria.Orden).ThenBy(p => p.Nombre)
             .ToListAsync();
 
+    public Task<List<Producto>> ObtenerDisponiblesParaVentaAsync(IReadOnlyCollection<int> idsProducto) =>
+        context.Productos.AsNoTracking()
+            .Where(p => idsProducto.Contains(p.IdProducto) && p.Disponible && p.Categoria.Activa)
+            .ToListAsync();
+
     public Task<bool> TieneVentasAsync(int idProducto) =>
         context.DetallesVenta.AnyAsync(d => d.IdProducto == idProducto);
 

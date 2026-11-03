@@ -33,6 +33,7 @@ public class MonteCarloDbContext : DbContext
     public DbSet<ConfiguracionSistema> ConfiguracionesSistema => Set<ConfiguracionSistema>();
     public DbSet<TokenRecuperacionContrasena> TokensRecuperacionContrasena => Set<TokenRecuperacionContrasena>();
     public DbSet<Venta> Ventas => Set<Venta>();
+    public DbSet<PedidoVenta> PedidosVenta => Set<PedidoVenta>();
     public DbSet<DetalleVenta> DetallesVenta => Set<DetalleVenta>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -61,6 +62,7 @@ public class MonteCarloDbContext : DbContext
         ConfigurarConfiguracionSistema(modelBuilder);
         ConfigurarTokenRecuperacionContrasena(modelBuilder);
         ConfigurarVenta(modelBuilder);
+        ConfigurarPedidoVenta(modelBuilder);
         ConfigurarDetalleVenta(modelBuilder);
     }
 
@@ -506,18 +508,43 @@ public class MonteCarloDbContext : DbContext
             entity.ToTable("Venta", t =>
             {
                 t.HasCheckConstraint("CK_Venta_Tipo", "TipoVenta IN ('Consumo', 'Takeout')");
+                t.HasCheckConstraint("CK_Venta_Estado", "Estado IN ('Abierta', 'Cobrada', 'Anulada')");
                 t.HasCheckConstraint("CK_Venta_Total", "Total >= 0");
                 t.HasCheckConstraint(
                     "CK_Venta_TipoReserva",
                     "(TipoVenta = 'Consumo' AND IdReserva IS NOT NULL) OR (TipoVenta = 'Takeout' AND IdReserva IS NULL)");
+                t.HasCheckConstraint(
+                    "CK_Venta_Abierta",
+                    "Estado <> 'Abierta' OR (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)");
+                t.HasCheckConstraint(
+                    "CK_Venta_Cobro",
+                    "Estado = 'Abierta' OR (FechaCobro IS NOT NULL AND IdUsuarioCobro IS NOT NULL AND (Total = 0 OR IdMetodoPago IS NOT NULL))");
+                t.HasCheckConstraint(
+                    "CK_Venta_Anulacion",
+                    "(Estado = 'Anulada' AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR " +
+                    "(Estado <> 'Anulada' AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)");
             });
             entity.HasKey(e => e.IdVenta).HasName("PK_Venta");
             entity.HasIndex(e => e.FechaVenta).HasDatabaseName("IX_Venta_Fecha");
             entity.HasIndex(e => e.TipoVenta).HasDatabaseName("IX_Venta_Tipo");
 
+            // Una sola venta (cuenta) por reserva.
+            entity.HasIndex(e => e.IdReserva).IsUnique().HasFilter("[IdReserva] IS NOT NULL").HasDatabaseName("UQ_Venta_Reserva");
+
+            // Reportes de ingresos: solo ventas cobradas, por fecha de cobro.
+            entity.HasIndex(e => e.FechaCobro)
+                .HasFilter("[Estado] = 'Cobrada'")
+                .IncludeProperties(e => new { e.Total, e.TipoVenta, e.IdMetodoPago })
+                .HasDatabaseName("IX_Venta_Cobrada_Fecha");
+
             entity.Property(e => e.TipoVenta).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Estado).HasMaxLength(10).IsRequired();
             entity.Property(e => e.Total).HasColumnType("decimal(10,2)").HasDefaultValue(0m);
             entity.Property(e => e.FechaVenta).HasDefaultValueSql("SYSDATETIME()");
+            entity.Property(e => e.MotivoAnulacion).HasMaxLength(300);
+
+            // rowversion: la base de datos lo genera; EF lo usa como token de concurrencia.
+            entity.Property(e => e.RowVersion).IsRowVersion();
 
             entity.HasOne(e => e.Reserva)
                 .WithMany(r => r.Ventas)
@@ -536,6 +563,51 @@ public class MonteCarloDbContext : DbContext
                 .HasForeignKey(e => e.IdUsuarioRegistro)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Venta_Usuario");
+
+            entity.HasOne(e => e.UsuarioCobro)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuarioCobro)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Venta_UsuarioCobro");
+
+            entity.HasOne(e => e.UsuarioAnulacion)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuarioAnulacion)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Venta_UsuarioAnulacion");
+        });
+    }
+
+    private static void ConfigurarPedidoVenta(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PedidoVenta>(entity =>
+        {
+            entity.ToTable("PedidoVenta");
+            entity.HasKey(e => e.IdPedido).HasName("PK_PedidoVenta");
+
+            // Permite que DetalleVenta apunte a (IdPedido, IdVenta): linea y pedido de la misma cuenta.
+            entity.HasAlternateKey(e => new { e.IdPedido, e.IdVenta }).HasName("UQ_PedidoVenta_Pedido_Venta");
+
+            entity.HasIndex(e => e.ClaveIdempotencia)
+                .IsUnique()
+                .HasFilter("[ClaveIdempotencia] IS NOT NULL")
+                .HasDatabaseName("UQ_PedidoVenta_Clave");
+            entity.HasIndex(e => e.IdVenta).HasDatabaseName("IX_PedidoVenta_Venta");
+
+            entity.Property(e => e.Fecha).HasDefaultValueSql("SYSDATETIME()");
+            entity.Property(e => e.Nota).HasMaxLength(200);
+
+            entity.HasOne(e => e.Venta)
+                .WithMany(v => v.Pedidos)
+                .HasForeignKey(e => e.IdVenta)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PedidoVenta_Venta");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PedidoVenta_Usuario");
         });
     }
 
@@ -547,12 +619,25 @@ public class MonteCarloDbContext : DbContext
             {
                 t.HasCheckConstraint("CK_DetalleVenta_Cantidad", "Cantidad > 0");
                 t.HasCheckConstraint("CK_DetalleVenta_Precio", "PrecioUnitario >= 0");
+                t.HasCheckConstraint(
+                    "CK_DetalleVenta_Anulacion",
+                    "(Anulado = 1 AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR " +
+                    "(Anulado = 0 AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)");
             });
             entity.HasKey(e => e.IdDetalleVenta).HasName("PK_DetalleVenta");
             entity.HasIndex(e => e.IdVenta).HasDatabaseName("IX_DetalleVenta_Venta");
             entity.HasIndex(e => e.IdProducto).HasDatabaseName("IX_DetalleVenta_Producto");
+            entity.HasIndex(e => e.IdPedido).HasDatabaseName("IX_DetalleVenta_Pedido");
+
+            // Lineas activas de una cuenta: total y numero de productos sin recorrer las anuladas.
+            entity.HasIndex(e => e.IdVenta)
+                .HasFilter("[Anulado] = 0")
+                .IncludeProperties(e => new { e.Cantidad, e.Subtotal })
+                .HasDatabaseName("IX_DetalleVenta_Venta_Activo");
 
             entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.Anulado).HasDefaultValue(false);
+            entity.Property(e => e.MotivoAnulacion).HasMaxLength(200);
 
             // Columna calculada PERSISTED: la base de datos la genera, EF solo la lee.
             entity.Property(e => e.Subtotal)
@@ -564,6 +649,20 @@ public class MonteCarloDbContext : DbContext
                 .HasForeignKey(e => e.IdVenta)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_DetalleVenta_Venta");
+
+            // Linea y pedido de la misma cuenta: FK compuesta (IdPedido, IdVenta).
+            entity.HasOne(e => e.Pedido)
+                .WithMany(p => p.Detalles)
+                .HasForeignKey(e => new { e.IdPedido, e.IdVenta })
+                .HasPrincipalKey(p => new { p.IdPedido, p.IdVenta })
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_DetalleVenta_Pedido");
+
+            entity.HasOne(e => e.UsuarioAnulacion)
+                .WithMany()
+                .HasForeignKey(e => e.IdUsuarioAnulacion)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_DetalleVenta_UsuarioAnulacion");
 
             entity.HasOne(e => e.Producto)
                 .WithMany(p => p.DetallesVenta)

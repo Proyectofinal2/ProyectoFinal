@@ -16,6 +16,9 @@ public interface IProductosRepository
     /// Lo que puede ofrecer el selector de consumo y venta: producto disponible Y categoria activa.
     Task<List<Producto>> ObtenerDisponiblesParaVentaAsync();
 
+    /// <summary>Entre esos ids, los que se pueden vender (producto disponible y categoria activa).</summary>
+    Task<List<Producto>> ObtenerDisponiblesParaVentaAsync(IReadOnlyCollection<int> idsProducto);
+
     /// true si el producto aparece en alguna linea de venta o consumo (DetalleVenta).
     Task<bool> TieneVentasAsync(int idProducto);
 

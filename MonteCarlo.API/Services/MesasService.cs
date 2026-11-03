@@ -8,6 +8,7 @@ namespace MonteCarlo.API.Services;
 public class MesasService(
     IMesasRepository mesasRepository,
     IReservasRepository reservasRepository,
+    IVentasRepository ventasRepository,
     IConfiguracionService configuracionService) : IMesasService
 {
     private const string Deshabilitada = "Deshabilitada";
@@ -63,22 +64,25 @@ public class MesasService(
         var mesas = incluirDeshabilitadas
             ? await mesasRepository.ObtenerTodasAsync()
             : await mesasRepository.ObtenerMesasHabilitadasAsync();
-        var reservasHoy = await reservasRepository.ObtenerConfirmadasPorFechaAsync(hoy);
+        var reservasHoy = await reservasRepository.ObtenerConfirmadasParaMesasAsync(hoy);
+        var cuentas = await ventasRepository.ObtenerResumenCuentasAbiertasAsync(reservasHoy.Select(r => r.IdReserva).ToList());
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var ventanaMinutos = await configuracionService.ObtenerValorVentanaAlertaReservaProximaAsync();
-        var contexto = new ContextoEstadoEnVivo(hoy, ahora, duracionMinutos, ventanaMinutos);
+        var contexto = new ContextoEstadoEnVivo(hoy, ahora, duracionMinutos, ventanaMinutos, cuentas);
 
         return mesas
             .Select(mesa => (Mesa: mesa, Respuesta: MapearEstadoEnVivo(mesa, reservasHoy, contexto)))
             .ToList();
     }
 
-    private readonly record struct ContextoEstadoEnVivo(DateOnly Hoy, DateTime Ahora, int DuracionMinutos, int VentanaMinutos);
+    private readonly record struct ContextoEstadoEnVivo(
+        DateOnly Hoy, DateTime Ahora, int DuracionMinutos, int VentanaMinutos,
+        IReadOnlyDictionary<int, CuentaAbiertaResumen> Cuentas);
 
     /// <summary>Cruza el Estado persistido de la mesa con las reservas Confirmadas del día -- "Ocupada" nunca se persiste.</summary>
     private static MesaResponse MapearEstadoEnVivo(Mesa mesa, List<Reserva> reservasHoy, ContextoEstadoEnVivo contexto)
     {
-        var (hoy, ahora, duracionMinutos, ventanaMinutos) = contexto;
+        var (hoy, ahora, duracionMinutos, ventanaMinutos, cuentas) = contexto;
 
         var reservasDeEstaMesa = reservasHoy
             .Where(r => r.ReservaMesas.Any(rm => rm.IdMesa == mesa.IdMesa))
@@ -97,17 +101,30 @@ public class MesasService(
             DuracionReservaMinutos = duracionMinutos
         };
 
-        var ocupante = reservasDeEstaMesa.FirstOrDefault(r => EstaOcupandoAhora(r, hoy, ahora, duracionMinutos));
+        var ocupante = reservasDeEstaMesa.FirstOrDefault(r =>
+            EstaOcupandoAhora(r, hoy, ahora, duracionMinutos, cuentas.ContainsKey(r.IdReserva)));
 
         if (ocupante is not null)
         {
             respuesta.Estado = "Ocupada";
             respuesta.PersonasActuales = ocupante.CantidadPersonas;
+            respuesta.EsperandoLlegada = ocupante.FechaAtencion is null;
+            respuesta.ReservaActual = MapearReservaActual(ocupante, ahora);
+
+            if (cuentas.TryGetValue(ocupante.IdReserva, out var cuenta))
+            {
+                respuesta.Cuenta = new MesaCuentaResponse
+                {
+                    Total = cuenta.Total,
+                    Productos = cuenta.Productos,
+                    Version = cuenta.Version
+                };
+            }
 
             // Misma ventana que "proxima" abajo (VentanaAlertaReservaProximaMinutos) -- antes
             // este badge no tenia limite de tiempo, mostrando una reserva aunque faltaran horas.
             var siguiente = reservasDeEstaMesa
-                .Where(r => r.IdReserva != ocupante.IdReserva && r.FechaAtencion is null)
+                .Where(r => r.IdReserva != ocupante.IdReserva && r.FechaAtencion is null && r.FechaReserva == hoy)
                 .Select(r => (Reserva: r, Inicio: hoy.ToDateTime(r.HoraReserva)))
                 .Where(x => x.Inicio >= ahora && (x.Inicio - ahora).TotalMinutes <= ventanaMinutos)
                 .OrderBy(x => x.Inicio)
@@ -116,6 +133,7 @@ public class MesasService(
             if (siguiente.Reserva is not null)
             {
                 respuesta.MinutosHastaSiguienteReserva = (int)Math.Max(0, (siguiente.Inicio - ahora).TotalMinutes);
+                respuesta.ProximaReserva = MapearProxima(siguiente.Reserva);
             }
 
             return respuesta;
@@ -128,7 +146,7 @@ public class MesasService(
         }
 
         var proxima = reservasDeEstaMesa
-            .Where(r => r.FechaAtencion is null)
+            .Where(r => r.FechaAtencion is null && r.FechaReserva == hoy)
             .Select(r => (Reserva: r, Inicio: hoy.ToDateTime(r.HoraReserva)))
             .Where(x => x.Inicio >= ahora && (x.Inicio - ahora).TotalMinutes <= ventanaMinutos)
             .OrderBy(x => x.Inicio)
@@ -138,16 +156,50 @@ public class MesasService(
         {
             respuesta.EsProxima = true;
             respuesta.MinutosProximaReserva = (int)Math.Ceiling((proxima.Inicio - ahora).TotalMinutes);
+            respuesta.ProximaReserva = MapearProxima(proxima.Reserva);
         }
 
         return respuesta;
     }
 
-    /// <summary>Ocupa desde el check-in si lo hay; si no, desde la hora programada (misma ventana que EstaLibre).</summary>
-    private static bool EstaOcupandoAhora(Reserva reserva, DateOnly hoy, DateTime ahora, int duracionMinutos)
+    private static MesaReservaActualResponse MapearReservaActual(Reserva reserva, DateTime ahora)
     {
-        var inicio = reserva.FechaAtencion ?? hoy.ToDateTime(reserva.HoraReserva);
-        return ahora >= inicio && ahora < inicio.AddMinutes(duracionMinutos);
+        var ocupadaDesde = reserva.FechaAtencion ?? reserva.FechaReserva.ToDateTime(reserva.HoraReserva);
+        return new MesaReservaActualResponse
+        {
+            IdReserva = reserva.IdReserva,
+            CodigoReserva = reserva.CodigoReserva,
+            Cliente = reserva.NombreParaMostrar(),
+            Personas = reserva.CantidadPersonas,
+            HoraReserva = reserva.HoraReserva,
+            FechaAtencion = reserva.FechaAtencion,
+            OcupadaDesde = ocupadaDesde,
+            MinutosSentados = (int)Math.Max(0, (ahora - ocupadaDesde).TotalMinutes)
+        };
+    }
+
+    private static MesaProximaReservaResponse MapearProxima(Reserva reserva) => new()
+    {
+        IdReserva = reserva.IdReserva,
+        Cliente = reserva.NombreParaMostrar(),
+        Personas = reserva.CantidadPersonas,
+        HoraReserva = reserva.HoraReserva
+    };
+
+    /// <summary>
+    /// Ocupa desde el check-in si lo hay; si no, desde la hora programada (misma ventana que EstaLibre).
+    /// Una cuenta abierta mantiene la mesa ocupada aunque el turno ya haya terminado, hasta cobrar o liberar.
+    /// </summary>
+    // TODO: revisar esta logica. Hoy una cuenta abierta ocupa la mesa sin limite de tiempo, incluso si es de un
+    // dia anterior; definir si debe haber un tope (p. ej. cierre del dia) o un aviso de cuenta olvidada.
+    private static bool EstaOcupandoAhora(Reserva reserva, DateOnly hoy, DateTime ahora, int duracionMinutos, bool tieneCuentaAbierta)
+    {
+        var inicio = reserva.FechaAtencion ?? reserva.FechaReserva.ToDateTime(reserva.HoraReserva);
+        if (tieneCuentaAbierta)
+            return ahora >= inicio;
+
+        // Las reservas de dias anteriores solo ocupan mesa con la cuenta abierta (cubierto arriba).
+        return reserva.FechaReserva == hoy && ahora >= inicio && ahora < inicio.AddMinutes(duracionMinutos);
     }
 
     // HU-MES-001/002/003/006: CRUD minimo de mesas, alcance del
@@ -155,7 +207,7 @@ public class MesasService(
 
     /// <summary>Para CRUD sin reservas que cruzar: Duracion/Ventana no se usan.</summary>
     private static ContextoEstadoEnVivo ContextoSinReservas() =>
-        new(DateOnly.FromDateTime(DateTime.Now), DateTime.Now, 0, 0);
+        new(DateOnly.FromDateTime(DateTime.Now), DateTime.Now, 0, 0, new Dictionary<int, CuentaAbiertaResumen>());
 
     public async Task<Result<MesaResponse>> CrearAsync(CrearMesaRequest request)
     {

@@ -98,6 +98,10 @@ public class Result
     public static Result BadRequest(string message)
         => new(false, message, 400);
 
+    /// <summary>Crea un resultado de conflicto con el estado actual (409 Conflict).</summary>
+    public static Result Conflict(string message)
+        => new(false, message, 409);
+
     /// <summary>Crea un resultado de error interno del servidor (500 Internal Server Error).</summary>
     public static Result InternalError(string message = "No se pudo procesar la solicitud. Intenta nuevamente más tarde.")
         => new(false, message, 500);
