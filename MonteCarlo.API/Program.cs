@@ -64,6 +64,11 @@ builder.Services.AddScoped<IProductosService, ProductosService>();
 builder.Services.AddScoped<ICategoriasProductoService, CategoriasProductoService>();
 builder.Services.AddScoped<IHistorialCatalogoService, HistorialCatalogoService>();
 
+// Ventas y cuenta de mesa (HU-CON-002)
+builder.Services.AddScoped<IVentasRepository, VentasRepository>();
+builder.Services.AddScoped<IMetodosPagoRepository, MetodosPagoRepository>();
+builder.Services.AddScoped<IVentasService, VentasService>();
+
 // HU-CFG-005: horarios regulares de operación
 builder.Services.AddScoped<IHorariosOperacionRepository, HorariosOperacionRepository>();
 builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>();

@@ -30,6 +30,62 @@ public class MesaResponse
 
     /// <summary>Mismo valor en todas las mesas; evita un segundo round-trip desde el canvas.</summary>
     public int DuracionReservaMinutos { get; set; }
+
+    /// <summary>Solo si Estado == "Ocupada": la reserva que ocupa la mesa, para abrir su cuenta (HU-CON-002).</summary>
+    public MesaReservaActualResponse? ReservaActual { get; set; }
+
+    /// <summary>
+    /// Reserva Confirmada sin llegada registrada cuya hora ya paso: sigue contando como Ocupada para la
+    /// disponibilidad, pero la pantalla ofrece "Cliente llegó" o "No Show" en vez de la cuenta.
+    /// </summary>
+    public bool EsperandoLlegada { get; set; }
+
+    /// <summary>Siguiente reserva por llegar dentro de la ventana de alerta (mesa Disponible o Ocupada).</summary>
+    public MesaProximaReservaResponse? ProximaReserva { get; set; }
+
+    /// <summary>Cuenta abierta de la reserva actual; null mientras todavia no hay pedidos. En una union las dos mesas comparten la misma.</summary>
+    public MesaCuentaResponse? Cuenta { get; set; }
+}
+
+public class MesaReservaActualResponse
+{
+    public int IdReserva { get; set; }
+
+    /// <summary>Null en un walk-in.</summary>
+    public string? CodigoReserva { get; set; }
+
+    /// <summary>"Walk-in" si no hay cliente real.</summary>
+    public string Cliente { get; set; } = null!;
+    public int Personas { get; set; }
+    public TimeOnly HoraReserva { get; set; }
+
+    /// <summary>Llegada del cliente; null mientras se espera.</summary>
+    public DateTime? FechaAtencion { get; set; }
+
+    /// <summary>Inicio de la ocupacion: la llegada, o la hora de la reserva si todavia no llega. Sirve para el tiempo sentado.</summary>
+    public DateTime OcupadaDesde { get; set; }
+
+    /// <summary>Minutos desde <see cref="OcupadaDesde"/> con el reloj del servidor; la pantalla no usa el del navegador (la hora la define el servidor).</summary>
+    public int MinutosSentados { get; set; }
+}
+
+public class MesaProximaReservaResponse
+{
+    public int IdReserva { get; set; }
+    public string Cliente { get; set; } = null!;
+    public int Personas { get; set; }
+    public TimeOnly HoraReserva { get; set; }
+}
+
+public class MesaCuentaResponse
+{
+    public decimal Total { get; set; }
+
+    /// <summary>Unidades activas en la cuenta.</summary>
+    public int Productos { get; set; }
+
+    /// <summary>RowVersion en base64.</summary>
+    public string Version { get; set; } = null!;
 }
 
 /// <summary>Indicadores actuales de mesas para el panel administrativo.</summary>

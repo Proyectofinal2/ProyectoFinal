@@ -71,6 +71,12 @@
       categorias (quien, cuando y que cambio). Para una base ya
       creada, ver alter_database-3.sql (incluye datos de prueba
       opcionales).
+   15. Ventas y cuenta de mesa (HU-CON-002 / HU-CON-003): Venta gana
+      Estado (Abierta / Cobrada / Anulada), datos de cobro y de
+      anulacion y RowVersion; nueva tabla PedidoVenta (una ronda de
+      pedido dentro de una cuenta); DetalleVenta pertenece a un
+      pedido y se anula sin borrarse. Para una base ya creada, ver
+      alter_database-5.sql.
    14. HistorialHorarioOperacion (HU-CFG-005): auditoria por cada
       dia creado o modificado, con valores anteriores/nuevos,
       administrador responsable e identificador comun del guardado
@@ -90,6 +96,7 @@ GO
    ------------------------------------------------------------ */
 IF OBJECT_ID('dbo.HistorialCatalogo', 'U') IS NOT NULL DROP TABLE dbo.HistorialCatalogo;
 IF OBJECT_ID('dbo.DetalleVenta', 'U') IS NOT NULL DROP TABLE dbo.DetalleVenta;
+IF OBJECT_ID('dbo.PedidoVenta', 'U') IS NOT NULL DROP TABLE dbo.PedidoVenta;
 IF OBJECT_ID('dbo.Venta', 'U') IS NOT NULL DROP TABLE dbo.Venta;
 IF OBJECT_ID('dbo.TokenRecuperacionContrasena', 'U') IS NOT NULL DROP TABLE dbo.TokenRecuperacionContrasena;
 IF OBJECT_ID('dbo.ConfiguracionSistema', 'U') IS NOT NULL DROP TABLE dbo.ConfiguracionSistema;
@@ -547,55 +554,129 @@ GO
 
 /* ------------------------------------------------------------
    Entidad: Venta (HU-CON-002 consumo en mesa / HU-CON-003 takeout)
-   IdReserva NOT NULL solo para TipoVenta = 'Consumo'.
-   IdMetodoPago puede ser NULL unicamente si Total = 0 (cierre
-   de mesa sin consumo, HU-CON-002 escenario 2); esa regla se
-   valida en la capa de aplicacion.
+   Una venta de consumo es la cuenta de la mesa: nace Abierta con el
+   primer pedido, suma pedidos mientras la mesa esta ocupada y pasa a
+   Cobrada al cobrar. La venta para llevar nace Cobrada. Anulada
+   (HU-CON-006) conserva sus datos de cobro. Solo las ventas Cobradas
+   son ingreso: los reportes filtran Estado = 'Cobrada'.
+   - IdReserva NOT NULL solo para TipoVenta = 'Consumo'; una sola
+     venta por reserva (UQ_Venta_Reserva).
+   - Total = suma de las lineas activas; lo recalcula el servicio.
+   - FechaVenta = apertura de la cuenta; FechaCobro = cobro.
+   - IdMetodoPago solo puede faltar si Total = 0 (cierre sin
+     consumo) o si la cuenta sigue Abierta.
+   - RowVersion: concurrencia; cobrar con una cuenta que cambio
+     falla en lugar de cobrar un total desactualizado.
    ------------------------------------------------------------ */
 CREATE TABLE dbo.Venta (
     IdVenta            INT IDENTITY(1,1) NOT NULL,
     TipoVenta          NVARCHAR(20)   NOT NULL, -- 'Consumo' / 'Takeout'
+    Estado             NVARCHAR(10)   NOT NULL, -- 'Abierta' / 'Cobrada' / 'Anulada'
     IdReserva          INT            NULL,
     IdMetodoPago       INT            NULL,
     Total              DECIMAL(10,2)  NOT NULL DEFAULT 0,
-    IdUsuarioRegistro  INT            NOT NULL,
-    FechaVenta         DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+    IdUsuarioRegistro  INT            NOT NULL, -- quien abrio la cuenta o registro la venta
+    FechaVenta         DATETIME2      NOT NULL DEFAULT SYSDATETIME(), -- apertura
+    FechaCobro         DATETIME2      NULL,
+    IdUsuarioCobro     INT            NULL,
+    MotivoAnulacion    NVARCHAR(300)  NULL,
+    FechaAnulacion     DATETIME2      NULL,
+    IdUsuarioAnulacion INT            NULL,
+    RowVersion         ROWVERSION     NOT NULL,
     CONSTRAINT PK_Venta PRIMARY KEY (IdVenta),
     CONSTRAINT CK_Venta_Tipo CHECK (TipoVenta IN ('Consumo', 'Takeout')),
+    CONSTRAINT CK_Venta_Estado CHECK (Estado IN ('Abierta', 'Cobrada', 'Anulada')),
     CONSTRAINT CK_Venta_Total CHECK (Total >= 0),
     CONSTRAINT CK_Venta_TipoReserva CHECK (
         (TipoVenta = 'Consumo'  AND IdReserva IS NOT NULL) OR
         (TipoVenta = 'Takeout'  AND IdReserva IS NULL)
+    ),
+    CONSTRAINT CK_Venta_Abierta CHECK (
+        Estado <> 'Abierta' OR
+        (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)
+    ),
+    CONSTRAINT CK_Venta_Cobro CHECK (
+        Estado = 'Abierta' OR
+        (FechaCobro IS NOT NULL AND IdUsuarioCobro IS NOT NULL AND (Total = 0 OR IdMetodoPago IS NOT NULL))
+    ),
+    CONSTRAINT CK_Venta_Anulacion CHECK (
+        (Estado = 'Anulada' AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR
+        (Estado <> 'Anulada' AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)
     ),
     CONSTRAINT FK_Venta_Reserva
         FOREIGN KEY (IdReserva) REFERENCES dbo.Reserva (IdReserva),
     CONSTRAINT FK_Venta_MetodoPago
         FOREIGN KEY (IdMetodoPago) REFERENCES dbo.MetodoPago (IdMetodoPago),
     CONSTRAINT FK_Venta_Usuario
-        FOREIGN KEY (IdUsuarioRegistro) REFERENCES dbo.Usuario (IdUsuario)
+        FOREIGN KEY (IdUsuarioRegistro) REFERENCES dbo.Usuario (IdUsuario),
+    CONSTRAINT FK_Venta_UsuarioCobro
+        FOREIGN KEY (IdUsuarioCobro) REFERENCES dbo.Usuario (IdUsuario),
+    CONSTRAINT FK_Venta_UsuarioAnulacion
+        FOREIGN KEY (IdUsuarioAnulacion) REFERENCES dbo.Usuario (IdUsuario)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: PedidoVenta (HU-CON-002)
+   Una ronda de pedido dentro de una cuenta: quien lo registro,
+   cuando y una clave de idempotencia (GUID generado por la
+   pantalla) para que un doble clic o un reintento no duplique
+   las lineas. UQ (IdPedido, IdVenta) permite que DetalleVenta
+   apunte a ambos y la base garantice que linea y pedido son de
+   la misma cuenta.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.PedidoVenta (
+    IdPedido          INT IDENTITY(1,1) NOT NULL,
+    IdVenta           INT              NOT NULL,
+    IdUsuario         INT              NOT NULL, -- administrador que registro el pedido
+    Fecha             DATETIME2        NOT NULL CONSTRAINT DF_PedidoVenta_Fecha DEFAULT SYSDATETIME(),
+    ClaveIdempotencia UNIQUEIDENTIFIER NULL,
+    Nota              NVARCHAR(200)    NULL,
+    CONSTRAINT PK_PedidoVenta PRIMARY KEY (IdPedido),
+    CONSTRAINT UQ_PedidoVenta_Pedido_Venta UNIQUE (IdPedido, IdVenta),
+    CONSTRAINT FK_PedidoVenta_Venta
+        FOREIGN KEY (IdVenta) REFERENCES dbo.Venta (IdVenta),
+    CONSTRAINT FK_PedidoVenta_Usuario
+        FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
 
 /* ------------------------------------------------------------
    Entidad: DetalleVenta
    PrecioUnitario es una copia (snapshot) del precio de
-   Producto al momento de la venta: si el precio del catalogo
-   cambia despues, las ventas historicas no se alteran.
+   Producto al momento de agregar el pedido: si el precio del
+   catalogo cambia despues, las ventas no se alteran.
+   Las lineas no se unen por producto (cada pedido conserva las
+   suyas). Quitar una linea de una cuenta abierta la marca
+   Anulado (con quien y cuando) en lugar de borrarla.
    ------------------------------------------------------------ */
 CREATE TABLE dbo.DetalleVenta (
     IdDetalleVenta  INT IDENTITY(1,1) NOT NULL,
     IdVenta         INT           NOT NULL,
+    IdPedido        INT           NOT NULL,
     IdProducto      INT           NOT NULL,
     Cantidad        INT           NOT NULL,
     PrecioUnitario  DECIMAL(10,2) NOT NULL, -- precio historico, independiente de Producto.Precio
     Subtotal        AS (Cantidad * PrecioUnitario) PERSISTED,
+    Anulado         BIT           NOT NULL CONSTRAINT DF_DetalleVenta_Anulado DEFAULT 0,
+    MotivoAnulacion NVARCHAR(200) NULL,
+    FechaAnulacion  DATETIME2     NULL,
+    IdUsuarioAnulacion INT        NULL,
     CONSTRAINT PK_DetalleVenta PRIMARY KEY (IdDetalleVenta),
     CONSTRAINT CK_DetalleVenta_Cantidad CHECK (Cantidad > 0),
     CONSTRAINT CK_DetalleVenta_Precio CHECK (PrecioUnitario >= 0),
+    CONSTRAINT CK_DetalleVenta_Anulacion CHECK (
+        (Anulado = 1 AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR
+        (Anulado = 0 AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)
+    ),
     CONSTRAINT FK_DetalleVenta_Venta
         FOREIGN KEY (IdVenta) REFERENCES dbo.Venta (IdVenta),
+    CONSTRAINT FK_DetalleVenta_Pedido
+        FOREIGN KEY (IdPedido, IdVenta) REFERENCES dbo.PedidoVenta (IdPedido, IdVenta),
     CONSTRAINT FK_DetalleVenta_Producto
-        FOREIGN KEY (IdProducto) REFERENCES dbo.Producto (IdProducto)
+        FOREIGN KEY (IdProducto) REFERENCES dbo.Producto (IdProducto),
+    CONSTRAINT FK_DetalleVenta_UsuarioAnulacion
+        FOREIGN KEY (IdUsuarioAnulacion) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
 
@@ -611,6 +692,12 @@ CREATE INDEX IX_Venta_Fecha ON dbo.Venta (FechaVenta);
 CREATE INDEX IX_Venta_Tipo ON dbo.Venta (TipoVenta);
 CREATE INDEX IX_DetalleVenta_Venta ON dbo.DetalleVenta (IdVenta);
 CREATE INDEX IX_DetalleVenta_Producto ON dbo.DetalleVenta (IdProducto);
+CREATE UNIQUE INDEX UQ_Venta_Reserva ON dbo.Venta (IdReserva) WHERE IdReserva IS NOT NULL;
+CREATE INDEX IX_Venta_Cobrada_Fecha ON dbo.Venta (FechaCobro) INCLUDE (Total, TipoVenta, IdMetodoPago) WHERE Estado = 'Cobrada';
+CREATE UNIQUE INDEX UQ_PedidoVenta_Clave ON dbo.PedidoVenta (ClaveIdempotencia) WHERE ClaveIdempotencia IS NOT NULL;
+CREATE INDEX IX_PedidoVenta_Venta ON dbo.PedidoVenta (IdVenta);
+CREATE INDEX IX_DetalleVenta_Pedido ON dbo.DetalleVenta (IdPedido);
+CREATE INDEX IX_DetalleVenta_Venta_Activo ON dbo.DetalleVenta (IdVenta) INCLUDE (Cantidad, Subtotal) WHERE Anulado = 0;
 CREATE INDEX IX_HistorialCierre_Fecha ON dbo.HistorialCierre (Fecha);
 CREATE INDEX IX_HistorialCierre_Tipo ON dbo.HistorialCierre (TipoCierre);
 CREATE INDEX IX_HistorialCierre_Usuario ON dbo.HistorialCierre (IdUsuario);

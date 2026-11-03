@@ -41,4 +41,7 @@ public class Reserva
     public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
     public ICollection<Venta> Ventas { get; set; } = new List<Venta>();
     public ICollection<ReservaMesa> ReservaMesas { get; set; } = new List<ReservaMesa>();
+
+    /// <summary>"Walk-in" si no hay cliente real; si no, nombre y apellido. Requiere <see cref="Cliente"/> cargado.</summary>
+    public string NombreParaMostrar() => EsWalkIn ? "Walk-in" : $"{Cliente.Nombre} {Cliente.Apellido}".Trim();
 }

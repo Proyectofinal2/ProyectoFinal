@@ -16,6 +16,37 @@ public class MesaApiResponse
     public bool TieneReservaActiva { get; set; }
     public bool EnUnionActiva { get; set; }
     public int DuracionReservaMinutos { get; set; }
+    public MesaReservaActualApiResponse? ReservaActual { get; set; }
+    public bool EsperandoLlegada { get; set; }
+    public MesaProximaReservaApiResponse? ProximaReserva { get; set; }
+    public MesaCuentaApiResponse? Cuenta { get; set; }
+}
+
+public class MesaReservaActualApiResponse
+{
+    public int IdReserva { get; set; }
+    public string? CodigoReserva { get; set; }
+    public string Cliente { get; set; } = "Walk-in";
+    public int Personas { get; set; }
+    public TimeOnly HoraReserva { get; set; }
+    public DateTime? FechaAtencion { get; set; }
+    public DateTime OcupadaDesde { get; set; }
+    public int MinutosSentados { get; set; }
+}
+
+public class MesaProximaReservaApiResponse
+{
+    public int IdReserva { get; set; }
+    public string Cliente { get; set; } = "";
+    public int Personas { get; set; }
+    public TimeOnly HoraReserva { get; set; }
+}
+
+public class MesaCuentaApiResponse
+{
+    public decimal Total { get; set; }
+    public int Productos { get; set; }
+    public string Version { get; set; } = "";
 }
 
 /// <summary>Datos de GET api/mesas/resumen para los indicadores del panel.</summary>

@@ -13,7 +13,7 @@ namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 [Area("Admin")]
 [Route("admin/mesas")]
 [Authorize(Roles = "General,Regular")]
-public class MesasController(IMesasApiService mesasApiService) : Controller
+public class MesasController(IMesasApiService mesasApiService, IReservasApiService reservasApiService) : Controller
 {
     [HttpGet]
     public IActionResult Index() => View(new MesasIndexViewModel
@@ -48,6 +48,24 @@ public class MesasController(IMesasApiService mesasApiService) : Controller
     public async Task<IActionResult> Liberar(int id)
     {
         var (success, message) = await mesasApiService.LiberarMesaAsync(id);
+        return Json(new { success, message });
+    }
+
+    /// <summary>HU-CON-002: registra la llegada de una reserva sentada en la mesa. El codigo viene de la reserva actual de la mesa.</summary>
+    [HttpPost("cliente-llego")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClienteLlego([FromBody] ReservaBody body)
+    {
+        var (success, message) = await reservasApiService.RegistrarAtencionAsync(body.CodigoReserva);
+        return Json(new { success, message });
+    }
+
+    /// <summary>HU-CON-002: marca No Show a una reserva que no llego. La API rechaza la reserva si ya tiene cuenta abierta.</summary>
+    [HttpPost("no-show")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> NoShow([FromBody] ReservaBody body)
+    {
+        var (success, message) = await reservasApiService.RegistrarNoShowAsync(body.CodigoReserva);
         return Json(new { success, message });
     }
 
@@ -102,6 +120,7 @@ public class MesasController(IMesasApiService mesasApiService) : Controller
         return Json(new { success, message });
     }
 
+    public record ReservaBody(string CodigoReserva);
     public record CrearWalkInBody(int CantidadPersonas, List<int> IdsMesa);
     public record CrearMesaBody(int NumeroMesa, int Capacidad, int PosX, int PosY);
     public record ActualizarCapacidadBody(int Capacidad);

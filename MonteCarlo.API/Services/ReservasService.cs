@@ -10,12 +10,15 @@ public class ReservasService(
     IMesasRepository mesasRepository,
     IClientesRepository clientesRepository,
     IConfiguracionService configuracionService,
+    IVentasRepository ventasRepository,
     INotificacionesService notificacionesService) : IReservasService
 {
+    private const string MensajeCuentaAbierta =
+        "La reserva tiene una cuenta abierta. Cobrala o, si no hubo consumo, libera la mesa sin consumo.";
+
     private const string Pendiente = "Pendiente";
     private const string Confirmada = "Confirmada";
     private const string Cancelada = "Cancelada";
-    private const string Finalizada = "Finalizada";
     private const string NoShow = "No Show";
     private const string Deshabilitada = "Deshabilitada";
 
@@ -195,6 +198,11 @@ public class ReservasService(
         {
             return Result<ReservaResponse>.Conflict(
                 $"La reserva esta en estado \"{reserva.EstadoReserva.Nombre}\" y no puede cancelarse.");
+        }
+
+        if (await ventasRepository.TieneCuentaAbiertaAsync(reserva.IdReserva))
+        {
+            return Result<ReservaResponse>.Conflict(MensajeCuentaAbierta);
         }
 
         var estadoCancelada = await reservasRepository.ObtenerEstadoAsync(Cancelada);
@@ -460,23 +468,6 @@ public class ReservasService(
         }, "Cliente sentado correctamente.");
     }
 
-    public async Task<Result> LiberarMesaAsync(int idMesa)
-    {
-        var hoy = DateOnly.FromDateTime(DateTime.Now);
-        var reserva = await reservasRepository.ObtenerConfirmadaActivaPorMesaAsync(idMesa, hoy);
-        if (reserva is null) return Result.BadRequest("Esa mesa no tiene ninguna reserva activa que liberar.");
-
-        var estadoFinalizada = await reservasRepository.ObtenerEstadoAsync(Finalizada);
-        if (estadoFinalizada is null) return Result.InternalError("El estado \"Finalizada\" no esta configurado.");
-
-        reserva.EstadoReserva = estadoFinalizada;
-        reserva.MotivoCancelacion = "Liberada sin consumo";
-
-        await reservasRepository.GuardarCambiosAsync();
-
-        return Result.Ok("Mesa liberada.");
-    }
-
     // ============================================================
     // HU-OPE-003: registrar atencion y no show
     // ============================================================
@@ -507,6 +498,9 @@ public class ReservasService(
 
         if (reserva.EstadoReserva.Nombre != Confirmada)
             return Result.BadRequest($"Solo se puede marcar No Show a reservas Confirmadas. Estado actual: {reserva.EstadoReserva.Nombre}.");
+
+        if (await ventasRepository.TieneCuentaAbiertaAsync(reserva.IdReserva))
+            return Result.Conflict(MensajeCuentaAbierta);
 
         var estadoNoShow = await reservasRepository.ObtenerEstadoAsync("No Show");
         if (estadoNoShow is null)
@@ -743,6 +737,9 @@ public class ReservasService(
         {
             return Result.BadRequest($"Transición no permitida de '{estadoActual}' a '{nuevoEstado}'.");
         }
+
+        if (nuevoEstado == Cancelada && await ventasRepository.TieneCuentaAbiertaAsync(reserva.IdReserva))
+            return Result.Conflict(MensajeCuentaAbierta);
 
         var estadoDestino = await reservasRepository.ObtenerEstadoAsync(nuevoEstado);
         if (estadoDestino is null) return Result.InternalError($"El estado '{nuevoEstado}' no existe.");

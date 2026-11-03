@@ -75,6 +75,15 @@ builder.Services
     })
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+// HU-CON-002: cuenta abierta de la mesa y cobro, requiere token.
+builder.Services
+    .AddHttpClient<IVentasApiService, VentasApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
 // Consulta y cancelacion publica de reservas. El token solo se agrega
 // si hay sesion; el listado de reservas del dia lo necesita.
 builder.Services

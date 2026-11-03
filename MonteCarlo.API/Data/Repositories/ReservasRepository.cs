@@ -115,12 +115,23 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
 
     public Task GuardarCambiosAsync() => context.SaveChangesAsync();
 
-    public Task<List<Reserva>> ObtenerConfirmadasPorFechaAsync(DateOnly fecha) =>
+    public Task<List<Reserva>> ObtenerConfirmadasParaMesasAsync(DateOnly hoy) =>
         context.Reservas
             .AsNoTracking()
+            .Include(r => r.Cliente)
             .Include(r => r.ReservaMesas)
-            .Where(r => r.FechaReserva == fecha && r.EstadoReserva.Nombre == "Confirmada")
+            .Where(r => r.EstadoReserva.Nombre == "Confirmada"
+                        && (r.FechaReserva == hoy
+                            || (r.FechaReserva < hoy
+                                && r.Ventas.Any(v => v.Estado == VentaEstados.Abierta))))
             .ToListAsync();
+
+    public Task<Reserva?> ObtenerParaCuentaAsync(int idReserva) =>
+        context.Reservas
+            .Include(r => r.Cliente)
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas).ThenInclude(rm => rm.Mesa)
+            .FirstOrDefaultAsync(r => r.IdReserva == idReserva);
 
     public Task<Reserva?> ObtenerConfirmadaActivaPorMesaAsync(int idMesa, DateOnly fecha) =>
         context.Reservas

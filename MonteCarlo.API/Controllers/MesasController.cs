@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MonteCarlo.API.DTOs;
@@ -8,7 +9,7 @@ namespace MonteCarlo.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "General,Regular")]
-public class MesasController(IMesasService mesasService, IReservasService reservasService) : ControllerBase
+public class MesasController(IMesasService mesasService, IReservasService reservasService, IVentasService ventasService) : ControllerBase
 {
     /// <summary>HU-MES-002/HU-OPE-004: listado del canvas, completo solo si incluirDeshabilitadas.</summary>
     [HttpGet]
@@ -34,13 +35,20 @@ public class MesasController(IMesasService mesasService, IReservasService reserv
         return Responder(result);
     }
 
-    /// <summary>HU-OPE-004 (gap #5): libera una mesa ocupada por abandono sin consumo.</summary>
+    /// <summary>
+    /// HU-OPE-004 (gap #5): libera una mesa ocupada por abandono sin consumo (cierre sin consumo de su cuenta).
+    /// 400 si la mesa no tiene reserva sentada; 409 si la cuenta ya tiene productos (hay que cobrarla).
+    /// </summary>
     [HttpPut("{id:int}/liberar")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Liberar(int id)
     {
-        var result = await reservasService.LiberarMesaAsync(id);
+        var idUsuario = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await ventasService.LiberarSinConsumoPorMesaAsync(id, idUsuario);
         return StatusCode(result.StatusCode, result.Success
-            ? ApiResponse.SuccessResponse(result.Message)
+            ? ApiResponse.SuccessResponse("Mesa liberada.")
             : ApiResponse.ErrorResponse(result.Message));
     }
 

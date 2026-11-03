@@ -24,7 +24,6 @@ public interface IReservasService
     Task<Result<AsignacionMesaResponse>> AsignarMesaAsync(int idReserva, List<int> idsMesa);
     Task<Result<AsignacionSugeridaResponse>> SugerirWalkInAsync(int cantidadPersonas);
     Task<Result<ReservaWalkInResponse>> CrearWalkInAsync(CrearReservaWalkInRequest request);
-    Task<Result> LiberarMesaAsync(int idMesa);
 
     /// <summary>HU-OPE-003: registra la llegada del cliente (FechaAtencion).</summary>
     Task<Result> RegistrarAtencionAsync(string codigo);

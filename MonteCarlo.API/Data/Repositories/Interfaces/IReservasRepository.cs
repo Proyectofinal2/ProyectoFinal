@@ -32,8 +32,14 @@ public interface IReservasRepository
     /// <summary>Verifica si ya existe una reserva con ese código (evita duplicados).</summary>
     Task<bool> ExisteCodigoAsync(string codigo);
 
-    /// <summary>Reservas Confirmadas de una fecha con sus mesas cargadas, para el estado en vivo del canvas (HU-MES-002).</summary>
-    Task<List<Reserva>> ObtenerConfirmadasPorFechaAsync(DateOnly fecha);
+    /// <summary>
+    /// Reservas Confirmadas que pueden ocupar una mesa ahora: las de hoy y las de dias anteriores que
+    /// siguen con la cuenta abierta (la mesa sigue ocupada hasta cobrar). Con sus mesas, sin rastrear.
+    /// </summary>
+    Task<List<Reserva>> ObtenerConfirmadasParaMesasAsync(DateOnly hoy);
+
+    /// <summary>Reserva por Id con cliente, estado y mesas (con su mesa), rastreada, para la cuenta y el cobro (HU-CON-002).</summary>
+    Task<Reserva?> ObtenerParaCuentaAsync(int idReserva);
 
     /// <summary>Reserva Confirmada y atendida que ocupa esa mesa hoy, para liberarla (HU-OPE-004).</summary>
     Task<Reserva?> ObtenerConfirmadaActivaPorMesaAsync(int idMesa, DateOnly fecha);
