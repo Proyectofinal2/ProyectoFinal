@@ -94,7 +94,7 @@ BEGIN CATCH
     IF XACT_STATE() <> 0
     BEGIN
         ROLLBACK TRANSACTION;
-    END
+    END;
 
     THROW;
 END CATCH;
