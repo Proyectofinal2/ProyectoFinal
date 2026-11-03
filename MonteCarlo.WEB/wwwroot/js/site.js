@@ -1108,6 +1108,733 @@
       });
   }
 
+  /* --------------------------------------------------------
+       Cuenta de la mesa y caja de pedido (HU-CON-002)
+       ------------------------------------------------------------
+       El HTML de la cuenta (_Cuenta) y de la caja (_CajaPedido) llega
+       por fetch desde admin/ventas, asi que todo va por delegacion de
+       eventos en document. Nada aqui decide precios ni totales: el
+       servidor los calcula; la pantalla solo los muestra.
+
+       Eventos para la pantalla anfitriona (en document):
+         mc:cuenta-cambio  detail: { tipo, mensaje, idReserva, data }
+           tipo = "pedido" | "quitar" | "cobro" | "sin-consumo" | "desactualizada"
+       -------------------------------------------------------- */
+  var colones = window.mc.colones;
+  var enviarJson = window.mc.enviarJson;
+
+  function emitirCambio(origen, detalle) {
+    (origen || document).dispatchEvent(
+      new CustomEvent("mc:cuenta-cambio", { bubbles: true, detail: detalle }),
+    );
+  }
+
+  function esPlural(etiquetaMesa) {
+    return /^Mesas/.test(etiquetaMesa || "");
+  }
+
+  function mostrarErrorCuenta(raiz, mensaje) {
+    var caja = raiz.querySelector("[data-mc-cuenta-error]");
+    if (!caja) {
+      return;
+    }
+    caja.textContent = mensaje;
+    caja.hidden = false;
+  }
+
+  function limpiarErrorCuenta(raiz) {
+    var caja = raiz.querySelector("[data-mc-cuenta-error]");
+    if (caja) {
+      caja.hidden = true;
+    }
+  }
+
+  function bloquearControles(raiz, bloquear) {
+    raiz.querySelectorAll("button, input").forEach(function (el) {
+      el.disabled = bloquear;
+    });
+  }
+
+  /* Resuelve el resultado de una accion sobre la cuenta. */
+  function resolverAccion(raiz, tipo, respuesta, mensajeExito) {
+    var idReserva = Number(raiz.dataset.idReserva);
+    bloquearControles(raiz, false);
+
+    if (respuesta.success) {
+      emitirCambio(raiz, {
+        tipo: tipo,
+        mensaje: mensajeExito,
+        idReserva: idReserva,
+        data: respuesta.data,
+      });
+      return;
+    }
+
+    mostrarErrorCuenta(raiz, respuesta.message);
+    // La cuenta cambio mientras tanto (otro administrador, otra pantalla): hay que volver a pedirla.
+    if (respuesta.cuenta) {
+      emitirCambio(raiz, {
+        tipo: "desactualizada",
+        mensaje: respuesta.message,
+        idReserva: idReserva,
+        data: respuesta.cuenta,
+      });
+    }
+  }
+
+  function metodoElegido(raiz) {
+    return raiz.querySelector("[data-mc-cuenta-pagos] input:checked");
+  }
+
+  function textoBotonCobrar(raiz) {
+    var texto = raiz.querySelector("[data-mc-cuenta-cobrar-texto]");
+    if (!texto) {
+      return;
+    }
+    var metodo = metodoElegido(raiz);
+    var total = colones(Number(raiz.dataset.total));
+    texto.textContent = metodo
+      ? "Cobrar " + total + " con " + metodo.dataset.nombre
+      : "Cobrar " + total;
+  }
+
+  function cuentaDe(elemento) {
+    return elemento.closest("[data-mc-cuenta]");
+  }
+
+  function abrirConfirmacionQuitar(raiz, boton) {
+    var cantidad = Number(boton.dataset.cantidad);
+    var bloque = raiz.querySelector("[data-mc-cuenta-confirm-quitar]");
+    if (!bloque) {
+      return;
+    }
+    // Un producto puede estar repartido en varias lineas (pedidos distintos): se quitan de la mas reciente a la mas antigua.
+    raiz._quitar = { lineas: JSON.parse(boton.dataset.lineas || "[]"), nombre: boton.dataset.nombre };
+    bloque.querySelector("[data-mc-cuenta-quitar-texto]").textContent =
+      "Quitar «" + boton.dataset.nombre + "» de la cuenta. Queda registrado quién lo quitó.";
+    bloque.querySelector("[data-mc-cuenta-quitar-uno]").hidden = cantidad <= 1;
+    bloque.querySelector("[data-mc-cuenta-quitar-todo]").textContent =
+      cantidad > 1 ? "Quitar todo" : "Quitar";
+    bloque.hidden = false;
+    bloque.querySelector("button:not([hidden])").focus();
+  }
+
+  /* Reparte `cantidad` unidades entre las lineas de un producto, de la mas reciente a la mas antigua
+     (el orden en que llegan). Devuelve [{ idDetalle, cantidad, valor }]; es la unica regla de "quitar". */
+  function repartirQuitar(lineas, cantidad) {
+    var resto = cantidad;
+    var operaciones = [];
+    lineas.forEach(function (l) {
+      var tomar = Math.min(resto, l.cantidad);
+      if (tomar > 0) {
+        operaciones.push({ idDetalle: l.idDetalle, cantidad: tomar, valor: tomar * (l.precio || 0) });
+        resto -= tomar;
+      }
+    });
+    return operaciones;
+  }
+
+  /* Anula las lineas una tras otra (la API no tiene una operacion unica) y se detiene en el primer fallo.
+     Devuelve { fallo, aplicadas, cuenta }: si fallo existe y aplicadas > 0, la cuenta quedo a medias. */
+  async function anularEnSecuencia(operaciones) {
+    var resultado = { fallo: null, aplicadas: 0, cuenta: null };
+    for (var i = 0; !resultado.fallo && i < operaciones.length; i += 1) {
+      var respuesta = await enviarJson("/admin/ventas/cuenta/lineas/" + operaciones[i].idDetalle + "/anular", {
+        cantidad: operaciones[i].cantidad,
+      });
+      if (respuesta.success) {
+        resultado.aplicadas += 1;
+        resultado.cuenta = respuesta.data || resultado.cuenta;
+      } else {
+        resultado.fallo = respuesta;
+      }
+    }
+    return resultado;
+  }
+
+  async function ejecutarQuitar(raiz, cantidad) {
+    var pendiente = raiz._quitar;
+    if (!pendiente) {
+      return;
+    }
+    var unidades = pendiente.lineas.reduce(function (suma, l) {
+      return suma + l.cantidad;
+    }, 0);
+    var idReserva = Number(raiz.dataset.idReserva);
+
+    limpiarErrorCuenta(raiz);
+    bloquearControles(raiz, true);
+    var resultado = await anularEnSecuencia(repartirQuitar(pendiente.lineas, cantidad || unidades));
+
+    if (resultado.fallo && resultado.aplicadas > 0) {
+      // Se quito una parte: la cuenta que se ve ya no coincide, hay que volver a pedirla.
+      bloquearControles(raiz, false);
+      emitirCambio(raiz, {
+        tipo: "desactualizada",
+        mensaje: "No se pudo quitar todo: " + resultado.fallo.message,
+        idReserva: idReserva,
+        data: resultado.fallo.cuenta,
+      });
+      return;
+    }
+    resolverAccion(
+      raiz,
+      "quitar",
+      resultado.fallo || { success: true, data: resultado.cuenta },
+      "Producto quitado de la cuenta.",
+    );
+  }
+
+  function ejecutarCobro(raiz) {
+    var metodo = metodoElegido(raiz);
+    var pagos = raiz.querySelector("[data-mc-cuenta-pagos]");
+    var error = raiz.querySelector("[data-mc-cuenta-pago-error]");
+    if (!metodo) {
+      if (pagos) {
+        pagos.classList.add("is-invalid");
+      }
+      if (error) {
+        error.hidden = false;
+      }
+      return;
+    }
+
+    limpiarErrorCuenta(raiz);
+    var etiquetaMesa = raiz.dataset.mesa;
+    var nombreMetodo = metodo.dataset.nombre;
+    bloquearControles(raiz, true);
+    enviarJson("/admin/ventas/cuenta/" + raiz.dataset.idReserva + "/cobrar", {
+      idMetodoPago: Number(metodo.value),
+      totalEsperado: Number(raiz.dataset.total),
+      version: raiz.dataset.version || null,
+    }).then(function (respuesta) {
+      var mensaje = "";
+      if (respuesta.success && respuesta.data) {
+        mensaje =
+          etiquetaMesa +
+          (esPlural(etiquetaMesa) ? " cobradas y liberadas" : " cobrada y liberada") +
+          " · " + respuesta.data.folio +
+          " · " + colones(respuesta.data.total) +
+          " con " + nombreMetodo;
+      }
+      resolverAccion(raiz, "cobro", respuesta, mensaje);
+    });
+  }
+
+  function ejecutarLiberar(raiz) {
+    limpiarErrorCuenta(raiz);
+    var etiquetaMesa = raiz.dataset.mesa;
+    bloquearControles(raiz, true);
+    enviarJson("/admin/ventas/cuenta/" + raiz.dataset.idReserva + "/liberar-sin-consumo").then(
+      function (respuesta) {
+        var mensaje = "";
+        if (respuesta.success && respuesta.data) {
+          mensaje =
+            etiquetaMesa +
+            (esPlural(etiquetaMesa) ? " liberadas" : " liberada") +
+            " sin consumo · " + respuesta.data.folio + " · total ₡0";
+        }
+        resolverAccion(raiz, "sin-consumo", respuesta, mensaje);
+      },
+    );
+  }
+
+  function abrirCaja(raiz, boton) {
+    if (typeof bootstrap === "undefined") {
+      return;
+    }
+    limpiarErrorCuenta(raiz);
+    boton.disabled = true;
+    fetch("/admin/ventas/cuenta/" + raiz.dataset.idReserva + "/caja", {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    })
+      .then(function (respuesta) {
+        if (respuesta.redirected) {
+          window.location.href = respuesta.url;
+          return null;
+        }
+        return respuesta.text().then(function (html) {
+          return { ok: respuesta.ok, html: html };
+        });
+      })
+      .then(function (resultado) {
+        boton.disabled = false;
+        if (!resultado) {
+          return;
+        }
+        if (!resultado.ok) {
+          var temporal = document.createElement("div");
+          temporal.innerHTML = resultado.html;
+          mostrarErrorCuenta(raiz, temporal.textContent || "No se pudo abrir la caja.");
+          return;
+        }
+        montarCaja(resultado.html);
+      })
+      .catch(function () {
+        boton.disabled = false;
+        mostrarErrorCuenta(raiz, "No se pudo abrir la caja. Intenta de nuevo.");
+      });
+  }
+
+  /* ---------------- Caja de pedido ---------------- */
+  function montarCaja(html) {
+    var anterior = document.getElementById("mcCajaModal");
+    if (anterior) {
+      bootstrap.Modal.getOrCreateInstance(anterior).dispose();
+      anterior.remove();
+    }
+
+    var contenedor = document.createElement("div");
+    contenedor.innerHTML = html.trim();
+    var modalEl = contenedor.firstElementChild;
+    document.body.appendChild(modalEl);
+
+    var carrito = []; // pedido nuevo: [{ id, nombre, precio, cantidad }]
+    var clave = crypto.randomUUID(); // un reintento del mismo pedido no lo duplica
+    var enviando = false;
+    var totalCuenta = Number(modalEl.dataset.cuentaTotal);
+    var categoriaActiva = 0;
+
+    // Lo que ya esta en la cuenta, por producto (lineas activas, la mas reciente primero), y las unidades que
+    // el administrador quita en esta caja. Un solo ticket: "+" y "-" actuan igual sobre lo nuevo y lo existente;
+    // al guardar se registra el pedido nuevo y se anulan (con usuario y fecha) las unidades quitadas.
+    var yaPorProducto = {};
+    JSON.parse(modalEl.dataset.lineas || "[]").forEach(function (l) {
+      var p = yaPorProducto[l.idProducto];
+      if (!p) {
+        p = yaPorProducto[l.idProducto] = { id: l.idProducto, nombre: l.nombre, lineas: [], cantidad: 0, valor: 0 };
+      }
+      p.lineas.push(l);
+      p.cantidad += l.cantidad;
+      p.valor += l.cantidad * l.precio;
+    });
+    var quitar = {}; // idProducto -> unidades de la cuenta que se quitaran
+
+    var lineasEl = modalEl.querySelector("[data-mc-caja-lineas]");
+    var vacioEl = modalEl.querySelector("[data-mc-caja-vacio]");
+    var totalPedidoEl = modalEl.querySelector("[data-mc-caja-total-pedido]");
+    var quedaraEl = modalEl.querySelector("[data-mc-caja-total-quedara]");
+    var quitadoFilaEl = modalEl.querySelector("[data-mc-caja-quitado-fila]");
+    var quitadoEl = modalEl.querySelector("[data-mc-caja-total-quitado]");
+    var avisoQuitarEl = modalEl.querySelector("[data-mc-caja-aviso-quitar]");
+    var resumenEl = modalEl.querySelector("[data-mc-caja-resumen]");
+    var confirmarEl = modalEl.querySelector("[data-mc-caja-confirmar]");
+    var errorEl = modalEl.querySelector("[data-mc-caja-error]");
+    var buscarEl = modalEl.querySelector("[data-mc-caja-buscar]");
+
+    function buscar(id) {
+      return carrito.find(function (l) {
+        return l.id === id;
+      });
+    }
+
+    function tilePorId(id) {
+      return modalEl.querySelector('[data-mc-caja-tile][data-id-producto="' + id + '"]');
+    }
+
+    function cantidadYa(id) {
+      return yaPorProducto[id] ? yaPorProducto[id].cantidad : 0;
+    }
+
+    function cantidadNueva(id) {
+      var linea = buscar(id);
+      return linea ? linea.cantidad : 0;
+    }
+
+    function cantidadQuitar(id) {
+      return quitar[id] || 0;
+    }
+
+    // Valor de lo que se quita (misma regla que se aplica al guardar).
+    function valorQuitado(id) {
+      if (!yaPorProducto[id]) {
+        return 0;
+      }
+      return repartirQuitar(yaPorProducto[id].lineas, cantidadQuitar(id)).reduce(function (suma, op) {
+        return suma + op.valor;
+      }, 0);
+    }
+
+    function operacionesQuitar() {
+      var operaciones = [];
+      Object.keys(quitar).forEach(function (id) {
+        operaciones = operaciones.concat(repartirQuitar(yaPorProducto[id].lineas, quitar[id]));
+      });
+      return operaciones;
+    }
+
+    function pintar() {
+      var ids = Object.keys(yaPorProducto).map(Number);
+      carrito.forEach(function (l) {
+        if (ids.indexOf(l.id) === -1) {
+          ids.push(l.id);
+        }
+      });
+
+      var totalNuevo = 0;
+      var totalQuitado = 0;
+      var nuevas = 0;
+      var quitadas = 0;
+      lineasEl.innerHTML = "";
+      ids.forEach(function (id) {
+        var ya = yaPorProducto[id];
+        var nueva = buscar(id);
+        var nombre = ya ? ya.nombre : nueva.nombre;
+        var cNueva = nueva ? nueva.cantidad : 0;
+        var cQuitar = cantidadQuitar(id);
+        var cantidad = cantidadYa(id) - cQuitar + cNueva;
+        var subtotalNuevo = nueva ? nueva.cantidad * nueva.precio : 0;
+        var quitado = valorQuitado(id);
+        totalNuevo += subtotalNuevo;
+        totalQuitado += quitado;
+        nuevas += cNueva;
+        quitadas += cQuitar;
+
+        var marcas = [];
+        // "Nuevo": producto que no estaba en la cuenta; "+N nuevo": mas unidades de uno que ya estaba.
+        if (cNueva > 0) {
+          marcas.push(cantidadYa(id) > 0 ? "+" + cNueva + " nuevo" : "Nuevo");
+        }
+        if (cQuitar > 0) {
+          marcas.push("\u2212" + cQuitar + " se quitar\u00e1");
+        }
+        // Sin precio vigente (producto ya no disponible) solo se puede quitar o deshacer lo quitado.
+        var puedeSumar = cQuitar > 0 || !!tilePorId(id);
+
+        var li = document.createElement("li");
+        li.className = "mc-ticket__linea" + (cQuitar > 0 ? " is-quitar" : "");
+        li.innerHTML =
+          '<span class="mc-ticket__nombre"><span data-nombre></span><small class="mc-ticket__marca"></small></span>' +
+          '<span class="mc-ticket__cantidad" role="group">' +
+          '<button type="button" class="mc-icon-btn" data-mc-caja-menos aria-label="Quitar uno"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>' +
+          '<span class="mc-ticket__num" aria-live="polite"></span>' +
+          '<button type="button" class="mc-icon-btn" data-mc-caja-mas aria-label="Agregar uno"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>' +
+          "</span>" +
+          '<span class="mc-ticket__sub"></span>';
+        li.dataset.id = id;
+        li.querySelector("[data-nombre]").textContent = nombre;
+        li.querySelector(".mc-ticket__marca").textContent = marcas.join(" \u00b7 ");
+        li.querySelector(".mc-ticket__marca").hidden = marcas.length === 0;
+        li.querySelector(".mc-ticket__num").textContent = cantidad;
+        li.querySelector(".mc-ticket__sub").textContent = colones(
+          (ya ? ya.valor : 0) - quitado + subtotalNuevo,
+        );
+        li.querySelector("[data-mc-caja-menos]").disabled = cantidad <= 0;
+        li.querySelector("[data-mc-caja-mas]").disabled = !puedeSumar || cNueva >= 99;
+        lineasEl.appendChild(li);
+      });
+
+      vacioEl.hidden = ids.length > 0;
+      totalPedidoEl.textContent = colones(totalNuevo);
+      if (quedaraEl) {
+        quedaraEl.textContent = colones(totalCuenta - totalQuitado + totalNuevo);
+      }
+      if (quitadoFilaEl) {
+        quitadoFilaEl.hidden = quitadas === 0;
+        quitadoEl.textContent = "\u2212" + colones(totalQuitado);
+      }
+      avisoQuitarEl.hidden = quitadas === 0;
+
+      var partes = [];
+      if (nuevas > 0) {
+        partes.push(nuevas + (nuevas === 1 ? " producto nuevo" : " productos nuevos"));
+      }
+      if (quitadas > 0) {
+        partes.push(quitadas + (quitadas === 1 ? " se quitar\u00e1" : " se quitar\u00e1n"));
+      }
+      resumenEl.textContent = partes.length > 0 ? partes.join(" \u00b7 ") : "Usa + y \u2212 para armar el pedido";
+      confirmarEl.textContent = nuevas > 0 && quitadas === 0 ? "Agregar a la cuenta" : "Guardar cambios";
+      confirmarEl.disabled = (nuevas === 0 && quitadas === 0) || enviando;
+
+      // Menu: la cantidad de cada producto es lo que quedara en la cuenta (lo que ya tenia, mas lo nuevo, menos lo quitado).
+      var seleccionados = 0;
+      modalEl.querySelectorAll("[data-mc-caja-tile]").forEach(function (tile) {
+        var id = Number(tile.dataset.idProducto);
+        var cantidad = cantidadYa(id) - cantidadQuitar(id) + cantidadNueva(id);
+        var cambiado = cantidadNueva(id) > 0 || cantidadQuitar(id) > 0;
+        tile.querySelector("[data-mc-caja-burbuja]").textContent = cantidad;
+        tile.querySelector("[data-mc-caja-tile-menos]").disabled = cantidad <= 0;
+        tile.querySelector("[data-mc-caja-tile-mas]").disabled = cantidadNueva(id) >= 99;
+        tile.classList.toggle("is-en-cuenta", cantidad > 0);
+        tile.classList.toggle("is-elegido", cambiado);
+        var seleccionado = cantidadYa(id) > 0 || cantidadNueva(id) > 0;
+        tile.dataset.sel = seleccionado ? "1" : "";
+        if (seleccionado) {
+          seleccionados += 1;
+        }
+      });
+
+      // Categoria "Seleccionados": solo existe mientras haya algo en la cuenta o en el pedido nuevo.
+      var chipSel = modalEl.querySelector("[data-mc-caja-seleccionados]");
+      chipSel.hidden = seleccionados === 0;
+      chipSel.querySelector("[data-mc-caja-seleccionados-n]").textContent = seleccionados;
+      if (seleccionados === 0 && categoriaActiva === -1) {
+        categoriaActiva = 0;
+        modalEl.querySelectorAll("[data-mc-caja-categoria]").forEach(function (chip) {
+          var activo = Number(chip.dataset.mcCajaCategoria) === 0;
+          chip.classList.toggle("is-active", activo);
+          chip.setAttribute("aria-pressed", String(activo));
+        });
+      }
+      filtrar();
+    }
+
+    function filtrar() {
+      var texto = (buscarEl.value || "").trim().toLowerCase();
+      var visibles = 0;
+      modalEl.querySelectorAll("[data-mc-caja-tile]").forEach(function (tile) {
+        var coincideTexto = !texto || tile.dataset.nombre.toLowerCase().indexOf(texto) !== -1;
+        var coincideCategoria =
+          categoriaActiva === 0 ||
+          (categoriaActiva === -1 ? tile.dataset.sel === "1" : Number(tile.dataset.categoria) === categoriaActiva);
+        tile.hidden = !(coincideTexto && coincideCategoria);
+        if (!tile.hidden) {
+          visibles += 1;
+        }
+      });
+      modalEl.querySelector("[data-mc-caja-sin-resultados]").hidden = visibles > 0;
+    }
+
+    // "+" suma al pedido nuevo (o deshace una unidad quitada); "-" resta del pedido nuevo y, si no queda nada
+    // nuevo, marca una unidad de la cuenta para quitar.
+    function cambiar(id, delta) {
+      if (delta > 0) {
+        if (cantidadQuitar(id) > 0) {
+          quitar[id] -= 1;
+          if (quitar[id] <= 0) {
+            delete quitar[id];
+          }
+        } else {
+          var tile = tilePorId(id);
+          if (!tile) {
+            return;
+          }
+          var linea = buscar(id);
+          if (!linea) {
+            linea = {
+              id: id,
+              nombre: tile.dataset.nombre,
+              precio: Number(tile.dataset.precio),
+              cantidad: 0,
+            };
+            carrito.push(linea);
+          }
+          linea.cantidad = Math.min(99, linea.cantidad + 1);
+        }
+      } else {
+        var nueva = buscar(id);
+        if (nueva) {
+          nueva.cantidad -= 1;
+          if (nueva.cantidad <= 0) {
+            carrito.splice(carrito.indexOf(nueva), 1);
+          }
+        } else if (cantidadYa(id) - cantidadQuitar(id) > 0) {
+          quitar[id] = cantidadQuitar(id) + 1;
+        }
+      }
+      errorEl.hidden = true;
+      pintar();
+    }
+
+    modalEl.addEventListener("click", function (event) {
+      var tileMas = event.target.closest("[data-mc-caja-tile-mas]");
+      var tileMenos = event.target.closest("[data-mc-caja-tile-menos]");
+      if (tileMas || tileMenos) {
+        var tile = (tileMas || tileMenos).closest("[data-mc-caja-tile]");
+        cambiar(Number(tile.dataset.idProducto), tileMas ? 1 : -1);
+        return;
+      }
+
+      var categoria = event.target.closest("[data-mc-caja-categoria]");
+      if (categoria) {
+        categoriaActiva = Number(categoria.dataset.mcCajaCategoria);
+        modalEl.querySelectorAll("[data-mc-caja-categoria]").forEach(function (chip) {
+          var activo = chip === categoria;
+          chip.classList.toggle("is-active", activo);
+          chip.setAttribute("aria-pressed", String(activo));
+        });
+        filtrar();
+        return;
+      }
+
+      var mas = event.target.closest("[data-mc-caja-mas]");
+      var menos = event.target.closest("[data-mc-caja-menos]");
+      if (mas || menos) {
+        var id = Number((mas || menos).closest("li").dataset.id);
+        cambiar(id, mas ? 1 : -1);
+      }
+    });
+
+    buscarEl.addEventListener("input", filtrar);
+
+    // Enter agrega 1 del primer producto que coincide con la busqueda y la deja lista para el siguiente.
+    buscarEl.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") {
+        return;
+      }
+      event.preventDefault();
+      if (!buscarEl.value.trim()) {
+        return;
+      }
+      var primero = modalEl.querySelector("[data-mc-caja-tile]:not([hidden])");
+      if (primero) {
+        cambiar(Number(primero.dataset.idProducto), 1);
+        buscarEl.select();
+      }
+    });
+
+    confirmarEl.addEventListener("click", async function () {
+      var operaciones = operacionesQuitar();
+      if (enviando || (carrito.length === 0 && operaciones.length === 0)) {
+        return;
+      }
+      enviando = true;
+      confirmarEl.disabled = true;
+      errorEl.hidden = true;
+      var idReserva = Number(modalEl.dataset.idReserva);
+      var etiquetaMesa = modalEl.dataset.mesa;
+      var hayNuevo = carrito.length > 0;
+      var unidadesQuitadas = operaciones.reduce(function (suma, op) {
+        return suma + op.cantidad;
+      }, 0);
+      var cuenta = null;
+      var aplicado = false;
+      var fallo = null;
+
+      // Primero el pedido nuevo y despues las unidades quitadas: no son una sola transaccion, por eso
+      // si algo falla a medias se cierra la caja y se vuelve a pedir la cuenta.
+      if (hayNuevo) {
+        var r = await enviarJson("/admin/ventas/cuenta/" + idReserva + "/pedidos", {
+          claveIdempotencia: clave,
+          lineas: carrito.map(function (l) {
+            return { idProducto: l.id, cantidad: l.cantidad };
+          }),
+        });
+        if (r.success) {
+          cuenta = r.data || cuenta;
+          aplicado = true;
+        } else {
+          fallo = r;
+        }
+      }
+      if (!fallo) {
+        var anulacion = await anularEnSecuencia(operaciones);
+        if (anulacion.aplicadas > 0) {
+          cuenta = anulacion.cuenta || cuenta;
+          aplicado = true;
+        }
+        fallo = anulacion.fallo;
+      }
+      enviando = false;
+
+      function cerrarYAvisar(detalle) {
+        modalEl.addEventListener(
+          "hidden.bs.modal",
+          function () {
+            emitirCambio(document, detalle);
+          },
+          { once: true },
+        );
+        bootstrap.Modal.getInstance(modalEl).hide();
+      }
+
+      if (!fallo) {
+        var de = esPlural(etiquetaMesa) ? "las " : "la ";
+        var total = colones((cuenta && cuenta.total) || 0);
+        var quitadas = unidadesQuitadas + (unidadesQuitadas === 1 ? " producto quitado" : " productos quitados");
+        var mensaje;
+        if (hayNuevo) {
+          mensaje =
+            "Pedido " + (cuenta && cuenta.pedidos ? cuenta.pedidos.length : "") + " agregado" +
+            (unidadesQuitadas > 0 ? " y " + quitadas : "") +
+            " en la cuenta de " + de + etiquetaMesa + ": " + total + " en total.";
+        } else {
+          mensaje = "Cuenta de " + de + etiquetaMesa + " actualizada (" + quitadas + "): " + total + " en total.";
+        }
+        cerrarYAvisar({ tipo: hayNuevo ? "pedido" : "quitar", mensaje: mensaje, idReserva: idReserva, data: cuenta });
+        return;
+      }
+
+      if (!aplicado) {
+        errorEl.textContent = fallo.message;
+        errorEl.hidden = false;
+        pintar();
+        if (fallo.cuenta) {
+          emitirCambio(document, {
+            tipo: "desactualizada",
+            mensaje: fallo.message,
+            idReserva: idReserva,
+            data: fallo.cuenta,
+          });
+        }
+        return;
+      }
+
+      cerrarYAvisar({
+        tipo: "desactualizada",
+        mensaje: "No se pudieron aplicar todos los cambios: " + fallo.message + " Revisa la cuenta.",
+        idReserva: idReserva,
+        data: fallo.cuenta || cuenta,
+      });
+    });
+
+    modalEl.addEventListener("hidden.bs.modal", function () {
+      bootstrap.Modal.getOrCreateInstance(modalEl).dispose();
+      modalEl.remove();
+    });
+
+    pintar();
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    modalEl.addEventListener("shown.bs.modal", function () {
+      buscarEl.focus();
+    }, { once: true });
+  }
+
+  function initCuentas() {
+    document.addEventListener("click", function (event) {
+      var objetivo = event.target;
+      var raiz = cuentaDe(objetivo);
+      if (!raiz) {
+        return;
+      }
+
+      var quitar = objetivo.closest("[data-mc-cuenta-quitar]");
+      if (quitar) {
+        abrirConfirmacionQuitar(raiz, quitar);
+      } else if (objetivo.closest("[data-mc-cuenta-quitar-no]")) {
+        raiz.querySelector("[data-mc-cuenta-confirm-quitar]").hidden = true;
+      } else if (objetivo.closest("[data-mc-cuenta-quitar-uno]")) {
+        ejecutarQuitar(raiz, 1);
+      } else if (objetivo.closest("[data-mc-cuenta-quitar-todo]")) {
+        ejecutarQuitar(raiz, null);
+      } else if (objetivo.closest("[data-mc-cuenta-agregar]")) {
+        abrirCaja(raiz, objetivo.closest("[data-mc-cuenta-agregar]"));
+      } else if (objetivo.closest("[data-mc-cuenta-cobrar]")) {
+        ejecutarCobro(raiz);
+      } else if (objetivo.closest("[data-mc-cuenta-liberar]")) {
+        raiz.querySelector("[data-mc-cuenta-confirm-liberar]").hidden = false;
+      } else if (objetivo.closest("[data-mc-cuenta-liberar-no]")) {
+        raiz.querySelector("[data-mc-cuenta-confirm-liberar]").hidden = true;
+      } else if (objetivo.closest("[data-mc-cuenta-liberar-si]")) {
+        ejecutarLiberar(raiz);
+      }
+    });
+
+    document.addEventListener("change", function (event) {
+      var raiz = cuentaDe(event.target);
+      if (!raiz || !event.target.closest("[data-mc-cuenta-pagos]")) {
+        return;
+      }
+      raiz.querySelector("[data-mc-cuenta-pagos]").classList.remove("is-invalid");
+      var error = raiz.querySelector("[data-mc-cuenta-pago-error]");
+      if (error) {
+        error.hidden = true;
+      }
+      textoBotonCobrar(raiz);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initPasswordToggles();
     initStrengthMeters();
@@ -1124,5 +1851,6 @@
     initAutoDismiss();
     initReservationCalendars();
     initTimePickers();
+    initCuentas();
   });
 })();

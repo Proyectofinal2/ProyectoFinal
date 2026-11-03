@@ -1,0 +1,125 @@
+@*
+    Caja de pedido (HU-CON-002): modal grande con el menu vendible y el pedido nuevo. Llega por fetch desde
+    GET admin/ventas/cuenta/{idReserva}/caja y site.js ([data-mc-caja]) la monta y la quita al cerrarse.
+    El carrito y los totales del pedido se calculan en el cliente solo para mostrarlos: el precio y el total
+    reales los decide el servidor al registrar el pedido.
+*@
+@using MonteCarlo.WEB.Models.Catalogo
+@using MonteCarlo.WEB.Models.Ventas
+@model CajaViewModel
+@{
+    var c = Model.Cuenta;
+    var invariante = System.Globalization.CultureInfo.InvariantCulture;
+    // Lineas activas (la mas reciente primero): la caja las edita igual que el pedido nuevo y al guardar anula las que se quitaron.
+    var lineasYa = c.LineasActivas();
+    var cantidadYa = lineasYa.GroupBy(l => l.IdProducto).ToDictionary(g => g.Key, g => g.Sum(l => l.Cantidad));
+    var lineasJson = LineaActivaJson.Serializar(lineasYa);
+}
+<div class="modal fade mc-caja" id="mcCajaModal" tabindex="-1" aria-labelledby="mcCajaTitulo" aria-hidden="true"
+     data-mc-caja
+     data-id-reserva="@c.IdReserva"
+     data-mesa="@Model.EtiquetaMesa"
+     data-cuenta-total="@c.Total.ToString(invariante)"
+     data-lineas="@lineasJson">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title fs-5" id="mcCajaTitulo">Agregar pedido · @Model.EtiquetaMesa</h2>
+                    <p class="mc-caja__sub">@c.Cliente · @c.Personas @(c.Personas == 1 ? "persona" : "personas")</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body mc-caja__cuerpo">
+                <section class="mc-caja__menu" aria-label="Menú">
+                    <div class="mc-caja__controles">
+                    <div class="mc-caja__busqueda">
+                        <label class="visually-hidden" for="mcCajaBuscar">Buscar producto</label>
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input type="search" class="form-control" id="mcCajaBuscar" placeholder="Buscar producto (Enter agrega el primero)" autocomplete="off" data-mc-caja-buscar>
+                    </div>
+
+                    <div class="mc-chips mc-caja__categorias" role="group" aria-label="Categorías">
+                        <button type="button" class="mc-chip is-active" data-mc-caja-categoria="0" aria-pressed="true">Todas</button>
+                        @* Solo para esta vista: lo que ya esta en la cuenta mas lo elegido; se oculta si no hay nada (la llena site.js). *@
+                        <button type="button" class="mc-chip" data-mc-caja-categoria="-1" data-mc-caja-seleccionados aria-pressed="false"
+                                @(cantidadYa.Count > 0 ? "" : "hidden")>
+                            <i class="bi bi-check2-circle" aria-hidden="true"></i> Seleccionados <span data-mc-caja-seleccionados-n>@cantidadYa.Count</span>
+                        </button>
+                        @foreach (var cat in Model.Categorias)
+                        {
+                            <button type="button" class="mc-chip @CategoriaEstilo.Clase(cat.IdCategoria)" data-mc-caja-categoria="@cat.IdCategoria" aria-pressed="false">@cat.Nombre</button>
+                        }
+                    </div>
+                    </div>
+
+                    <div class="mc-caja__mosaico" data-mc-caja-mosaico>
+                        @foreach (var cat in Model.Categorias)
+                        {
+                            foreach (var p in cat.Productos)
+                            {
+                                cantidadYa.TryGetValue(p.IdProducto, out var ya);
+                                <div class="mc-caja__tile @CategoriaEstilo.Clase(cat.IdCategoria) @(ya > 0 ? "is-en-cuenta" : "")"
+                                     data-mc-caja-tile
+                                     data-id-producto="@p.IdProducto"
+                                     data-nombre="@p.Nombre"
+                                     data-precio="@p.Precio.ToString(invariante)"
+                                     data-categoria="@cat.IdCategoria"
+                                     data-ya="@ya">
+                                    <span class="mc-caja__tile-nombre">@p.Nombre</span>
+                                    <div class="mc-caja__tile-pie">
+                                        <span class="mc-caja__tile-precio">@CuentaViewModel.Dinero(p.Precio)</span>
+                                        <span class="mc-caja__tile-control" role="group" aria-label="Cantidad de @p.Nombre">
+                                            <button type="button" class="mc-caja__paso" data-mc-caja-tile-menos aria-label="Quitar uno de @p.Nombre" @(ya > 0 ? "" : "disabled")><i class="bi bi-dash-lg" aria-hidden="true"></i></button>
+                                            <span class="mc-caja__tile-num" data-mc-caja-burbuja aria-live="polite">@ya</span>
+                                            <button type="button" class="mc-caja__paso" data-mc-caja-tile-mas aria-label="Agregar uno de @p.Nombre"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        @if (Model.Categorias.Count == 0)
+                        {
+                            <p class="text-secondary mb-0">No hay productos disponibles para vender.</p>
+                        }
+                    </div>
+                    <p class="text-secondary" data-mc-caja-sin-resultados hidden>Ningún producto coincide con la búsqueda.</p>
+                </section>
+
+                <aside class="mc-ticket" aria-label="Pedido nuevo">
+                    <header class="mc-ticket__cabecera">
+                        <h3 class="mc-ticket__titulo">@(c.Pedidos.Count > 0 ? "Cuenta · Pedido " + (c.Pedidos.Count + 1) : "Pedido " + (c.Pedidos.Count + 1))</h3>
+                    </header>
+                    <div class="mc-ticket__cuerpo">
+                        <div class="mc-ticket__vacio" data-mc-caja-vacio>
+                            <i class="bi bi-receipt" aria-hidden="true"></i>
+                            <strong>Pedido vacío</strong>
+                            <span>Usa + en un producto para agregarlo.</span>
+                        </div>
+                        <ul class="mc-ticket__lineas" data-mc-caja-lineas></ul>
+                    </div>
+                    <div class="mc-ticket__pie">
+                        <dl class="mc-ticket__totales">
+                            <div><dt>Este pedido</dt><dd data-mc-caja-total-pedido>₡0</dd></div>
+                            @if (c.TotalProductos > 0)
+                            {
+                                <div class="mc-ticket__quitado" data-mc-caja-quitado-fila hidden><dt>Se quitará</dt><dd data-mc-caja-total-quitado>₡0</dd></div>
+                                <div class="mc-ticket__ya"><dt>Ya en la cuenta: @c.TotalProductos @(c.TotalProductos == 1 ? "producto" : "productos")</dt><dd>@CuentaViewModel.Dinero(c.Total)</dd></div>
+                            }
+                            <div class="mc-ticket__quedara"><dt>Quedará en</dt><dd data-mc-caja-total-quedara>@CuentaViewModel.Dinero(c.Total)</dd></div>
+                        </dl>
+                        <p class="mc-ticket__aviso" data-mc-caja-aviso-quitar hidden>Quitar productos de la cuenta queda registrado: quién y cuándo.</p>
+                        <div class="alert alert-danger mb-0" role="alert" data-mc-caja-error hidden></div>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="modal-footer">
+                <span class="mc-caja__resumen" data-mc-caja-resumen>Usa + y − para armar el pedido</span>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" data-mc-caja-confirmar disabled>Agregar a la cuenta</button>
+            </div>
+        </div>
+    </div>
+</div>

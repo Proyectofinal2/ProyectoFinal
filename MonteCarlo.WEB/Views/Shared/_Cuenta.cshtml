@@ -1,0 +1,190 @@
+@*
+    Cuenta de una mesa (HU-CON-002). Sin dependencias de la pagina anfitriona: se carga por fetch desde
+    GET admin/ventas/cuenta/{idReserva} en el panel de Mesas, el cajon de Reservas del dia y el de Ventas.
+    El comportamiento vive en site.js ([data-mc-cuenta]); al cambiar algo emite el evento "mc:cuenta-cambio".
+*@
+@using MonteCarlo.WEB.Models.Ventas
+@model CuentaViewModel
+@{
+    var c = Model.Cuenta;
+    var abierta = c.Estado == "Abierta";
+    var sentados = Model.Sentados;
+
+    // Lista unica por producto (lo que se cobra). El detalle por pedido queda como historial de solo lectura.
+    var productos = c.ProductosActivos();
+    var hayHistorial = c.Pedidos.Count > 1 || c.Pedidos.Any(p => p.Lineas.Any(l => l.Anulado));
+}
+<div class="mc-cuenta"
+     data-mc-cuenta
+     data-id-reserva="@c.IdReserva"
+     data-total="@c.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+     data-version="@c.Version"
+     data-mesa="@Model.EtiquetaMesa">
+
+    <p class="mc-cuenta__meta">
+        <strong>@c.Cliente</strong> · @c.Personas @(c.Personas == 1 ? "persona" : "personas")
+        @if (sentados is not null && (abierta || c.Estado == "SinPedidos"))
+        {
+            <text> · sentados hace @sentados</text>
+        }
+        @if (!string.IsNullOrEmpty(c.Folio))
+        {
+            <span class="mc-cuenta__folio">@c.Folio</span>
+        }
+    </p>
+
+    @if (c.Bloqueo is not null)
+    {
+        <div class="alert @(c.Estado == "Cobrada" ? "alert-success" : "alert-warning") mc-cuenta__aviso" role="status">@c.Bloqueo</div>
+    }
+
+    <div class="mc-cuenta__error alert alert-danger" role="alert" data-mc-cuenta-error hidden></div>
+
+    @if (c.Pedidos.Count == 0)
+    {
+        <div class="mc-cuenta__vacia">
+            <p class="mc-cuenta__vacia-titulo">Aún no hay pedidos</p>
+            @if (c.PuedeAgregar)
+            {
+                <p class="mc-cuenta__vacia-texto">Agrega el primer pedido para abrir la cuenta.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <ul class="mc-pedido__lineas mc-cuenta__productos">
+            @foreach (var x in productos)
+            {
+                <li class="mc-linea">
+                    <div class="mc-linea__texto">
+                        <span class="mc-linea__nombre">@x.Nombre</span>
+                        <span class="mc-linea__detalle">
+                            @if (x.PrecioUnico is { } precio)
+                            {
+                                <text>@x.Cantidad × @CuentaViewModel.Dinero(precio)</text>
+                            }
+                            else
+                            {
+                                <text>@x.Cantidad @(x.Cantidad == 1 ? "unidad" : "unidades")</text>
+                            }
+                        </span>
+                    </div>
+                    <span class="mc-linea__subtotal">@CuentaViewModel.Dinero(x.Subtotal)</span>
+                    @if (abierta && c.PuedeAgregar)
+                    {
+                        <button type="button" class="mc-icon-btn mc-icon-btn--danger"
+                                data-mc-cuenta-quitar
+                                data-nombre="@x.Nombre"
+                                data-cantidad="@x.Cantidad"
+                                data-lineas="@x.LineasJson"
+                                aria-label="Quitar @x.Nombre">
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (hayHistorial)
+        {
+            <details class="mc-cuenta__historial">
+                <summary>Ver por pedido</summary>
+                @foreach (var pedido in c.Pedidos)
+                {
+                    <section class="mc-pedido" aria-label="Pedido @pedido.Numero">
+                        <header class="mc-pedido__cabecera">
+                            <span>Pedido @pedido.Numero · @pedido.Fecha.ToString("HH:mm")</span>
+                            <span class="mc-pedido__subtotal">@CuentaViewModel.Dinero(pedido.Subtotal)</span>
+                        </header>
+                        <ul class="mc-pedido__lineas">
+                            @foreach (var linea in pedido.Lineas)
+                            {
+                                <li class="mc-linea @(linea.Anulado ? "is-anulada" : "")">
+                                    <div class="mc-linea__texto">
+                                        <span class="mc-linea__nombre">@linea.Producto</span>
+                                        <span class="mc-linea__detalle">
+                                            @linea.Cantidad × @CuentaViewModel.Dinero(linea.PrecioUnitario)
+                                            @if (linea.Anulado)
+                                            {
+                                                <text> · quitado</text>
+                                            }
+                                        </span>
+                                    </div>
+                                    <span class="mc-linea__subtotal">@CuentaViewModel.Dinero(linea.Subtotal)</span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </details>
+        }
+
+        @* Confirmacion en linea para quitar un producto (la llena site.js) *@
+        @if (abierta && c.PuedeAgregar)
+        {
+        <div class="mc-confirmar" data-mc-cuenta-confirm-quitar hidden role="alertdialog" aria-labelledby="mcQuitarTitulo-@c.IdReserva">
+            <p class="mc-confirmar__texto" id="mcQuitarTitulo-@c.IdReserva" data-mc-cuenta-quitar-texto></p>
+            <div class="mc-confirmar__acciones">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-mc-cuenta-quitar-no>No</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-mc-cuenta-quitar-uno hidden>Quitar 1</button>
+                <button type="button" class="btn btn-sm btn-primary" data-mc-cuenta-quitar-todo>Quitar todo</button>
+            </div>
+        </div>
+        }
+    }
+
+    @if (c.PuedeAgregar || c.PuedeLiberarSinConsumo || c.Estado == "Cobrada")
+    {
+        <footer class="mc-cuenta__pie">
+            @if (c.Pedidos.Count > 0)
+            {
+                <div class="mc-cuenta__total">
+                    <span>@c.TotalProductos @(c.TotalProductos == 1 ? "producto" : "productos")</span>
+                    <strong data-mc-cuenta-total>@CuentaViewModel.Dinero(c.Total)</strong>
+                </div>
+            }
+
+            @if (c.PuedeAgregar)
+            {
+                <button type="button"
+                        class="btn @(c.PuedeCobrar ? "btn-outline-primary" : "btn-primary") w-100"
+                        data-mc-cuenta-agregar>
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i> Agregar pedido
+                </button>
+            }
+
+            @if (c.PuedeCobrar)
+            {
+                <fieldset class="mc-pagos" data-mc-cuenta-pagos>
+                    <legend class="mc-pagos__titulo visually-hidden">Método de pago</legend>
+                    <div class="mc-chips">
+                        @foreach (var metodo in Model.MetodosPago)
+                        {
+                            <input type="radio" class="btn-check" name="metodoPago-@c.IdReserva"
+                                   id="metodo-@c.IdReserva-@metodo.IdMetodoPago"
+                                   value="@metodo.IdMetodoPago" data-nombre="@metodo.Nombre" autocomplete="off">
+                            <label class="mc-chip" for="metodo-@c.IdReserva-@metodo.IdMetodoPago">@metodo.Nombre</label>
+                        }
+                    </div>
+                    <p class="mc-pagos__error" data-mc-cuenta-pago-error hidden>Elige el método de pago para cobrar.</p>
+                </fieldset>
+
+                <button type="button" class="btn btn-primary w-100 mc-cuenta__cobrar" data-mc-cuenta-cobrar>
+                    <span data-mc-cuenta-cobrar-texto>Cobrar @CuentaViewModel.Dinero(c.Total)</span>
+                </button>
+            }
+
+            @if (c.PuedeLiberarSinConsumo)
+            {
+                <button type="button" class="btn btn-link mc-cuenta__enlace" data-mc-cuenta-liberar>Liberar sin consumo</button>
+                <div class="mc-confirmar" data-mc-cuenta-confirm-liberar hidden role="alertdialog">
+                    <p class="mc-confirmar__texto">¿Liberar la mesa sin consumo? Se cierra la reserva con total ₡0, sin método de pago.</p>
+                    <div class="mc-confirmar__acciones">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-mc-cuenta-liberar-no>Cancelar</button>
+                        <button type="button" class="btn btn-sm btn-primary" data-mc-cuenta-liberar-si>Sí, liberar</button>
+                    </div>
+                </div>
+            }
+        </footer>
+    }
+</div>
