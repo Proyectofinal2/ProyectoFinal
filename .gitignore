@@ -62,3 +62,14 @@ MonteCarlo.WEB/wwwroot/lib/**/*.map
 secrets.json
 local.settings.json
 
+# Archivos locales (no se versionan): configuracion de Claude y su planificador
+.claude/
+CLAUDE.md
+MonteCarlo.WEB/CLAUDE.md
+HistoriasUsuario.md
+MonteCarlo.API/appsettings.Development.json.example
+
+# Documentos de proyecto y temporales de Office
+Calendario del Proyecto - Diseno de sistemas.html
+Resultado_Sprint1_MonteCarlo.docx
+~$*
