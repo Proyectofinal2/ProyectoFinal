@@ -51,6 +51,14 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
             d => new CuentaAbiertaResumen(d.IdReserva, d.IdVenta, d.Total, d.Productos, Convert.ToBase64String(d.RowVersion)));
     }
 
+    public async Task<HashSet<int>> ObtenerIdsMesaConCuentaAbiertaAsync() =>
+        (await context.ReservasMesa
+            .AsNoTracking()
+            .Where(rm => rm.Reserva.EstadoReserva.Nombre == "Confirmada"
+                         && rm.Reserva.Ventas.Any(v => v.Estado == VentaEstados.Abierta))
+            .Select(rm => rm.IdMesa)
+            .ToListAsync()).ToHashSet();
+
     public void Agregar(Venta venta) => context.Ventas.Add(venta);
 
     public void MarcarModificada(Venta venta) =>

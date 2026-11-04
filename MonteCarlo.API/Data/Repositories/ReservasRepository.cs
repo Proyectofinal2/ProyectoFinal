@@ -136,7 +136,7 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
     public Task<Reserva?> ObtenerConfirmadaActivaPorMesaAsync(int idMesa, DateOnly fecha) =>
         context.Reservas
             .Include(r => r.ReservaMesas)
-            .Where(r => r.FechaReserva == fecha
+            .Where(r => (r.FechaReserva == fecha || r.Ventas.Any(v => v.Estado == VentaEstados.Abierta))
                         && r.EstadoReserva.Nombre == "Confirmada"
                         && r.FechaAtencion != null
                         && r.ReservaMesas.Any(rm => rm.IdMesa == idMesa))

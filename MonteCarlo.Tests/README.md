@@ -11,7 +11,7 @@ dotnet test MonteCarlo.Tests --filter "Escenario=9"       # un criterio de acept
 dotnet test MonteCarlo.Tests --filter "Hueco=G1"          # huecos conocidos
 ```
 
-Si la API está corriendo y bloquea `MonteCarlo.API.exe`, agrega `-p:UseAppHost=false`.
+Si la API está corriendo y bloquea `MonteCarlo.API.exe`, agrega `-p:UseAppHost=false`. Si además bloquea `MonteCarlo.API.dll` (Visual Studio con la API en ejecución), compila a otra carpeta **dentro del repo** (las pruebas buscan `database.sql` subiendo desde la salida): `dotnet test MonteCarlo.Tests -p:UseAppHost=false -p:OutDir="$PWD/MonteCarlo.Tests/bin/alt/"` (`bin/` está ignorado por git).
 
 ## Base de datos temporal
 
@@ -31,7 +31,7 @@ MonteCarlo.Tests/
 ├── Builders/     Mundo (datos propios por prueba: mesas, reservas, productos) y Sesion
 │                 (servicios reales sobre un DbContext; dos Sesion = dos peticiones simultáneas)
 ├── Ventas/       cuenta, pedidos, quitar, cobrar, liberar sin consumo
-├── Reservas/     bloqueos con cuenta abierta
+├── Reservas/     bloqueos con cuenta abierta; mesas con cuenta abierta en creación, asignación y calendario
 ├── Mesas/        estado en vivo + huecos conocidos
 └── Datos/        restricciones de la base de datos
 ```
@@ -52,6 +52,7 @@ Reglas para escribir pruebas nuevas:
 |---|---|---|
 | #35 | HU-CON-002 cuenta de mesa y cobro | **Cubierto** (tabla siguiente) |
 | #36 | HU-CON-003 venta para llevar | Pendiente: al implementar `para-llevar` agregar pruebas de total automático y de que exige al menos un producto |
+| #35 | HU-CON-002 esc. 14 (mesa con cuenta abierta no se ofrece) y HU-RES-003 (sin mesa no hay reserva) | **Cubierto** (tabla «Cuentas abiertas y disponibilidad») |
 | — | HU-CON-001 catálogo | Sin pruebas propias (CRUD); solo se cubre lo que usa la venta (producto disponible + categoría activa) |
 | — | HU-CON-004 / HU-REP-003 | Pendiente: cuando existan, probar que solo `Estado = 'Cobrada'` cuenta como ingreso |
 
@@ -75,18 +76,31 @@ Los criterios 10 (vistas Tarjetas/Plano) y 12 (Reservas del día, Paso 2) **no s
 | 11 Esperando llegada | `EstadoEnVivoTests`: `..._estaOcupadaEsperandoLlegada`; `LiberarSinConsumoTests`: `..._reservaSinLlegada_devuelve409...` |
 | Reglas de la BD | `RestriccionesVentaTests`: `CK_Venta` (abierta con método de pago, cobrada con total sin método), `UQ_Venta_Reserva`, `FK_DetalleVenta_Pedido` + `Subtotal` calculado |
 
+### Cuentas abiertas y disponibilidad (plan `HU-CON-002-cuentas-abiertas-vencidas.md`, fase A1)
+
+Una mesa con cuenta abierta no se ofrece ni se asigna a una reserva que empieza dentro del turno actual (`ahora + duración`); una reserva posterior sí puede tomarla. Sin mesa no hay reserva (409, sin Pendiente ni umbral).
+
+| Comportamiento | Pruebas |
+|---|---|
+| Walk-in sobre mesa con cuenta (409) y sugerencia sin esa mesa | `HuecosConocidosTests`: `G1_crearWalkInSobreMesaOcupadaPorCuentaAbierta_esConflicto`, `G1_sugerirWalkInNoOfreceLaMesaConCuentaAbierta` |
+| `PUT mesas/{id}/liberar` encuentra la cuenta vacía de ayer (R1) | `HuecosConocidosTests.R1_liberarPorMesa...` |
+| Asignar mesa dentro del turno (409) y posterior al turno (sí) | `CuentaAbiertaYDisponibilidadTests`: `AsignarMesa_aReservaDentroDelTurno...`, `AsignarMesa_aReservaPosteriorAlTurno...` |
+| Crear reserva: sin mesa 409 y sin cliente huérfano; grupo grande confirmado; hoy sobre la única mesa con cuenta | `Crear_sinMesaDisponible...`, `Crear_grupoGrande_seConfirma...`, `Crear_hoyDentroDelTurno...` |
+| Calendario de hoy no ofrece horarios del turno; mañana sí | `Calendario_hoy_...`, `Calendario_manana_...` |
+
+Estas pruebas deshabilitan temporalmente las demás mesas de la base compartida y las restauran al terminar (`ConSoloLasMesasAsync`).
+
 ### Huecos conocidos (fijan el comportamiento actual)
 
 | Hueco | Prueba | Cuándo invertir la aserción |
 |---|---|---|
-| G1: walk-in sobre mesa ocupada por cuenta abierta | `HuecosConocidosTests.G1_crearWalkIn...` | Al implementar `.claude/plans/HU-CON-002-cuentas-abiertas-vencidas.md` (debe dar 409) |
 | Cuenta vieja sin límite | `HuecosConocidosTests.CuentaAbiertaDeHaceDosDias...` | Mismo plan (vencimiento / `Abandonada`) |
 
-Defecto conocido sin prueba: `PUT api/mesas/{id}/liberar` solo busca reservas de **hoy**, por lo que una mesa ocupada por una cuenta vacía de un día anterior no se libera por esa ruta (sí por `liberar-sin-consumo`). Entra en el mismo plan (R1). Hallazgos completos de la revisión: `.claude/plans/HU-CON-002-revision-codigo-1.md`.
+G1 y R1 ya están corregidos (fase A1). Pendiente en el mismo plan: liberación estimada de la mesa (A2), antigüedad, «Cerrar sin cobro» y cierre automático. Hallazgos completos de la revisión: `.claude/plans/HU-CON-002-revision-codigo-1.md`.
 
 ## Checkpoint
 
-- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 38 pruebas verdes (HU-CON-002).
+- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 47 pruebas verdes (HU-CON-002 y reservas con cuenta abierta).
 - [x] Concurrencia: doble primer pedido y doble cobro.
 - [ ] Equivalencia `alter_database-5.sql` (ejecutado dos veces) vs `database.sql` (columnas, CHECK, FK, índices).
 - [ ] Autorización por rol de `VentasController` y `Mesas/liberar` (a nivel de atributos).

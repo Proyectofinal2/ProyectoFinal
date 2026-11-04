@@ -4,10 +4,6 @@ namespace MonteCarlo.API.Services.Interfaces;
 
 public interface IConfiguracionService
 {
-    /// Umbral vigente. El flujo de creación de reservas (HU-RES-003) debe leerlo
-    /// en el momento de crear la reserva: así un cambio solo afecta a las nuevas.
-    Task<int> ObtenerValorUmbralAsync();
-
     /// Duración (en minutos) usada para detectar solapamiento entre reservas de una
     /// misma mesa y para el cálculo de disponibilidad del calendario (HU-RES-002).
     Task<int> ObtenerValorDuracionReservaAsync();

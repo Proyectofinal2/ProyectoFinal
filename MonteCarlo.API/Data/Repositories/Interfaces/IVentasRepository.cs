@@ -26,6 +26,12 @@ public interface IVentasRepository
     /// <summary>Cuentas abiertas de esas reservas en una sola consulta (total, unidades y version).</summary>
     Task<Dictionary<int, CuentaAbiertaResumen>> ObtenerResumenCuentasAbiertasAsync(IReadOnlyCollection<int> idsReserva);
 
+    /// <summary>
+    /// Ids de las mesas ocupadas por una reserva Confirmada con cuenta abierta, de cualquier dia
+    /// (la cuenta mantiene la mesa ocupada aunque el turno ya haya terminado).
+    /// </summary>
+    Task<HashSet<int>> ObtenerIdsMesaConCuentaAbiertaAsync();
+
     void Agregar(Venta venta);
 
     /// <summary>Marca el total como modificado para que RowVersion cambie aunque la suma no varie.</summary>
