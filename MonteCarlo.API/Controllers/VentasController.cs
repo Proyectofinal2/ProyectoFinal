@@ -74,4 +74,17 @@ public class VentasController(IVentasService ventasService) : ControllerBase
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> ObtenerCatalogoVenta() =>
         this.Responder(await ventasService.ObtenerCatalogoAsync());
+
+    /// <summary>HU-CON-004: Listado de ventas con filtros.</summary>
+    [HttpGet("ventas")] // <-- Importante poner "ventas" para que no choque con la ruta base
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerVentas([FromQuery] FiltroVentasRequest filtro) =>
+        this.Responder(await ventasService.ObtenerListadoAsync(filtro));
+
+    /// <summary>HU-CON-005: Obtiene el detalle de una venta.</summary>
+    [HttpGet("ventas/{idVenta:int}")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerDetalleVenta(int idVenta) =>
+        this.Responder(await ventasService.ObtenerDetalleAsync(idVenta));
 }

@@ -1,4 +1,5 @@
 using MonteCarlo.API.Data.Entities;
+using MonteCarlo.API.DTOs;
 
 namespace MonteCarlo.API.Data.Repositories.Interfaces;
 
@@ -29,6 +30,11 @@ public interface IVentasRepository
 
     /// <summary>Marca el total como modificado para que RowVersion cambie aunque la suma no varie.</summary>
     void MarcarModificada(Venta venta);
+
+    Task<List<Venta>> ObtenerConFiltrosAsync(FiltroVentasRequest filtro);
+
+
+    Task<Venta?> ObtenerDetallePorIdAsync(int idVenta);
 
     Task GuardarCambiosAsync();
 }

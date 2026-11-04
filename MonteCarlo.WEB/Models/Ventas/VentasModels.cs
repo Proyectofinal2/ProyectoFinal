@@ -166,3 +166,51 @@ public class CajaViewModel
 
     public string EtiquetaMesa => CuentaViewModel.Etiqueta(Cuenta.NumerosMesa);
 }
+
+// ------------------------------------------------------------
+// HU-CON-004: Listado de ventas
+// ------------------------------------------------------------
+
+public class VentaListadoApiResponse
+{
+    public int IdVenta { get; set; }
+    public string? Folio { get; set; }
+    public DateTime FechaVenta { get; set; }
+    public string TipoVenta { get; set; } = "";
+    public decimal Total { get; set; }
+    public string? MetodoPago { get; set; }
+    public string Estado { get; set; } = "";
+}
+
+public class FiltroVentasViewModel
+{
+    public DateTime? FechaInicio { get; set; }
+    public DateTime? FechaFin { get; set; }
+    public string? TipoVenta { get; set; }
+    public int? IdMetodoPago { get; set; }
+    public string? Estado { get; set; }
+
+    public List<VentaListadoApiResponse> Ventas { get; set; } = [];
+    public List<MetodoPagoApiResponse> MetodosPago { get; set; } = [];
+}
+
+public class VentaDetalleApiResponse
+{
+    public int IdVenta { get; set; }
+    public string Folio { get; set; } = "";
+    public DateTime FechaVenta { get; set; }
+    public string TipoVenta { get; set; } = "";
+    public string Estado { get; set; } = "";
+    public decimal Total { get; set; }
+    public string? MetodoPago { get; set; }
+    public string UsuarioRegistro { get; set; } = "";
+    public List<LineaDetalleApiResponse> Lineas { get; set; } = [];
+}
+
+public class LineaDetalleApiResponse
+{
+    public string Producto { get; set; } = "";
+    public int Cantidad { get; set; }
+    public decimal PrecioUnitario { get; set; }
+    public decimal Subtotal { get; set; }
+}

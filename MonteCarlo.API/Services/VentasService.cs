@@ -505,4 +505,49 @@ public class VentasService(
             })
             .ToList();
     }
+
+    public async Task<Result<List<VentaListadoResponse>>> ObtenerListadoAsync(FiltroVentasRequest filtro)
+    {
+        var ventas = await ventasRepository.ObtenerConFiltrosAsync(filtro);
+
+        var respuesta = ventas.Select(v => new VentaListadoResponse
+        {
+            IdVenta = v.IdVenta,
+            Folio = $"V-{v.IdVenta:D5}", // Formato de folio
+            FechaVenta = v.FechaVenta,
+            TipoVenta = v.TipoVenta,
+            Total = v.Total,
+            MetodoPago = v.MetodoPago?.Nombre,
+            Estado = v.Estado
+        }).ToList();
+
+        return Result<List<VentaListadoResponse>>.Ok(respuesta, $"{respuesta.Count} venta(s) encontrada(s).");
+    }
+
+    public async Task<Result<VentaDetalleResponse>> ObtenerDetalleAsync(int idVenta)
+    {
+        var venta = await ventasRepository.ObtenerDetallePorIdAsync(idVenta);
+        if (venta is null) return Result<VentaDetalleResponse>.NotFound("Venta no encontrada.");
+
+        var response = new VentaDetalleResponse
+        {
+            IdVenta = venta.IdVenta,
+            Folio = $"V-{venta.IdVenta:D5}",
+            FechaVenta = venta.FechaVenta,
+            TipoVenta = venta.TipoVenta,
+            Estado = venta.Estado,
+            Total = venta.Total,
+            MetodoPago = venta.MetodoPago?.Nombre,
+            UsuarioRegistro = venta.UsuarioRegistro.NombreCompleto,
+            Lineas = venta.Detalles.Select(d => new LineaDetalleResponse
+            {
+                Producto = d.Producto.Nombre,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Subtotal = d.Subtotal
+            }).ToList()
+        };
+
+        return Result<VentaDetalleResponse>.Ok(response, "Detalle obtenido exitosamente.");
+    }
 }

@@ -24,4 +24,8 @@ public interface IVentasApiService
     Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync();
 
     Task<(bool Success, string Message, List<CategoriaVentaApiResponse>? Data)> ObtenerCatalogoVentaAsync();
+
+    Task<(bool Success, string Message, List<VentaListadoApiResponse>? Data)> ObtenerListadoAsync(FiltroVentasViewModel filtro);
+
+    Task<(bool Success, string Message, VentaDetalleApiResponse? Data)> ObtenerDetalleAsync(int idVenta);
 }

@@ -154,3 +154,48 @@ public class ProductoVentaResponse
     public string Nombre { get; set; } = null!;
     public decimal Precio { get; set; }
 }
+
+/// HU-CON-004: Fila del listado de ventas.
+public class VentaListadoResponse
+{
+    public int IdVenta { get; set; }
+    public string? Folio { get; set; }
+    public DateTime FechaVenta { get; set; }
+    public string TipoVenta { get; set; } = null!;
+    public decimal Total { get; set; }
+    public string? MetodoPago { get; set; }
+    public string Estado { get; set; } = null!;
+}
+
+/// HU-CON-004: Filtros para consultar el listado de ventas.
+public class FiltroVentasRequest
+{
+    public DateOnly? FechaInicio { get; set; }
+    public DateOnly? FechaFin { get; set; }
+    public string? TipoVenta { get; set; }
+    public int? IdMetodoPago { get; set; }
+    public string? Estado { get; set; }
+}
+
+/// HU-CON-005: Detalle de una venta registrada.
+public class VentaDetalleResponse
+{
+    public int IdVenta { get; set; }
+    public string Folio { get; set; } = null!;
+    public DateTime FechaVenta { get; set; }
+    public string TipoVenta { get; set; } = null!;
+    public string Estado { get; set; } = null!;
+    public decimal Total { get; set; }
+    public string? MetodoPago { get; set; }
+    public string UsuarioRegistro { get; set; } = null!;
+
+    public List<LineaDetalleResponse> Lineas { get; set; } = [];
+}
+
+public class LineaDetalleResponse
+{
+    public string Producto { get; set; } = null!;
+    public int Cantidad { get; set; }
+    public decimal PrecioUnitario { get; set; }
+    public decimal Subtotal { get; set; }
+}

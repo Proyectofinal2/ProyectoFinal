@@ -89,4 +89,30 @@ public class VentasApiService(HttpClient httpClient, ILogger<VentasApiService> l
             return (false, "Error inesperado. Intenta de nuevo.", default, null);
         }
     }
+
+    public async Task<(bool Success, string Message, List<VentaListadoApiResponse>? Data)> ObtenerListadoAsync(FiltroVentasViewModel filtro)
+    {
+        var query = new List<string>();
+        if (filtro.FechaInicio.HasValue) query.Add($"fechaInicio={filtro.FechaInicio.Value:yyyy-MM-dd}");
+        if (filtro.FechaFin.HasValue) query.Add($"fechaFin={filtro.FechaFin.Value:yyyy-MM-dd}");
+        if (!string.IsNullOrEmpty(filtro.TipoVenta)) query.Add($"tipoVenta={filtro.TipoVenta}");
+        if (filtro.IdMetodoPago.HasValue) query.Add($"idMetodoPago={filtro.IdMetodoPago}");
+        if (!string.IsNullOrEmpty(filtro.Estado)) query.Add($"estado={filtro.Estado}");
+
+        var url = "ventas" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+
+        var (success, message, data, _) = await EjecutarAsync<List<VentaListadoApiResponse>>(
+            () => httpClient.GetAsync(url),
+            "Ventas obtenidas.", "No se pudieron obtener las ventas.");
+
+        return (success, message, data);
+    }
+
+    public async Task<(bool Success, string Message, VentaDetalleApiResponse? Data)> ObtenerDetalleAsync(int idVenta)
+    {
+        var (success, message, data, _) = await EjecutarAsync<VentaDetalleApiResponse>(
+            () => httpClient.GetAsync($"ventas/{idVenta}"),
+            "Detalle obtenido.", "No se pudo obtener el detalle.");
+        return (success, message, data);
+    }
 }

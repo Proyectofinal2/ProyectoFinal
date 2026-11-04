@@ -26,4 +26,8 @@ public interface IVentasService
 
     /// <summary>Productos disponibles con categoria activa, agrupados por categoria, para el selector.</summary>
     Task<Result<List<CategoriaVentaResponse>>> ObtenerCatalogoAsync();
+
+    Task<Result<List<VentaListadoResponse>>> ObtenerListadoAsync(FiltroVentasRequest filtro);
+
+    Task<Result<VentaDetalleResponse>> ObtenerDetalleAsync(int idVenta);
 }

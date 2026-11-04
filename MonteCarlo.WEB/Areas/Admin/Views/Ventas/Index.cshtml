@@ -1,0 +1,165 @@
+﻿@using MonteCarlo.WEB.Models.Ventas
+@model FiltroVentasViewModel
+@{
+    ViewData["Title"] = "Ventas";
+    ViewData["Subtitle"] = "Consulta el historial de ventas del restaurante.";
+}
+
+<form asp-action="Index" method="get" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Desde</label>
+                <input name="FechaInicio" type="date" class="form-control" value="@Model.FechaInicio?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Hasta</label>
+                <input name="FechaFin" type="date" class="form-control" value="@Model.FechaFin?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Origen</label>
+                <select name="TipoVenta" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Consumo" selected="@(Model.TipoVenta == "Consumo")">Consumo</option>
+                    <option value="Takeout" selected="@(Model.TipoVenta == "Takeout")">Takeout</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Método Pago</label>
+                <select name="IdMetodoPago" class="form-select">
+                    <option value="">Todos</option>
+                    @foreach (var m in Model.MetodosPago)
+                    {
+                        <option value="@m.IdMetodoPago" selected="@(Model.IdMetodoPago == m.IdMetodoPago)">@m.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Estado</label>
+                <select name="Estado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Abierta" selected="@(Model.Estado == "Abierta")">Abierta</option>
+                    <option value="Cobrada" selected="@(Model.Estado == "Cobrada")">Cobrada</option>
+                    <option value="Anulada" selected="@(Model.Estado == "Anulada")">Anulada</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Ventas.Count == 0)
+{
+    <div class="mc-table-card">
+        <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                 {
+                     Icono = "bi-receipt",
+                     Titulo = "No hay ventas",
+                     Descripcion = "No se encontraron ventas para los filtros seleccionados."
+                 })" />
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <thead>
+                    <tr>
+                        <th>Folio</th>
+                        <th>Fecha/Hora</th>
+                        <th>Origen</th>
+                        <th>Método Pago</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th> <!-- NUEVA COLUMNA -->
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var venta in Model.Ventas)
+                    {
+                        <tr>
+                            <td class="fw-medium">@venta.Folio</td>
+                            <td>@venta.FechaVenta.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@venta.TipoVenta</td>
+                            <td>@(venta.MetodoPago ?? "-")</td>
+                            <td class="text-end">@venta.Total.ToString("C")</td>
+                            <td>
+                                @if (venta.Estado == "Cobrada")
+                                {
+                                    <span class="badge text-bg-success">Cobrada</span>
+                                }
+                                else if (venta.Estado == "Anulada")
+                                {
+                                    <span class="badge text-bg-danger">Anulada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Abierta</span>
+                                }
+                            </td>
+                            <!-- NUEVA CELDA DE ACCIONES -->
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal" data-bs-target="#modalDetalle"
+                                        data-id="@venta.IdVenta">
+                                    <i class="bi bi-eye"></i> Ver Detalle
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- Modal Detalle de Venta (HU-CON-005) -->
+<div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle de Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalleBody">
+                <!-- Aquí se carga la vista parcial vía AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalDetalle = document.getElementById('modalDetalle');
+            modalDetalle.addEventListener('show.bs.modal', function (event) {
+                // Botón que abrió el modal
+                var button = event.relatedTarget;
+                var idVenta = button.getAttribute('data-id');
+                var body = document.getElementById('detalleBody');
+
+                // Mostrar spinner de carga
+                body.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Cargando detalle...</p></div>';
+
+                // Hacer la petición al controlador para obtener la vista parcial
+                fetch(`/admin/ventas/listado/detalle/${idVenta}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error al cargar');
+                        return response.text();
+                    })
+                    .then(html => {
+                        body.innerHTML = html;
+                    })
+                    .catch(() => {
+                        body.innerHTML = '<div class="alert alert-danger">Error al cargar el detalle de la venta.</div>';
+                    });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,51 @@
+﻿@using MonteCarlo.WEB.Models.Ventas
+@model VentaDetalleApiResponse
+
+<div class="row mb-4">
+    <div class="col-sm-6">
+        <p class="mb-1 text-muted small">Folio</p>
+        <p class="fw-bold fs-5">@Model.Folio</p>
+
+        <p class="mb-1 text-muted small">Fecha y Hora</p>
+        <p>@Model.FechaVenta.ToString("dddd d 'de' MMMM 'de' yyyy, HH:mm")</p>
+    </div>
+    <div class="col-sm-6">
+        <p class="mb-1 text-muted small">Atendido por</p>
+        <p>@Model.UsuarioRegistro</p>
+
+        <p class="mb-1 text-muted small">Origen / Pago / Estado</p>
+        <p>
+            <span class="badge text-bg-secondary">@Model.TipoVenta</span>
+            <span class="badge text-bg-info">@(Model.MetodoPago ?? "Sin método")</span>
+            <span class="badge text-bg-success">@Model.Estado</span>
+        </p>
+    </div>
+</div>
+
+<table class="table table-sm table-striped border">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th class="text-center">Cant.</th>
+            <th class="text-end">Precio Unit.</th>
+            <th class="text-end">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var linea in Model.Lineas)
+        {
+            <tr>
+                <td>@linea.Producto</td>
+                <td class="text-center">@linea.Cantidad</td>
+                <td class="text-end">@linea.PrecioUnitario.ToString("C")</td>
+                <td class="text-end fw-medium">@linea.Subtotal.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3" class="text-end fw-bold border-0">Total:</td>
+            <td class="text-end fw-bold fs-5 border-0">@Model.Total.ToString("C")</td>
+        </tr>
+    </tfoot>
+</table>

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MonteCarlo.API.Data.Entities;
 using MonteCarlo.API.Data.Repositories.Interfaces;
+using MonteCarlo.API.DTOs;
 
 namespace MonteCarlo.API.Data.Repositories;
 
@@ -56,4 +57,39 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
         context.Entry(venta).Property(v => v.Total).IsModified = true;
 
     public Task GuardarCambiosAsync() => context.SaveChangesAsync();
+
+    public async Task<List<Venta>> ObtenerConFiltrosAsync(FiltroVentasRequest filtro)
+    {
+        var query = context.Ventas
+            .Include(v => v.MetodoPago)
+            .AsQueryable();
+
+        // 1. Rango de fechas (si no mandan nada, usa el día actual)
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        var inicio = filtro.FechaInicio ?? hoy;
+        var fin = filtro.FechaFin ?? inicio;
+
+        var inicioDateTime = inicio.ToDateTime(TimeOnly.MinValue);
+        var finDateTime = fin.ToDateTime(TimeOnly.MaxValue);
+
+        query = query.Where(v => v.FechaVenta >= inicioDateTime && v.FechaVenta <= finDateTime);
+
+        // 2. Filtros adicionales
+        if (!string.IsNullOrWhiteSpace(filtro.TipoVenta))
+            query = query.Where(v => v.TipoVenta == filtro.TipoVenta);
+
+        if (filtro.IdMetodoPago.HasValue)
+            query = query.Where(v => v.IdMetodoPago == filtro.IdMetodoPago.Value);
+
+        if (!string.IsNullOrWhiteSpace(filtro.Estado))
+            query = query.Where(v => v.Estado == filtro.Estado);
+
+        return await query.OrderBy(v => v.FechaVenta).ToListAsync();
+    }
+    public Task<Venta?> ObtenerDetallePorIdAsync(int idVenta) =>
+    context.Ventas
+        .Include(v => v.MetodoPago)
+        .Include(v => v.UsuarioRegistro)
+        .Include(v => v.Detalles).ThenInclude(d => d.Producto)
+        .FirstOrDefaultAsync(v => v.IdVenta == idVenta);
 }
