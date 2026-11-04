@@ -41,7 +41,10 @@ public interface IReservasRepository
     /// <summary>Reserva por Id con cliente, estado y mesas (con su mesa), rastreada, para la cuenta y el cobro (HU-CON-002).</summary>
     Task<Reserva?> ObtenerParaCuentaAsync(int idReserva);
 
-    /// <summary>Reserva Confirmada y atendida que ocupa esa mesa hoy, para liberarla (HU-OPE-004).</summary>
+    /// <summary>
+    /// Reserva Confirmada y atendida que ocupa esa mesa, para liberarla (HU-OPE-004): la de la fecha indicada
+    /// o una de otro dia con la cuenta todavia abierta.
+    /// </summary>
     Task<Reserva?> ObtenerConfirmadaActivaPorMesaAsync(int idMesa, DateOnly fecha);
 
     /// <summary>Agrega una nueva reserva al contexto (HU-RES-003).</summary>

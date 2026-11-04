@@ -41,16 +41,15 @@ public class ReservasService(
             return Result<DisponibilidadFechaResponse>.BadRequest("La cantidad de personas debe ser mayor que cero.");
         }
 
-        var umbral = await configuracionService.ObtenerValorUmbralAsync();
-        var datosDisponibilidad = await ObtenerDatosDisponibilidadAsync(cantidadPersonas, umbral);
+        var datosDisponibilidad = await ObtenerDatosDisponibilidadAsync(cantidadPersonas);
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var intervaloMinutos = await configuracionService.ObtenerValorIntervaloCalendarioAsync();
-        var horasReservadas = datosDisponibilidad.RequiereMesaDisponible
-            ? await mesasRepository.ObtenerHorasReservadasPorFechaAsync(fecha)
-            : null;
+        var horasReservadas = await mesasRepository.ObtenerHorasReservadasPorFechaAsync(fecha);
+        var ahora = DateTime.Now;
+        var mesasConCuenta = await ObtenerMesasConCuentaDeHoyAsync(fecha, fecha, ahora);
 
         return Result<DisponibilidadFechaResponse>.Ok(
-            CalcularDisponibilidad(fecha, datosDisponibilidad, horasReservadas, DateTime.Now, duracionMinutos, intervaloMinutos),
+            CalcularDisponibilidad(fecha, datosDisponibilidad, horasReservadas, mesasConCuenta, ahora, duracionMinutos, intervaloMinutos),
             "Disponibilidad obtenida exitosamente.");
     }
 
@@ -68,21 +67,19 @@ public class ReservasService(
 
         var inicio = new DateOnly(anio, mes, 1);
         var fin = new DateOnly(anio, mes, DateTime.DaysInMonth(anio, mes));
-        var umbral = await configuracionService.ObtenerValorUmbralAsync();
-        var datosDisponibilidad = await ObtenerDatosDisponibilidadAsync(cantidadPersonas, umbral);
+        var datosDisponibilidad = await ObtenerDatosDisponibilidadAsync(cantidadPersonas);
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var intervaloMinutos = await configuracionService.ObtenerValorIntervaloCalendarioAsync();
         var ahora = DateTime.Now;
 
-        var horasReservadasPorFecha = datosDisponibilidad.RequiereMesaDisponible
-            ? await mesasRepository.ObtenerHorasReservadasPorRangoAsync(inicio, fin)
-            : null;
+        var horasReservadasPorFecha = await mesasRepository.ObtenerHorasReservadasPorRangoAsync(inicio, fin);
+        var mesasConCuenta = await ObtenerMesasConCuentaDeHoyAsync(inicio, fin, ahora);
 
         var fechas = new List<DisponibilidadFechaResponse>();
         for (var dia = inicio; dia <= fin; dia = dia.AddDays(1))
         {
-            var horasReservadas = horasReservadasPorFecha?.GetValueOrDefault(dia);
-            var disponibilidad = CalcularDisponibilidad(dia, datosDisponibilidad, horasReservadas, ahora, duracionMinutos, intervaloMinutos);
+            var horasReservadas = horasReservadasPorFecha.GetValueOrDefault(dia);
+            var disponibilidad = CalcularDisponibilidad(dia, datosDisponibilidad, horasReservadas, mesasConCuenta, ahora, duracionMinutos, intervaloMinutos);
             fechas.Add(new DisponibilidadFechaResponse
             {
                 Fecha = disponibilidad.Fecha,
@@ -243,6 +240,15 @@ public class ReservasService(
             return Result<ReservaResponse>.BadRequest("El telefono ingresado no es valido.");
         }
 
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var datosMesas = await CargarMesasConReservasDelDiaAsync(request.FechaReserva);
+        datosMesas = SinMesasConCuentaAbierta(datosMesas, await ObtenerMesasBloqueadasPorCuentaAsync(request.FechaReserva, request.HoraReserva, duracionMinutos));
+        var resultado = BuscarMejorAsignacion(request.CantidadPersonas, request.HoraReserva, duracionMinutos, datosMesas);
+
+        // Sin mesa no hay reserva: se avisa antes de registrar al cliente.
+        if (resultado.RequiereManual)
+            return Result<ReservaResponse>.Conflict("No hay mesa disponible para esa fecha y hora. Elige otro horario.");
+
         var cliente = await clientesRepository.ObtenerPorTelefonoAsync(telefono);
 
         if (cliente is null)
@@ -261,27 +267,11 @@ public class ReservasService(
             await clientesRepository.GuardarCambiosAsync();
         }
 
-        var umbral = await configuracionService.ObtenerValorUmbralAsync();
-        AsignacionResult resultado;
-
-        if (request.CantidadPersonas > umbral)
-        {
-            resultado = new AsignacionResult([], RequiereManual: true);
-        }
-        else
-        {
-            var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
-            var datosMesas = await CargarMesasConReservasDelDiaAsync(request.FechaReserva);
-            resultado = BuscarMejorAsignacion(request.CantidadPersonas, request.HoraReserva, duracionMinutos, datosMesas);
-        }
-
-        var requiereAsignacionManual = resultado.RequiereManual;
-        var nombreEstado = resultado.RequiereManual ? Pendiente : Confirmada;
-        var estado = await reservasRepository.ObtenerEstadoAsync(nombreEstado);
+        var estado = await reservasRepository.ObtenerEstadoAsync(Confirmada);
 
         if (estado is null)
         {
-            return Result<ReservaResponse>.InternalError($"El estado \"{nombreEstado}\" no esta configurado.");
+            return Result<ReservaResponse>.InternalError($"El estado \"{Confirmada}\" no esta configurado.");
         }
 
         var codigo = await GenerarCodigoUnicoAsync();
@@ -294,7 +284,6 @@ public class ReservasService(
             FechaReserva = request.FechaReserva,
             HoraReserva = request.HoraReserva,
             CantidadPersonas = request.CantidadPersonas,
-            RequiereAsignacionManual = requiereAsignacionManual,
             Observaciones = string.IsNullOrWhiteSpace(request.Observaciones)
                 ? null
                 : request.Observaciones.Trim(),
@@ -316,11 +305,7 @@ public class ReservasService(
 
         var creada = await reservasRepository.ObtenerPorCodigoAsync(codigo);
 
-        return Result<ReservaResponse>.Ok(
-            Mapear(creada!),
-            resultado.RequiereManual
-                ? "Reserva registrada. Requiere revision administrativa."
-                : "Reserva confirmada exitosamente.");
+        return Result<ReservaResponse>.Ok(Mapear(creada!), "Reserva confirmada exitosamente.");
     }
 
     // ============================================================
@@ -335,6 +320,7 @@ public class ReservasService(
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var datosMesas = await CargarMesasConReservasDelDiaAsync(reserva.FechaReserva);
         ExcluirReservaPropia(datosMesas.HorasReservadas, reserva);
+        datosMesas = SinMesasConCuentaAbierta(datosMesas, await ObtenerMesasBloqueadasPorCuentaAsync(reserva.FechaReserva, reserva.HoraReserva, duracionMinutos));
 
         var resultado = BuscarMejorAsignacion(reserva.CantidadPersonas, reserva.HoraReserva, duracionMinutos, datosMesas);
 
@@ -375,6 +361,9 @@ public class ReservasService(
         var mesaOcupada = mesas.FirstOrDefault(m => !EstaLibre(m, horasReservadas, reserva.HoraReserva, duracionMinutos));
         if (mesaOcupada is not null) return Result<AsignacionMesaResponse>.Conflict($"La mesa {mesaOcupada.NumeroMesa} ya tiene otra reserva activa que se solapa con este horario.");
 
+        var mesaConCuenta = PrimeraMesaConCuenta(mesas, await ObtenerMesasBloqueadasPorCuentaAsync(reserva.FechaReserva, reserva.HoraReserva, duracionMinutos));
+        if (mesaConCuenta is not null) return Result<AsignacionMesaResponse>.Conflict($"La mesa {mesaConCuenta.NumeroMesa} tiene una cuenta abierta.");
+
         var estadoConfirmada = await reservasRepository.ObtenerEstadoAsync(Confirmada);
         if (estadoConfirmada is null) return Result<AsignacionMesaResponse>.InternalError("El estado \"Confirmada\" no esta configurado.");
 
@@ -405,6 +394,7 @@ public class ReservasService(
         var ahora = DateTime.Now;
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var datosMesas = await CargarMesasConReservasDelDiaAsync(DateOnly.FromDateTime(ahora));
+        datosMesas = SinMesasConCuentaAbierta(datosMesas, await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync());
         var resultado = BuscarMejorAsignacion(cantidadPersonas, TimeOnly.FromDateTime(ahora), duracionMinutos, datosMesas);
 
         return Result<AsignacionSugeridaResponse>.Ok(new AsignacionSugeridaResponse
@@ -439,6 +429,9 @@ public class ReservasService(
 
         var mesaOcupada = mesas.FirstOrDefault(m => !EstaLibre(m, horasReservadas, horaActual, duracionMinutos));
         if (mesaOcupada is not null) return Result<ReservaWalkInResponse>.Conflict($"La mesa {mesaOcupada.NumeroMesa} ya tiene otra reserva activa que se solapa con este horario.");
+
+        var mesaConCuenta = PrimeraMesaConCuenta(mesas, await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync());
+        if (mesaConCuenta is not null) return Result<ReservaWalkInResponse>.Conflict($"La mesa {mesaConCuenta.NumeroMesa} tiene una cuenta abierta.");
 
         var estadoConfirmada = await reservasRepository.ObtenerEstadoAsync(Confirmada);
         if (estadoConfirmada is null) return Result<ReservaWalkInResponse>.InternalError("El estado \"Confirmada\" no esta configurado.");
@@ -566,6 +559,27 @@ public class ReservasService(
         return new DatosMesasDelDia(mesas, horasReservadas);
     }
 
+    /// <summary>
+    /// Una cuenta abierta bloquea la mesa para una reserva que empieza dentro del turno actual (ahora + duracion).
+    /// Una reserva posterior si puede tomarla: se supone que la cuenta estara cerrada para entonces.
+    /// </summary>
+    private static bool CuentaBloqueaMesa(DateTime inicioReserva, DateTime ahora, int duracionMinutos) =>
+        inicioReserva < ahora.AddMinutes(duracionMinutos);
+
+    /// <summary>Mesas ocupadas por una cuenta abierta que bloquean una reserva en esa fecha y hora (sin consultar si no aplica).</summary>
+    private async Task<HashSet<int>> ObtenerMesasBloqueadasPorCuentaAsync(DateOnly fecha, TimeOnly hora, int duracionMinutos) =>
+        CuentaBloqueaMesa(fecha.ToDateTime(hora), DateTime.Now, duracionMinutos)
+            ? await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync()
+            : [];
+
+    private static DatosMesasDelDia SinMesasConCuentaAbierta(DatosMesasDelDia datosMesas, HashSet<int> mesasConCuenta) =>
+        mesasConCuenta.Count == 0
+            ? datosMesas
+            : datosMesas with { Mesas = datosMesas.Mesas.Where(m => !mesasConCuenta.Contains(m.IdMesa)).ToList() };
+
+    private static Mesa? PrimeraMesaConCuenta(List<Mesa> mesas, HashSet<int> mesasConCuenta) =>
+        mesas.FirstOrDefault(m => mesasConCuenta.Contains(m.IdMesa));
+
     private static AsignacionResult BuscarMejorAsignacion(int cantidadPersonas, TimeOnly hora, int duracionMinutos, DatosMesasDelDia datosMesas)
     {
         var mesasLibres = FiltrarMesasLibres(datosMesas.Mesas, datosMesas.HorasReservadas, hora, duracionMinutos);
@@ -632,18 +646,27 @@ public class ReservasService(
         throw new InvalidOperationException("No se pudo generar un codigo unico despues de 10 intentos.");
     }
 
-    private async Task<DatosDisponibilidad> ObtenerDatosDisponibilidadAsync(int cantidadPersonas, int umbral)
+    private async Task<DatosDisponibilidad> ObtenerDatosDisponibilidadAsync(int cantidadPersonas)
     {
         var cierres = await reservasRepository.ObtenerDiasCierreFijoAsync();
         var cierresEventuales = await reservasRepository.ObtenerFechasCierreEventualAsync(DateOnly.FromDateTime(DateTime.Now));
         var horarios = await reservasRepository.ObtenerHorariosOperacionAsync();
-        var requiereMesaDisponible = cantidadPersonas <= umbral;
-        var mesasHabilitadas = requiereMesaDisponible ? await mesasRepository.ObtenerMesasHabilitadasAsync() : [];
+        var mesasHabilitadas = await mesasRepository.ObtenerMesasHabilitadasAsync();
 
-        return new DatosDisponibilidad(cantidadPersonas, cierres.ToHashSet(), cierresEventuales.ToHashSet(), horarios, mesasHabilitadas, requiereMesaDisponible);
+        return new DatosDisponibilidad(cantidadPersonas, cierres.ToHashSet(), cierresEventuales.ToHashSet(), horarios, mesasHabilitadas);
     }
 
-    private static DisponibilidadFechaResponse CalcularDisponibilidad(DateOnly fecha, DatosDisponibilidad datosDisponibilidad, Dictionary<int, List<TimeOnly>>? horasReservadas, DateTime ahora, int duracionMinutos, int intervaloMinutos)
+    /// <summary>
+    /// Mesas con cuenta abierta, solo si hoy cae en el rango consultado (la cuenta abierta solo afecta al dia de hoy);
+    /// asi el calendario no hace la consulta para meses futuros.
+    /// </summary>
+    private async Task<HashSet<int>> ObtenerMesasConCuentaDeHoyAsync(DateOnly desde, DateOnly hasta, DateTime ahora)
+    {
+        var hoy = DateOnly.FromDateTime(ahora);
+        return hoy >= desde && hoy <= hasta ? await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync() : [];
+    }
+
+    private static DisponibilidadFechaResponse CalcularDisponibilidad(DateOnly fecha, DatosDisponibilidad datosDisponibilidad, Dictionary<int, List<TimeOnly>>? horasReservadas, HashSet<int> mesasConCuentaHoy, DateTime ahora, int duracionMinutos, int intervaloMinutos)
     {
         var respuesta = new DisponibilidadFechaResponse { Fecha = fecha };
         var hoy = DateOnly.FromDateTime(ahora);
@@ -655,7 +678,7 @@ public class ReservasService(
 
         var horario = datosDisponibilidad.Horarios.FirstOrDefault(h => h.DiaSemana == diaSemana && h.Activo);
         if (horario is null) { respuesta.MotivoNoDisponible = "No hay horario de operacion configurado para este dia."; return respuesta; }
-        if (datosDisponibilidad.MesasCandidatas.Count == 0 && datosDisponibilidad.RequiereMesaDisponible) { respuesta.MotivoNoDisponible = "No hay mesas habilitadas."; return respuesta; }
+        if (datosDisponibilidad.MesasCandidatas.Count == 0) { respuesta.MotivoNoDisponible = "No hay mesas habilitadas."; return respuesta; }
 
         var horaActual = TimeOnly.FromDateTime(ahora);
         var duracionReserva = TimeSpan.FromMinutes(duracionMinutos);
@@ -665,7 +688,12 @@ public class ReservasService(
         for (var hora = horario.HoraApertura; hora.ToTimeSpan() + duracionReserva <= horario.HoraCierre.ToTimeSpan(); hora = hora.Add(intervaloLlegada))
         {
             if (fecha == hoy && hora <= horaActual) continue;
-            if (datosDisponibilidad.RequiereMesaDisponible && BuscarMejorAsignacion(datosDisponibilidad.CantidadPersonas, hora, duracionMinutos, datosMesas).RequiereManual) continue;
+
+            // Hoy, una cuenta abierta bloquea la mesa en los horarios que caen dentro del turno actual.
+            var datosHora = fecha == hoy && CuentaBloqueaMesa(fecha.ToDateTime(hora), ahora, duracionMinutos)
+                ? SinMesasConCuentaAbierta(datosMesas, mesasConCuentaHoy)
+                : datosMesas;
+            if (BuscarMejorAsignacion(datosDisponibilidad.CantidadPersonas, hora, duracionMinutos, datosHora).RequiereManual) continue;
 
             respuesta.HorariosDisponibles.Add(hora);
         }
@@ -762,5 +790,5 @@ public class ReservasService(
         return Result.Ok($"Estado cambiado a {nuevoEstado} exitosamente.");
     }
 
-    private sealed record DatosDisponibilidad(int CantidadPersonas, HashSet<byte> CierresFijos, HashSet<DateOnly> CierresEventuales, List<HorarioOperacion> Horarios, List<Mesa> MesasCandidatas, bool RequiereMesaDisponible);
+    private sealed record DatosDisponibilidad(int CantidadPersonas, HashSet<byte> CierresFijos, HashSet<DateOnly> CierresEventuales, List<HorarioOperacion> Horarios, List<Mesa> MesasCandidatas);
 }
