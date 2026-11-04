@@ -73,8 +73,9 @@
                 </a>
             </li>
             <li>
-                <a class="@ClaseActiva(controladorActual, "Ventas")"
-                   asp-area="Admin" asp-controller="Ventas" asp-action="Index">
+                <!-- CAMBIO AQUÍ: apuntamos al nuevo controlador -->
+                <a class="@ClaseActiva(controladorActual, "VentasListado")"
+                   asp-area="Admin" asp-controller="VentasListado" asp-action="Index">
                     <i class="bi bi-receipt" aria-hidden="true"></i> Ventas
                 </a>
             </li>
