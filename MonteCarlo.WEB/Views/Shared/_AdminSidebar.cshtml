@@ -73,9 +73,10 @@
                 </a>
             </li>
             <li>
-                <span class="mc-sidebar__link opacity-50" aria-disabled="true" title="Disponible en una entrega posterior">
+                <a class="@ClaseActiva(controladorActual, "Ventas")"
+                   asp-area="Admin" asp-controller="Ventas" asp-action="Index">
                     <i class="bi bi-receipt" aria-hidden="true"></i> Ventas
-                </span>
+                </a>
             </li>
 
             @* HU-AUT-005 y HU-AUT-006: exclusivo del Administrador General.
