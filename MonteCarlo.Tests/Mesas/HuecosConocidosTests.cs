@@ -25,15 +25,41 @@ public class HuecosConocidosTests(SqlServerFixture fixture) : PruebaSql(fixture)
     }
 
     [SqlFact]
-    [Trait("HU", "CON-002"), Trait("Hueco", "G1")]
-    public async Task G1_crearWalkInSobreMesaOcupadaPorCuentaAbierta_HOY_tieneExito()
+    [Trait("HU", "CON-002"), Trait("Escenario", "14"), Trait("Hueco", "G1")]
+    public async Task G1_crearWalkInSobreMesaOcupadaPorCuentaAbierta_esConflicto()
     {
-        // Plan: .claude/plans/HU-CON-002-cuentas-abiertas-vencidas.md (G1). Cuando se implemente, esto debe ser 409.
         var (mesa, _) = await MesaConCuentaDeAyerAsync(capacidad: 20);
 
         var r = await S.Reservas.CrearWalkInAsync(new CrearReservaWalkInRequest { CantidadPersonas = 2, IdsMesa = [mesa.IdMesa] });
 
-        Assert.True(r.Success, r.Message);   // HOY: se sienta otro grupo sobre una mesa Ocupada
+        Assert.Equal(409, r.StatusCode);
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "14"), Trait("Hueco", "G1")]
+    public async Task G1_sugerirWalkInNoOfreceLaMesaConCuentaAbierta()
+    {
+        var (mesa, _) = await MesaConCuentaDeAyerAsync(capacidad: 20);
+
+        var r = await S.Reservas.SugerirWalkInAsync(2);
+
+        Assert.DoesNotContain(mesa.NumeroMesa, r.Data!.NumerosMesa);
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Hueco", "R1")]
+    public async Task R1_liberarPorMesaEncuentraLaCuentaAbiertaVaciaDeAyer()
+    {
+        var mesa = Mundo.CrearMesa();
+        var ayer = Mundo.CrearReserva([mesa], fecha: Mundo.Hoy.AddDays(-1), hora: new TimeOnly(20, 0), personas: 2,
+            fechaAtencion: DateTime.Now.AddDays(-1));
+        var producto = Mundo.CrearProducto();
+        var abierta = await S.Ventas.AgregarPedidoAsync(ayer.IdReserva, Pedido((producto.IdProducto, 1)), Mundo.IdUsuario);
+        await S.Ventas.AnularLineaAsync(abierta.Data!.Pedidos[0].Lineas[0].IdDetalle, new AnularLineaRequest(), Mundo.IdUsuario);
+
+        var r = await S.Ventas.LiberarSinConsumoPorMesaAsync(mesa.IdMesa, Mundo.IdUsuario);
+
+        Assert.True(r.Success, r.Message);
     }
 
 

@@ -12,7 +12,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
     // ============================================================
 
     public const string ClaveUmbral = "UmbralConfirmacionAutomatica";
-    private const int UmbralPorDefecto = 4;
 
     /// <summary>Duracion estimada de un turno/reserva (HU-CFG-006), usada para
     /// solapamiento y disponibilidad.</summary>
@@ -38,9 +37,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
     // Lectura usada por el resto del sistema (solapamiento, bloqueo
     // de walk-in, recordatorios) para leer un parametro vigente.
     // ============================================================
-
-    public Task<int> ObtenerValorUmbralAsync() =>
-        ObtenerValorEnteroAsync(ClaveUmbral, UmbralPorDefecto);
 
     public Task<int> ObtenerValorDuracionReservaAsync() =>
         ObtenerValorEnteroAsync(ClaveDuracionReserva, DuracionReservaPorDefecto);
