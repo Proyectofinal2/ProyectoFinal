@@ -476,6 +476,9 @@ public class ReservasService(
         if (reserva.FechaAtencion is not null)
             return Result.BadRequest("El cliente ya fue registrado como atendido.");
 
+        if (reserva.FechaReserva != DateOnly.FromDateTime(DateTime.Now))
+            return Result.BadRequest("La llegada solo se registra el mismo dia de la reserva.");
+
         // Registrar la hora exacta de llegada, el estado se mantiene en Confirmada.
         reserva.FechaAtencion = DateTime.Now;
 
@@ -512,13 +515,25 @@ public class ReservasService(
     // Reservas del dia y Búsqueda (HU-OPE-005)
     // ============================================================
 
-    public async Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha)
+    private const int MaximoDiasRango = 92;
+
+    public async Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha, DateOnly? hasta = null)
     {
-        var reservas = await reservasRepository.ObtenerPorFechaAsync(fecha);
+        var fin = hasta ?? fecha;
+        if (fin < fecha)
+            return Result<List<ReservaDelDiaResponse>>.BadRequest("La fecha final no puede ser anterior a la inicial.");
+        if (fin.DayNumber - fecha.DayNumber >= MaximoDiasRango)
+            return Result<List<ReservaDelDiaResponse>>.BadRequest($"El rango no puede superar {MaximoDiasRango} dias.");
+
+        var reservas = await reservasRepository.ObtenerPorRangoAsync(fecha, fin);
+
+        var ventas = await ventasRepository.ObtenerResumenVentasPorReservaAsync(reservas.Select(r => r.IdReserva).ToList());
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var ahora = DateTime.Now;
 
         var respuesta = reservas
            // .Where(r => r.EstadoReserva.Nombre != Cancelada)
-            .Select(MapearDelDia)
+            .Select(r => MapearDelDia(r, ventas, ahora, duracionMinutos))
             .ToList();
 
         return Result<List<ReservaDelDiaResponse>>.Ok(respuesta, "Reservas del dia obtenidas exitosamente.");
@@ -532,7 +547,10 @@ public class ReservasService(
         const int limiteResultados = 50;
         var reservas = await reservasRepository.BuscarPorNombreOTelefonoAsync(termino, limiteResultados);
 
-        var respuesta = reservas.Select(MapearDelDia).ToList();
+        var ventas = await ventasRepository.ObtenerResumenVentasPorReservaAsync(reservas.Select(r => r.IdReserva).ToList());
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var ahora = DateTime.Now;
+        var respuesta = reservas.Select(r => MapearDelDia(r, ventas, ahora, duracionMinutos)).ToList();
 
         return Result<List<ReservaDelDiaResponse>>.Ok(respuesta, $"{respuesta.Count} reserva(s) encontrada(s).");
     }
@@ -738,7 +756,8 @@ public class ReservasService(
         NumerosMesa = reserva.ReservaMesas.Select(rm => rm.Mesa.NumeroMesa).ToList()
     };
 
-    private static ReservaDelDiaResponse MapearDelDia(Reserva r) => new()
+    private static ReservaDelDiaResponse MapearDelDia(
+        Reserva r, Dictionary<int, VentaReservaResumen> ventas, DateTime ahora, int duracionMinutos) => new()
     {
         IdReserva = r.IdReserva,
         CodigoReserva = r.CodigoReserva,
@@ -751,9 +770,38 @@ public class ReservasService(
         NumerosMesa = r.ReservaMesas.Select(rm => rm.Mesa.NumeroMesa).OrderBy(n => n).ToList(),
         Observaciones = r.Observaciones,
         EsWalkIn = r.EsWalkIn,
-        FechaAtencion = r.FechaAtencion // <-- AGREGADO
+        FechaAtencion = r.FechaAtencion,
+        Consumo = ventas.TryGetValue(r.IdReserva, out var v)
+            ? new ConsumoReservaResponse { IdVenta = v.IdVenta, Folio = VentasService.Folio(v.IdVenta), Estado = v.Estado, Total = v.Total, Productos = v.Productos }
+            : null,
+        MinutosDeRetraso = MinutosDeRetraso(r, ahora),
+        MinutosExcedidos = MinutosExcedidos(r, ahora, duracionMinutos)
     };
 
+
+    /// <summary>Reserva Confirmada sin llegada cuya hora ya paso: minutos de retraso (null si aun no empieza o ya llego).</summary>
+    private static int? MinutosDeRetraso(Reserva r, DateTime ahora)
+    {
+        if (r.EstadoReserva.Nombre != Confirmada || r.FechaAtencion is not null)
+            return null;
+
+        var minutos = (int)(ahora - r.FechaReserva.ToDateTime(r.HoraReserva)).TotalMinutes;
+        return minutos > 0 ? minutos : null;
+    }
+
+    /// <summary>
+    /// Cliente sentado en una reserva aun Confirmada que paso su tiempo (llegada + duracion): minutos de exceso.
+    /// Es la misma referencia que la liberacion estimada de la mesa, SIN la tolerancia de cobro: avisa antes de que la
+    /// cuenta pase a «Por cobrar» en Mesas (<c>CuentaVencimiento</c> = llegada + duracion + tolerancia).
+    /// </summary>
+    private static int? MinutosExcedidos(Reserva r, DateTime ahora, int duracionMinutos)
+    {
+        if (r.EstadoReserva.Nombre != Confirmada || r.FechaAtencion is null)
+            return null;
+
+        var minutos = (int)(ahora - r.FechaAtencion.Value.AddMinutes(duracionMinutos)).TotalMinutes;
+        return minutos > 0 ? minutos : null;
+    }
 
     // ============================================================
     // HU-OPE-002: Gestionar estados manualmente

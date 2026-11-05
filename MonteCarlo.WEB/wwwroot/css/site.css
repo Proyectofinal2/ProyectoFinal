@@ -3168,3 +3168,154 @@ a.mc-pager__btn:hover {
 .mc-panel.is-lateral { max-height: 640px; position: static; width: 320px; border: 1px solid var(--mc-border); border-radius: 12px; box-shadow: none; }
 .mc-panel.is-ancho { width: 320px; }
 @media (max-width: 991px) { .mc-tarjetas-wrap { grid-template-columns: 1fr; } .mc-panel.is-lateral { width: 100%; } }
+
+/* ------------------------------------------------------------
+   Reservas: tabla de operacion (HU-OPE-003, HU-CON-002)
+   ------------------------------------------------------------ */
+.mc-reservas td { vertical-align: middle; }
+.mc-reservas .mc-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mc-reservas__hora { font-weight: var(--mc-weight-semibold); }
+.mc-reservas__sub {
+  display: block;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  line-height: 1.4;
+}
+.mc-reservas__obs {
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-reservas__alertas { display: flex; flex-direction: column; align-items: flex-start; gap: var(--mc-space-1); margin-top: var(--mc-space-1); }
+.mc-reservas tr.mc-fila--retraso > td:first-child { box-shadow: inset 3px 0 0 var(--mc-warning); }
+.mc-reservas tr.mc-fila--exceso > td:first-child { box-shadow: inset 3px 0 0 var(--mc-danger); }
+
+/* Acciones: columnas fijas (principal e iconos) para que se alineen en todas las filas. */
+.mc-reservas__acciones {
+  --mc-accion-alto: 2.25rem;
+  display: grid;
+  grid-template-columns: 8.5rem var(--mc-accion-alto) var(--mc-accion-alto);
+  align-items: center;
+  justify-content: end;
+  gap: var(--mc-space-2);
+}
+/* Los tres tipos de control comparten alto, radio y tamano de letra para verse como un mismo conjunto. */
+.mc-reservas__acciones .btn,
+.mc-reservas__acciones .mc-icon-btn {
+  box-sizing: border-box;
+  height: var(--mc-accion-alto);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+.mc-reservas__acciones .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 var(--mc-space-3);
+  white-space: nowrap;
+}
+.mc-reservas__acciones .mc-icon-btn {
+  width: var(--mc-accion-alto);
+  border-color: var(--mc-border-strong);
+  font-size: 16px;
+}
+
+.mc-reservas-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+  margin-bottom: var(--mc-space-3);
+}
+.mc-reservas-barra__resumen { margin: 0; color: var(--mc-ink-muted); font-size: var(--mc-text-sm); }
+.mc-segment__conteo { margin-left: var(--mc-space-1); color: var(--mc-ink-muted); font-variant-numeric: tabular-nums; }
+
+/* Indicadores de la pantalla de Reservas */
+.mc-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--mc-space-3);
+  margin-bottom: var(--mc-space-4);
+}
+.mc-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background-color: var(--mc-elevated);
+  box-shadow: var(--mc-shadow-sm);
+}
+.mc-stat__icono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-600);
+  font-size: var(--mc-text-lg);
+}
+.mc-stat__icono--info { background-color: var(--mc-info-bg); color: var(--mc-info); }
+.mc-stat__icono--warning { background-color: var(--mc-warning-bg); color: var(--mc-warning); }
+.mc-stat__valor { display: block; font-size: 1.5rem; font-weight: var(--mc-weight-semibold); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mc-stat__etiqueta { display: block; color: var(--mc-ink-muted); font-size: var(--mc-text-xs); }
+
+/* Rango de fechas como un solo control: icono, desde, flecha, hasta */
+.mc-rango {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+  height: 38px;
+  padding: 0 var(--mc-space-3);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 8px;
+  background-color: var(--mc-surface);
+  color: var(--mc-ink-subtle);
+}
+.mc-rango:focus-within {
+  border-color: var(--mc-green-500);
+  background-color: var(--mc-elevated);
+  box-shadow: 0 0 0 3px var(--mc-green-50);
+}
+.mc-rango__input {
+  width: 8.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mc-ink);
+  font-size: 14px;
+  outline: 0;
+}
+.mc-rango__input:disabled { color: var(--mc-ink-subtle); }
+.mc-rango.is-disabled { opacity: 0.6; }
+
+/* Atajos de fecha */
+.mc-preset {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 var(--mc-space-3);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: 999px;
+  background-color: var(--mc-elevated);
+  color: var(--mc-ink);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mc-preset:hover { border-color: var(--mc-green-500); color: var(--mc-ink); }
+.mc-preset.is-active {
+  border-color: var(--mc-green-500);
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-600);
+  font-weight: var(--mc-weight-semibold);
+}
+.mc-preset:focus-visible { outline: 2px solid var(--mc-green-500); outline-offset: 2px; }
+.mc-toolbar__fila .mc-search--fin { margin-left: auto; }

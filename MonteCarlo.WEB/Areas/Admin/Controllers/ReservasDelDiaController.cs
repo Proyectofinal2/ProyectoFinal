@@ -6,19 +6,25 @@ using MonteCarlo.WEB.Services.Interfaces;
 
 namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 
-/// Reservas del dia para planificar la operacion y preparar la atencion.
+/// Reservas (por defecto, las de hoy; admite un rango de fechas) para planificar la operacion y preparar la atencion.
 [Area("Admin")]
 [Route("admin/reservas-del-dia")]
 [Authorize(Roles = "General,Regular")]
 public class ReservasDelDiaController(IReservasApiService reservasApiService) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(DateOnly? fecha, string? buscar)
+    public async Task<IActionResult> Index(DateOnly? desde, DateOnly? hasta, string? buscar, string? tipo, int pagina = 1)
     {
+        var inicio = desde ?? hasta ?? DateOnly.FromDateTime(DateTime.Now);
+        var fin = hasta ?? inicio;
+        if (fin < inicio) (inicio, fin) = (fin, inicio);
+
         var modelo = new ReservasDelDiaViewModel
         {
-            Fecha = fecha ?? DateOnly.FromDateTime(DateTime.Now),
-            TerminoBusqueda = buscar?.Trim()
+            Desde = inicio,
+            Hasta = fin,
+            TerminoBusqueda = buscar?.Trim(),
+            Tipo = tipo is "walkin" or "reserva" ? tipo : ""
         };
 
         // HU-OPE-005: si hay busqueda activa, busca en todas las fechas;
@@ -40,7 +46,7 @@ public class ReservasDelDiaController(IReservasApiService reservasApiService) : 
         else
         {
             var (success, message, data) =
-                await reservasApiService.ObtenerReservasDelDiaAsync(modelo.Fecha);
+                await reservasApiService.ObtenerReservasDelDiaAsync(modelo.Desde, modelo.Hasta);
 
             if (success)
             {
@@ -52,35 +58,40 @@ public class ReservasDelDiaController(IReservasApiService reservasApiService) : 
             }
         }
 
+        modelo.Pagina = Math.Clamp(pagina, 1, modelo.TotalPaginas);
+
         return View(modelo);
 
 
     }
     [HttpPost("atender")] // <-- Ruta única
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Atender([FromForm] string codigo, [FromForm] DateOnly fecha)
+    public async Task<IActionResult> Atender([FromForm] string codigo, [FromForm] DateOnly desde, [FromForm] DateOnly hasta)
     {
         var (success, message) = await reservasApiService.RegistrarAtencionAsync(codigo);
         TempData[success ? Alerta.Exito : Alerta.Error] = message;
-        return RedirectToAction(nameof(Index), new { fecha = fecha.ToString("yyyy-MM-dd") });
+        return VolverAlListado(desde, hasta);
     }
 
     [HttpPost("noshow")] // <-- Ruta única
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> NoShow([FromForm] string codigo, [FromForm] DateOnly fecha)
+    public async Task<IActionResult> NoShow([FromForm] string codigo, [FromForm] DateOnly desde, [FromForm] DateOnly hasta)
     {
         var (success, message) = await reservasApiService.RegistrarNoShowAsync(codigo);
         TempData[success ? Alerta.Exito : Alerta.Error] = message;
-        return RedirectToAction(nameof(Index), new { fecha = fecha.ToString("yyyy-MM-dd") });
+        return VolverAlListado(desde, hasta);
     }
 
     [HttpPost("cambiar-estado")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CambiarEstado([FromForm] string codigo, [FromForm] string nuevoEstado, [FromForm] DateOnly fecha)
+    public async Task<IActionResult> CambiarEstado([FromForm] string codigo, [FromForm] string nuevoEstado, [FromForm] DateOnly desde, [FromForm] DateOnly hasta)
     {
         var (success, message) = await reservasApiService.CambiarEstadoAsync(codigo, nuevoEstado);
         TempData[success ? Alerta.Exito : Alerta.Error] = message;
-        return RedirectToAction(nameof(Index), new { fecha = fecha.ToString("yyyy-MM-dd") });
+        return VolverAlListado(desde, hasta);
     }
+
+    private RedirectToActionResult VolverAlListado(DateOnly desde, DateOnly hasta) =>
+        RedirectToAction(nameof(Index), new { desde = desde.ToString("yyyy-MM-dd"), hasta = hasta.ToString("yyyy-MM-dd") });
 
 }

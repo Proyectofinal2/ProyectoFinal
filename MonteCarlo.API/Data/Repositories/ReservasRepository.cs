@@ -86,6 +86,15 @@ public class ReservasRepository(MonteCarloDbContext context) : IReservasReposito
             .OrderBy(r => r.HoraReserva)
             .ToListAsync();
 
+    public Task<List<Reserva>> ObtenerPorRangoAsync(DateOnly desde, DateOnly hasta) =>
+        context.Reservas
+            .Include(r => r.Cliente)
+            .Include(r => r.EstadoReserva)
+            .Include(r => r.ReservaMesas).ThenInclude(rm => rm.Mesa)
+            .Where(r => r.FechaReserva >= desde && r.FechaReserva <= hasta)
+            .OrderBy(r => r.FechaReserva).ThenBy(r => r.HoraReserva)
+            .ToListAsync();
+
     /// <summary>HU-OPE-005: busca por nombre del cliente o teléfono, desde hoy en adelante.</summary>
     public Task<List<Reserva>> BuscarPorNombreOTelefonoAsync(string termino, int limite)
     {

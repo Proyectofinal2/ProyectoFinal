@@ -7,7 +7,8 @@ public interface IReservasService
     Task<Result<DisponibilidadFechaResponse>> ObtenerDisponibilidadAsync(int cantidadPersonas, DateOnly fecha);
     Task<Result<DisponibilidadMesResponse>> ObtenerDisponibilidadMesAsync(int cantidadPersonas, int anio, int mes);
     Task<Result<ReservaResponse>> ObtenerPorCodigoAsync(string codigo);
-    Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha);
+    /// <summary>Reservas de una fecha o, con <paramref name="hasta"/>, de un rango de fechas (maximo 92 dias).</summary>
+    Task<Result<List<ReservaDelDiaResponse>>> ObtenerDelDiaAsync(DateOnly fecha, DateOnly? hasta = null);
 
     /// <summary>Catalogo real de estados disponible para filtros administrativos.</summary>
     Task<Result<List<EstadoReservaReporteResponse>>> ObtenerEstadosReporteAsync();

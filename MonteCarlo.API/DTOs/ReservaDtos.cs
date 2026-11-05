@@ -69,4 +69,30 @@ public class ReservaDelDiaResponse
     public string? Observaciones { get; set; }
     public bool EsWalkIn { get; set; }
     public DateTime? FechaAtencion { get; set; }
+
+    /// <summary>Venta de la reserva (abierta, cobrada o anulada); null si nunca se abrio una cuenta.</summary>
+    public ConsumoReservaResponse? Consumo { get; set; }
+
+    /// <summary>Reserva Confirmada cuya hora ya paso y el cliente no ha llegado: minutos desde la hora reservada; null si no aplica.</summary>
+    public int? MinutosDeRetraso { get; set; }
+
+    /// <summary>Cliente que llego y supero el tiempo de la reserva (llegada + duracion del turno), con la reserva aun sin cerrar: minutos de exceso; null si no aplica.</summary>
+    public int? MinutosExcedidos { get; set; }
+}
+
+/// <summary>Consumo de una reserva para la columna "Consumo" de Reservas del dia.</summary>
+public class ConsumoReservaResponse
+{
+    public int IdVenta { get; set; }
+
+    /// <summary>Folio legible (V-000123).</summary>
+    public string Folio { get; set; } = null!;
+
+    /// <summary>Abierta, Cobrada o Anulada.</summary>
+    public string Estado { get; set; } = null!;
+
+    public decimal Total { get; set; }
+
+    /// <summary>Unidades activas en la cuenta; con la cuenta abierta y mayor que cero la reserva no puede cancelarse.</summary>
+    public int Productos { get; set; }
 }
