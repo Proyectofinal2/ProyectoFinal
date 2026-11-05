@@ -57,6 +57,22 @@ public class BadgeEstadoViewModel
         : new BadgeEstadoViewModel { Texto = "Deshabilitada", Tono = TonoBadge.Neutral };
 
     /// <summary>
+    /// Estado de una venta (HU-CON-004). Solo Cobrada es ingreso; Abierta es una cuenta en curso; Anulada y
+    /// Abandonada (consumo sin cobrar) no cuentan como ingreso y se resaltan en rojo.
+    /// </summary>
+    public static BadgeEstadoViewModel Venta(string estado) => new()
+    {
+        Texto = estado,
+        Tono = estado switch
+        {
+            "Cobrada" => TonoBadge.Exito,
+            "Abierta" => TonoBadge.Advertencia,
+            "Anulada" or "Abandonada" => TonoBadge.Peligro,
+            _ => TonoBadge.Neutral
+        }
+    };
+
+    /// <summary>
     /// Estado de una reserva. Aun sin pantallas que lo usen; queda
     /// definido aqui para que los modulos RES y OPE no vuelvan a
     /// elegir colores por su cuenta.

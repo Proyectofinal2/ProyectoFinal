@@ -99,7 +99,7 @@ public class CobroApiResponse
 {
     public int? IdVenta { get; set; }
     public string? Folio { get; set; }
-    public int IdReserva { get; set; }
+    public int? IdReserva { get; set; }
     public List<int> NumerosMesa { get; set; } = [];
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
@@ -109,6 +109,9 @@ public class MetodoPagoApiResponse
 {
     public int IdMetodoPago { get; set; }
     public string Nombre { get; set; } = "";
+
+    /// <summary>false si se deshabilito (solo viaja con todos=true): ya no se ofrece al cobrar pero sigue en ventas antiguas.</summary>
+    public bool Activo { get; set; } = true;
 }
 
 public class CategoriaVentaApiResponse
@@ -163,11 +166,18 @@ public class CuentaViewModel
     public static string Dinero(decimal monto) => Colones.Formato(monto);
 }
 
-/// <summary>Caja de pedido (_CajaPedido): menu vendible y la cuenta a la que se agrega.</summary>
+/// <summary>
+/// Caja de venta (_Caja): el menu vendible y la cuenta a la que se agrega el pedido. En la venta para llevar la cuenta
+/// va vacia y se agregan los metodos de pago.
+/// </summary>
 public class CajaViewModel
 {
     public CuentaApiResponse Cuenta { get; set; } = new();
     public List<CategoriaVentaApiResponse> Categorias { get; set; } = [];
+
+    /// <summary>Venta para llevar (HU-CON-003): sin cuenta de mesa, con metodo de pago y cobro dentro del ticket.</summary>
+    public bool ParaLlevar { get; set; }
+    public List<MetodoPagoApiResponse> MetodosPago { get; set; } = [];
 
     public string EtiquetaMesa => CuentaViewModel.Etiqueta(Cuenta.NumerosMesa);
 }
@@ -184,6 +194,7 @@ public class VentaListadoApiResponse
     public string TipoVenta { get; set; } = "";
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
+    public bool? MetodoPagoActivo { get; set; }
     public string Estado { get; set; } = "";
 }
 
@@ -195,8 +206,22 @@ public class FiltroVentasViewModel
     public int? IdMetodoPago { get; set; }
     public string? Estado { get; set; }
 
+    /// <summary>Las ventas del filtro (con el origen aplicado); el conteo por origen sale de las del filtro sin origen.</summary>
     public List<VentaListadoApiResponse> Ventas { get; set; } = [];
     public List<MetodoPagoApiResponse> MetodosPago { get; set; } = [];
+
+    public const int TamanoPagina = 10;
+
+    public int Pagina { get; set; } = 1;
+
+    public int TotalPaginas => Math.Max(1, (int)Math.Ceiling(Ventas.Count / (double)TamanoPagina));
+
+    /// <summary>Las ventas de la pagina actual (10 como maximo).</summary>
+    public List<VentaListadoApiResponse> PaginaActual => Ventas.Skip((Pagina - 1) * TamanoPagina).Take(TamanoPagina).ToList();
+
+    /// <summary>Ventas del rango (con los demas filtros) por origen: Consumo (mesa) y Takeout (para llevar).</summary>
+    public int ConteoConsumo { get; set; }
+    public int ConteoParaLlevar { get; set; }
 }
 
 public class VentaDetalleApiResponse
@@ -209,6 +234,7 @@ public class VentaDetalleApiResponse
     public string? Motivo { get; set; }
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
+    public bool? MetodoPagoActivo { get; set; }
     public string UsuarioRegistro { get; set; } = "";
     public List<LineaDetalleApiResponse> Lineas { get; set; } = [];
 }

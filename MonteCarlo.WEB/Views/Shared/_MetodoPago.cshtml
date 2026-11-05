@@ -1,0 +1,26 @@
+@*
+    Metodo de pago con icono y color por metodo (efectivo, tarjeta, SINPE y cualquier otro). Un metodo deshabilitado se
+    muestra atenuado, con borde punteado y la leyenda "deshabilitado" (el color nunca es la unica senal).
+
+    Uso:
+        <partial name="_MetodoPago" model="new MetodoPagoVisualViewModel(venta.MetodoPago, venta.MetodoPagoActivo ?? true)" />
+*@
+@using MonteCarlo.WEB.Models.UI
+@model MetodoPagoVisualViewModel
+
+@if (string.IsNullOrWhiteSpace(Model.Nombre))
+{
+    <span class="mc-pago mc-pago--sin"><i class="bi bi-dash-circle" aria-hidden="true"></i>Sin pago</span>
+}
+else
+{
+    var (clave, icono) = Model.Estilo;
+    <span class="mc-pago mc-pago--@clave @(Model.Activo ? null : "is-inactivo")"
+          title="@(Model.Activo ? Model.Nombre : Model.Nombre + ": método deshabilitado, ya no se ofrece al cobrar")">
+        <i class="bi @icono" aria-hidden="true"></i>@Model.Nombre@if (!Model.Activo)
+        {
+            <span class="visually-hidden"> (deshabilitado)</span>
+            <i class="bi bi-slash-circle mc-pago__inactivo" aria-hidden="true"></i>
+        }
+    </span>
+}

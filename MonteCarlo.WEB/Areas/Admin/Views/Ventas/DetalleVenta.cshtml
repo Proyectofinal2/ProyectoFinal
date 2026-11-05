@@ -1,4 +1,6 @@
-﻿@using MonteCarlo.WEB.Models.Ventas
+﻿@using MonteCarlo.WEB.Models.Catalogo
+@using MonteCarlo.WEB.Models.UI
+@using MonteCarlo.WEB.Models.Ventas
 @model VentaDetalleApiResponse
 
 <div class="row mb-4">
@@ -7,7 +9,7 @@
         <p class="fw-bold fs-5">@Model.Folio</p>
 
         <p class="mb-1 text-muted small">Fecha y Hora</p>
-        <p>@Model.FechaVenta.ToString("dddd d 'de' MMMM 'de' yyyy, HH:mm")</p>
+        <p>@Model.FechaVenta.ToString("dddd d 'de' MMMM 'de' yyyy, HH:mm", System.Globalization.CultureInfo.GetCultureInfo("es-CR"))</p>
     </div>
     <div class="col-sm-6">
         <p class="mb-1 text-muted small">Atendido por</p>
@@ -15,9 +17,16 @@
 
         <p class="mb-1 text-muted small">Origen / Pago / Estado</p>
         <p>
-            <span class="badge text-bg-secondary">@Model.TipoVenta</span>
-            <span class="badge text-bg-info">@(Model.MetodoPago ?? "Sin método")</span>
-            <span class="badge @(Model.Estado switch { "Cobrada" => "text-bg-success", "Abierta" => "text-bg-warning", "Anulada" => "text-bg-danger", _ => "text-bg-secondary" })">@Model.Estado</span>
+            @if (Model.TipoVenta == "Takeout")
+            {
+                <span class="mc-badge mc-badge--info"><i class="bi bi-bag me-1" aria-hidden="true"></i>Para llevar</span>
+            }
+            else
+            {
+                <span class="mc-badge mc-badge--neutral"><i class="bi bi-cup-hot me-1" aria-hidden="true"></i>En mesa</span>
+            }
+            <partial name="_MetodoPago" model="new MetodoPagoVisualViewModel(Model.MetodoPago, Model.MetodoPagoActivo ?? true)" />
+            <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Venta(Model.Estado)" />
         </p>
         @if (!string.IsNullOrWhiteSpace(Model.Motivo))
         {
@@ -42,15 +51,15 @@
             <tr>
                 <td>@linea.Producto</td>
                 <td class="text-center">@linea.Cantidad</td>
-                <td class="text-end">@linea.PrecioUnitario.ToString("C")</td>
-                <td class="text-end fw-medium">@linea.Subtotal.ToString("C")</td>
+                <td class="text-end">@Colones.Formato(linea.PrecioUnitario)</td>
+                <td class="text-end fw-medium">@Colones.Formato(linea.Subtotal)</td>
             </tr>
         }
     </tbody>
     <tfoot>
         <tr>
             <td colspan="3" class="text-end fw-bold border-0">Total:</td>
-            <td class="text-end fw-bold fs-5 border-0">@Model.Total.ToString("C")</td>
+            <td class="text-end fw-bold fs-5 border-0">@Colones.Formato(Model.Total)</td>
         </tr>
     </tfoot>
 </table>

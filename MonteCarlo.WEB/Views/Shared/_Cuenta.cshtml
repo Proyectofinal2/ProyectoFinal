@@ -171,8 +171,12 @@
                         {
                             <input type="radio" class="btn-check" name="metodoPago-@c.IdReserva"
                                    id="metodo-@c.IdReserva-@metodo.IdMetodoPago"
-                                   value="@metodo.IdMetodoPago" data-nombre="@metodo.Nombre" autocomplete="off">
-                            <label class="mc-chip" for="metodo-@c.IdReserva-@metodo.IdMetodoPago">@metodo.Nombre</label>
+                                   value="@metodo.IdMetodoPago" data-nombre="@metodo.Nombre" autocomplete="off" @(metodo.Activo ? "" : "disabled")>
+                            <label class="mc-chip @(metodo.Activo ? "" : "is-deshabilitado")" for="metodo-@c.IdReserva-@metodo.IdMetodoPago"
+                                   title="@(metodo.Activo ? "" : "Método de pago no disponible")">@metodo.Nombre@if (!metodo.Activo)
+                            {
+                                <span class="visually-hidden"> (no disponible)</span>
+                            }</label>
                         }
                     </div>
                     <p class="mc-pagos__error" data-mc-cuenta-pago-error hidden>Elige el método de pago para cobrar.</p>

@@ -97,6 +97,26 @@ public class AgregarPedidoRequest
     public List<LineaPedidoRequest>? Lineas { get; set; }
 }
 
+/// <summary>
+/// Venta para llevar (HU-CON-003): productos y cantidades, el metodo de pago y el total que vio la pantalla. El precio y
+/// el total los decide el servidor; si los precios cambiaron mientras tanto, no se cobra (409).
+/// </summary>
+public class ParaLlevarRequest
+{
+    /// <summary>GUID generado por la pantalla; un reintento con la misma clave no duplica la venta.</summary>
+    [Required(ErrorMessage = "Falta la clave de la venta.")]
+    public Guid ClaveIdempotencia { get; set; }
+
+    [Range(1, int.MaxValue, ErrorMessage = "Elige el método de pago.")]
+    public int IdMetodoPago { get; set; }
+
+    /// <summary>El total que vio la pantalla.</summary>
+    public decimal TotalEsperado { get; set; }
+
+    [Required(ErrorMessage = "Agrega al menos un producto para registrar la venta.")]
+    public List<LineaPedidoRequest>? Lineas { get; set; }
+}
+
 public class LineaPedidoRequest
 {
     public int IdProducto { get; set; }
@@ -129,17 +149,18 @@ public class CobrarRequest
     public string? Version { get; set; }
 }
 
-/// <summary>Resultado de cobrar, de liberar una mesa sin consumo o de cerrar una cuenta sin cobro.</summary>
+/// <summary>Resultado de cobrar, de liberar una mesa sin consumo, de cerrar una cuenta sin cobro o de una venta para llevar.</summary>
 public class CobroResponse
 {
     /// <summary>Nulo en un cierre sin consumo: no se registra una venta.</summary>
     public int? IdVenta { get; set; }
     public string? Folio { get; set; }
-    public int IdReserva { get; set; }
+    /// <summary>Nulo en una venta para llevar (no tiene reserva ni mesa).</summary>
+    public int? IdReserva { get; set; }
     public List<int> NumerosMesa { get; set; } = [];
     public decimal Total { get; set; }
 
-    /// <summary>Nulo en un cierre sin consumo.</summary>
+    /// <summary>Nulo en un cierre sin consumo o sin cobro.</summary>
     public string? MetodoPago { get; set; }
 }
 
@@ -159,6 +180,9 @@ public class MetodoPagoResponse
 {
     public int IdMetodoPago { get; set; }
     public string Nombre { get; set; } = null!;
+
+    /// <summary>false si el metodo se deshabilito: ya no se ofrece al cobrar, pero sigue en las ventas que lo usaron.</summary>
+    public bool Activo { get; set; } = true;
 }
 
 /// <summary>Catalogo vendible agrupado por categoria, para el selector de la caja.</summary>
@@ -186,6 +210,9 @@ public class VentaListadoResponse
     public string TipoVenta { get; set; } = null!;
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
+
+    /// <summary>false si el metodo con el que se cobro esta hoy deshabilitado; nulo si la venta no tiene metodo de pago.</summary>
+    public bool? MetodoPagoActivo { get; set; }
     public string Estado { get; set; } = null!;
 }
 
@@ -212,6 +239,7 @@ public class VentaDetalleResponse
     public string? Motivo { get; set; }
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
+    public bool? MetodoPagoActivo { get; set; }
     public string UsuarioRegistro { get; set; } = null!;
 
     public List<LineaDetalleResponse> Lineas { get; set; } = [];

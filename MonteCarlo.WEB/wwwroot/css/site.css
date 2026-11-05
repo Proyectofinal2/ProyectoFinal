@@ -3319,3 +3319,60 @@ a.mc-pager__btn:hover {
 }
 .mc-preset:focus-visible { outline: 2px solid var(--mc-green-500); outline-offset: 2px; }
 .mc-toolbar__fila .mc-search--fin { margin-left: auto; }
+
+/* Venta para llevar: la caja como pagina (HU-CON-003). Mismo menu y ticket que el modal, dentro de una tarjeta. */
+.mc-caja--pagina {
+  height: max(560px, calc(100vh - 230px));
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  background-color: var(--mc-surface);
+  box-shadow: var(--mc-shadow-sm);
+}
+.mc-caja--pagina .mc-ticket__pie { display: flex; flex-direction: column; gap: var(--mc-space-3); }
+
+@media (max-width: 767.98px) {
+  .mc-caja--pagina { height: auto; }
+}
+
+/* Ventas: el origen se distingue con una marca de color en el borde de la fila (ademas de la etiqueta con icono) */
+.mc-ventas tr.mc-fila--llevar > td:first-child { box-shadow: inset 3px 0 0 var(--mc-info); }
+.mc-ventas tr.mc-fila--mesa > td:first-child { box-shadow: inset 3px 0 0 var(--mc-green-500); }
+
+/* Metodo de pago con icono y color propio (_MetodoPago). Deshabilitado: atenuado y con borde punteado. */
+.mc-pago {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+  padding: 2px var(--mc-space-3);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-semibold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.mc-pago--efectivo { background-color: var(--mc-green-50); color: var(--mc-green-600); }
+.mc-pago--tarjeta { background-color: var(--mc-info-bg); color: var(--mc-info); }
+.mc-pago--sinpe { background-color: var(--mc-copper-50); color: var(--mc-copper-600); }
+.mc-pago--otro { background-color: var(--mc-surface); border-color: var(--mc-border-strong); color: var(--mc-ink); }
+.mc-pago--sin { color: var(--mc-ink-muted); font-weight: var(--mc-weight-normal); }
+.mc-pago.is-inactivo { border: 1px dashed currentColor; background-color: transparent; opacity: 0.75; }
+.mc-pago__inactivo { font-size: 0.8em; }
+
+/* Selectores de la barra de filtros: en fila, con el mismo alto que el rango de fechas */
+.mc-toolbar__selects { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mc-space-2); }
+
+/* Chip no disponible (metodo de pago deshabilitado): en gris y sin respuesta al cursor; conserva el tooltip (title). */
+.btn-check:disabled + .mc-chip,
+.mc-chip.is-deshabilitado {
+  border-color: var(--mc-border);
+  background-color: var(--mc-surface);
+  color: var(--mc-ink-subtle);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.btn-check:disabled + .mc-chip::before { background-color: var(--mc-border-strong); }
+.btn-check:disabled + .mc-chip:hover {
+  border-color: var(--mc-border);
+  color: var(--mc-ink-subtle);
+}

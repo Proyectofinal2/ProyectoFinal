@@ -44,16 +44,28 @@ public class VentasApiService(HttpClient httpClient, ILogger<VentasApiService> l
             () => httpClient.PostAsync($"ventas/cuentas/reserva/{idReserva}/liberar-sin-consumo", null),
             "Mesa liberada sin consumo.", "No se pudo liberar la mesa. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> RegistrarParaLlevarAsync(
+        Guid claveIdempotencia, int idMetodoPago, decimal totalEsperado, IEnumerable<(int IdProducto, int Cantidad)> lineas) =>
+        EjecutarAsync<CobroApiResponse>(
+            () => httpClient.PostAsJsonAsync("ventas/para-llevar", new
+            {
+                claveIdempotencia,
+                idMetodoPago,
+                totalEsperado,
+                lineas = lineas.Select(l => new { l.IdProducto, l.Cantidad })
+            }),
+            "Venta para llevar registrada.", "No se pudo registrar la venta. Intenta de nuevo.");
+
     public Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> CerrarSinCobroAsync(
         int idReserva, string? motivo, string? version) =>
         EjecutarAsync<CobroApiResponse>(
             () => httpClient.PostAsJsonAsync($"ventas/cuentas/reserva/{idReserva}/cerrar-sin-cobro", new { motivo, version }),
             "Cuenta cerrada sin cobro.", "No se pudo cerrar la cuenta. Intenta de nuevo.");
 
-    public async Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync()
+    public async Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync(bool incluirInactivos = false)
     {
         var (success, message, data, _) = await EjecutarAsync<List<MetodoPagoApiResponse>>(
-            () => httpClient.GetAsync("metodos-pago"),
+            () => httpClient.GetAsync(incluirInactivos ? "metodos-pago?todos=true" : "metodos-pago"),
             "Metodos de pago obtenidos.", "No se pudieron obtener los metodos de pago. Intenta de nuevo.");
         return (success, message, data);
     }

@@ -52,7 +52,7 @@ Reglas para escribir pruebas nuevas:
 | Ticket | Historia | Estado de las pruebas |
 |---|---|---|
 | #35 | HU-CON-002 cuenta de mesa y cobro | **Cubierto** (tabla siguiente) |
-| #36 | HU-CON-003 venta para llevar | Pendiente: al implementar `para-llevar` agregar pruebas de total automático y de que exige al menos un producto |
+| #36 | HU-CON-003 venta para llevar | **Cubierto** (tabla «Venta para llevar») |
 | #35 | HU-CON-002 esc. 13 (cuenta antigua) y 14 (mesa con cuenta abierta no se ofrece) y HU-RES-003 (sin mesa no hay reserva) | **Cubierto** (tablas «Cuentas abiertas y disponibilidad» y «Cuenta antigua») |
 | — | HU-CON-001 catálogo | Sin pruebas propias (CRUD); solo se cubre lo que usa la venta (producto disponible + categoría activa) |
 | — | HU-CON-004 / HU-REP-003 | Pendiente: cuando existan, probar que solo `Estado = 'Cobrada'` cuenta como ingreso |
@@ -102,6 +102,19 @@ Una cuenta abierta es antigua (por cobrar) cuando pasó el tiempo de uso de la m
 | Reservas del día informa el consumo: cuenta abierta con productos (total, folio, unidades), cobrada y sin cuenta (esc. 12); rango de fechas; indicadores de retraso y de tiempo excedido; la llegada solo se registra el mismo día | `ReservasDelDiaConsumoTests` |
 | Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca; el resumen de Inicio (`CuentasAbiertas`, `ConsumoEnCurso`) suma una vez por reserva aunque sean dos mesas | `CuentaAntiguaTests` |
 
+### Venta para llevar (HU-CON-003, #36)
+
+| Criterio | Pruebas (clase → método) |
+|---|---|
+| Esc. 1: con productos y método de pago, registra una venta `Cobrada` de tipo `Takeout` sin reserva ni mesa, con total automático, precio congelado, método y usuario de cobro; aparece en el listado de ventas | `ParaLlevarTests` (`..._registraVentaCobradaSinReservaNiMesa`, `..._laVentaApareceEnElListadoDeVentasComoTakeoutCobrada`) |
+| Doble envío: la misma clave registra una sola venta; una clave de un pedido de mesa se rechaza | `ParaLlevarTests` (`..._mismaClave_registraUnaSolaVenta`, `..._unaClaveDeUnPedidoDeMesa_devuelve409`) |
+| Esc. 2: sin productos devuelve 400 «Agrega al menos un producto para registrar la venta» | `ParaLlevarTests.ParaLlevar_sinProductos_devuelve400QueExigeAlMenosUno` |
+| Dinero: si el total que vio la pantalla no coincide con el actual (409, no registra nada); producto no disponible (409); método de pago inactivo o inexistente (400) | `ParaLlevarTests` (`..._totalQueNoCoincide_...`, `..._productoNoDisponible_...`, `..._metodoDePagoInactivoOInexistente_...`) |
+
+Métodos de pago en el listado de ventas: `GET metodos-pago` ofrece solo los activos y, con `todos=true`, también los deshabilitados (para el filtro); una venta cobrada con un método que se deshabilitó después informa `MetodoPagoActivo = false` en el listado y el detalle (`MetodosPagoVentasTests`).
+
+El esc. 3 (listado de Ventas con totales, filtro por estado y el botón «Venta para llevar») es de interfaz: revisión manual.
+
 ### Cerrar sin cobro (HU-CON-002 esc. 15, fase B)
 
 | Criterio | Pruebas (clase → método) |
@@ -124,9 +137,9 @@ G1 y R1 ya están corregidos (fase A1). Pendiente en el mismo plan: liberación 
 
 ## Checkpoint
 
-- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 89 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
+- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 99 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
 - [x] Concurrencia: doble primer pedido y doble cobro.
 - [ ] Equivalencia `alter_database-5.sql` (ejecutado dos veces) vs `database.sql` (columnas, CHECK, FK, índices).
 - [ ] Autorización por rol de `VentasController` y `Mesas/liberar` (a nivel de atributos).
 - [ ] Pruebas de JS puro (`mc-util.js`) con `node --test`.
-- [ ] HU-CON-003 (#36) y reportes de ingresos (solo `Cobrada`).
+- [x] HU-CON-003 (#36). Pendiente: reportes de ingresos (solo `Cobrada`).
