@@ -35,12 +35,18 @@ public class MesasService(
 
         var mesasOcupadas = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Ocupada");
         var totalHabilitadas = mesasHabilitadas.Count;
+        var cuentasAntiguas = mesasHabilitadas
+            .Where(x => x.Respuesta.Cuenta?.Antigua == true)
+            .Select(x => x.Respuesta.ReservaActual!.IdReserva)
+            .Distinct()
+            .Count();
 
         var resumen = new ResumenMesasResponse
         {
             MesasHabilitadas = totalHabilitadas,
             MesasDisponibles = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Disponible"),
             MesasOcupadas = mesasOcupadas,
+            CuentasAntiguas = cuentasAntiguas,
             PorcentajeOcupacion = totalHabilitadas == 0
                 ? 0
                 : Math.Round(mesasOcupadas * 100m / totalHabilitadas, 1),
@@ -68,7 +74,10 @@ public class MesasService(
         var cuentas = await ventasRepository.ObtenerResumenCuentasAbiertasAsync(reservasHoy.Select(r => r.IdReserva).ToList());
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var ventanaMinutos = await configuracionService.ObtenerValorVentanaAlertaReservaProximaAsync();
-        var contexto = new ContextoEstadoEnVivo(hoy, ahora, duracionMinutos, ventanaMinutos, cuentas);
+
+        // El margen solo hace falta para decidir si una cuenta abierta es antigua.
+        var toleranciaMinutos = cuentas.Count > 0 ? await configuracionService.ObtenerValorToleranciaCobroAsync() : 0;
+        var contexto = new ContextoEstadoEnVivo(hoy, ahora, duracionMinutos, ventanaMinutos, cuentas, toleranciaMinutos);
 
         return mesas
             .Select(mesa => (Mesa: mesa, Respuesta: MapearEstadoEnVivo(mesa, reservasHoy, contexto)))
@@ -77,12 +86,12 @@ public class MesasService(
 
     private readonly record struct ContextoEstadoEnVivo(
         DateOnly Hoy, DateTime Ahora, int DuracionMinutos, int VentanaMinutos,
-        IReadOnlyDictionary<int, CuentaAbiertaResumen> Cuentas);
+        IReadOnlyDictionary<int, CuentaAbiertaResumen> Cuentas, int ToleranciaCobroMinutos);
 
     /// <summary>Cruza el Estado persistido de la mesa con las reservas Confirmadas del día -- "Ocupada" nunca se persiste.</summary>
     private static MesaResponse MapearEstadoEnVivo(Mesa mesa, List<Reserva> reservasHoy, ContextoEstadoEnVivo contexto)
     {
-        var (hoy, ahora, duracionMinutos, ventanaMinutos, cuentas) = contexto;
+        var (hoy, ahora, duracionMinutos, ventanaMinutos, cuentas, toleranciaMinutos) = contexto;
 
         var reservasDeEstaMesa = reservasHoy
             .Where(r => r.ReservaMesas.Any(rm => rm.IdMesa == mesa.IdMesa))
@@ -113,11 +122,16 @@ public class MesasService(
 
             if (cuentas.TryGetValue(ocupante.IdReserva, out var cuenta))
             {
+                var venceDesde = CuentaVencimiento.Calcular(
+                    ocupante.FechaAtencion ?? ocupante.FechaReserva.ToDateTime(ocupante.HoraReserva), duracionMinutos, toleranciaMinutos);
+
                 respuesta.Cuenta = new MesaCuentaResponse
                 {
                     Total = cuenta.Total,
                     Productos = cuenta.Productos,
-                    Version = cuenta.Version
+                    Version = cuenta.Version,
+                    Antigua = ahora > venceDesde,
+                    VenceDesde = venceDesde
                 };
             }
 
@@ -190,8 +204,8 @@ public class MesasService(
     /// Ocupa desde el check-in si lo hay; si no, desde la hora programada (misma ventana que EstaLibre).
     /// Una cuenta abierta mantiene la mesa ocupada aunque el turno ya haya terminado, hasta cobrar o liberar.
     /// </summary>
-    // TODO: revisar esta logica. Hoy una cuenta abierta ocupa la mesa sin limite de tiempo, incluso si es de un
-    // dia anterior; definir si debe haber un tope (p. ej. cierre del dia) o un aviso de cuenta olvidada.
+    // La mesa sigue Ocupada mientras la cuenta este abierta, pero pasado el tiempo de uso mas la tolerancia se marca
+    // Antigua (por cobrar), ver CuentaVencimiento.
     private static bool EstaOcupandoAhora(Reserva reserva, DateOnly hoy, DateTime ahora, int duracionMinutos, bool tieneCuentaAbierta)
     {
         var inicio = reserva.FechaAtencion ?? reserva.FechaReserva.ToDateTime(reserva.HoraReserva);
@@ -207,7 +221,7 @@ public class MesasService(
 
     /// <summary>Para CRUD sin reservas que cruzar: Duracion/Ventana no se usan.</summary>
     private static ContextoEstadoEnVivo ContextoSinReservas() =>
-        new(DateOnly.FromDateTime(DateTime.Now), DateTime.Now, 0, 0, new Dictionary<int, CuentaAbiertaResumen>());
+        new(DateOnly.FromDateTime(DateTime.Now), DateTime.Now, 0, 0, new Dictionary<int, CuentaAbiertaResumen>(), 0);
 
     public async Task<Result<MesaResponse>> CrearAsync(CrearMesaRequest request)
     {

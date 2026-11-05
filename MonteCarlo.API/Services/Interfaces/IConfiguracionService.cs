@@ -4,6 +4,10 @@ namespace MonteCarlo.API.Services.Interfaces;
 
 public interface IConfiguracionService
 {
+    /// Minutos de gracia después de terminar el tiempo de uso de la mesa antes de que una
+    /// cuenta abierta se considere antigua, es decir, por cobrar (HU-CON-002).
+    Task<int> ObtenerValorToleranciaCobroAsync();
+
     /// Duración (en minutos) usada para detectar solapamiento entre reservas de una
     /// misma mesa y para el cálculo de disponibilidad del calendario (HU-RES-002).
     Task<int> ObtenerValorDuracionReservaAsync();

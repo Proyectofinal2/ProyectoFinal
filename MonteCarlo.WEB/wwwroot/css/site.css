@@ -3076,6 +3076,7 @@ a.mc-pager__btn:hover {
     100% { box-shadow: 0 0 0 0 rgba(47,107,79,0), 0 2px 5px rgba(0,0,0,.15), inset 0 0 0 5px rgba(255,255,255,.55); }
 }
 .mc-mesa-tag { position: absolute; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.mc-mesa-tag.is-antigua, .mc-mesa-tag.is-exceso { background: var(--mc-danger); }
 .mc-mesa-badge-icon { position: absolute; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; pointer-events: none; }
 .mc-mesa-badge-icon.is-reloj { width: 20px; height: 20px; font-size: 11px; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .mc-mesa-badge-icon.is-reloj.critica { animation: mcClockPulse 1.4s ease-out infinite; }
@@ -3118,14 +3119,16 @@ a.mc-pager__btn:hover {
 .mc-resumen span { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--mc-surface); color: var(--mc-ink-muted); white-space: nowrap; }
 .mc-resumen .is-cuentas { background: var(--mc-danger-bg); color: var(--mc-danger); }
 .mc-resumen .is-sinpedido { background: var(--mc-warning-bg); color: var(--mc-warning); }
+.mc-resumen .is-antiguas { background: var(--mc-danger-bg); color: var(--mc-danger); font-weight: 700; }
 
 .mc-tarjetas-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; padding: 20px 28px; }
 .mc-tarjetas-main { min-width: 0; }
 #mc-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .mc-filtro { border: 1px solid var(--mc-border); background: var(--mc-elevated); border-radius: 999px; padding: 4px 11px; font-size: 12.5px; color: var(--mc-ink-muted); min-height: 30px; cursor: pointer; }
 .mc-filtro.is-active { border-color: var(--mc-ink); color: var(--mc-ink); font-weight: 600; }
-.mc-tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; min-width: 0; }
-.mc-tarjeta { font-size: 14px; line-height: 1.4; color: var(--mc-ink); text-align: left; display: grid; gap: 3px; align-content: start; padding: 11px 12px; min-height: 120px; background: var(--mc-elevated); border: 1px solid var(--mc-border); border-left: 5px solid var(--fam); border-radius: 12px; cursor: pointer; }
+/* Maximo 3 tarjetas por fila: el minimo de cada columna es un tercio del ancho (menos los huecos), nunca menos de 190px. */
+.mc-tarjetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(190px, calc((100% - 24px) / 3)), 1fr)); gap: 12px; min-width: 0; }
+.mc-tarjeta { font-size: 14px; line-height: 1.4; color: var(--mc-ink); text-align: left; display: grid; gap: 3px; align-content: start; padding: 14px 16px; min-height: 148px; background: var(--mc-elevated); border: 1px solid var(--mc-border); border-left: 5px solid var(--fam); border-radius: 12px; cursor: pointer; }
 .mc-tarjeta:hover { box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.08); }
 .mc-tarjeta:focus-visible { outline: 2px solid var(--mc-green-500); outline-offset: 2px; }
 .mc-tarjeta.is-selected { box-shadow: 0 0 0 2px var(--mc-surface), 0 0 0 4px var(--mc-ink); }
@@ -3135,13 +3138,21 @@ a.mc-pager__btn:hover {
 .mc-tarjeta__top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
 .mc-tarjeta__num { font-weight: 700; white-space: nowrap; }
 .mc-tarjeta__badge { line-height: 1.4; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--fam-bg); color: var(--fam-ink); white-space: nowrap; }
-.mc-tarjeta__principal { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: 4px; color: var(--mc-ink); }
-.mc-tarjeta__sec { font-size: 13px; color: var(--mc-ink-muted); }
-.mc-tarjeta__pie { font-size: 12px; margin-top: 2px; color: var(--mc-ink-muted); font-variant-numeric: tabular-nums; }
-.mc-tarjeta__pie .excede { color: var(--mc-danger); font-weight: 600; }
+.mc-tarjeta__principal { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; margin-top: 4px; color: var(--mc-ink); }
+.mc-tarjeta__sec { font-size: 14px; color: var(--mc-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-tarjeta__pie { font-size: 13px; margin-top: 2px; color: var(--mc-ink-muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-tarjeta__exceso { font-size: 13px; font-weight: 600; color: var(--mc-danger); }
 .mc-fam-verde { --fam: #5C9A4A; --fam-bg: #E3F1DD; --fam-ink: #3E7A2F; }
 .mc-fam-rojo { --fam: #C0392B; --fam-bg: #F6DAD7; --fam-ink: #A8321F; }
 .mc-fam-ambar { --fam: #C98A1E; --fam-bg: #FBEBC2; --fam-ink: #8A5A00; }
+/* Cuenta antigua (por cobrar): rojo oscuro con relleno para que no se confunda con una mesa ocupada normal. */
+.mc-fam-alerta { --fam: #8E1B10; --fam-bg: #8E1B10; --fam-ink: #fff; }
+.mc-tarjeta.mc-fam-alerta { background: var(--mc-danger-bg); border-color: var(--fam); border-left-width: 8px; }
+.mc-tarjeta.mc-fam-alerta .mc-tarjeta__principal { color: var(--mc-danger); }
+.mc-tarjeta.mc-fam-alerta .mc-tarjeta__pie { color: var(--mc-danger); font-weight: 600; }
+.mc-aviso-antiguas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 28px 0; padding: 10px 16px; background: var(--mc-danger-bg); border: 1px solid var(--mc-danger); border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--mc-danger); }
+.mc-aviso-antiguas button { border: 1px solid var(--mc-danger); background: var(--mc-danger); color: #fff; border-radius: 8px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; min-height: 30px; cursor: pointer; }
+.mc-aviso-antiguas button:focus-visible { outline: 2px solid var(--mc-ink); outline-offset: 2px; }
 .mc-fam-gris { --fam: #ADA99F; --fam-bg: #E6E3DC; --fam-ink: var(--mc-ink-muted); }
 .mc-panel-vacio { background: var(--mc-elevated); border: 1px solid var(--mc-border); border-radius: 12px; padding: 18px 8px; text-align: center; color: var(--mc-ink-muted); display: grid; gap: 4px; font-size: 12.5px; }
 .mc-panel-vacio strong { font-size: 14px; color: var(--mc-ink); }

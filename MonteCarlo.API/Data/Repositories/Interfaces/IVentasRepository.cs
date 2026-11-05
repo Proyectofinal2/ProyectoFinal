@@ -27,10 +27,11 @@ public interface IVentasRepository
     Task<Dictionary<int, CuentaAbiertaResumen>> ObtenerResumenCuentasAbiertasAsync(IReadOnlyCollection<int> idsReserva);
 
     /// <summary>
-    /// Ids de las mesas ocupadas por una reserva Confirmada con cuenta abierta, de cualquier dia
-    /// (la cuenta mantiene la mesa ocupada aunque el turno ya haya terminado).
+    /// Mesas ocupadas por una reserva Confirmada con cuenta abierta, de cualquier dia (la cuenta mantiene la mesa
+    /// ocupada aunque el turno ya haya terminado), con el momento en que se sento el cliente (la llegada, o la
+    /// apertura de la cuenta si no hay llegada registrada). Sirve para estimar cuando se libera cada mesa.
     /// </summary>
-    Task<HashSet<int>> ObtenerIdsMesaConCuentaAbiertaAsync();
+    Task<Dictionary<int, DateTime>> ObtenerMesasConCuentaAbiertaAsync();
 
     void Agregar(Venta venta);
 

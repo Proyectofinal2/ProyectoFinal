@@ -394,7 +394,7 @@ public class ReservasService(
         var ahora = DateTime.Now;
         var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
         var datosMesas = await CargarMesasConReservasDelDiaAsync(DateOnly.FromDateTime(ahora));
-        datosMesas = SinMesasConCuentaAbierta(datosMesas, await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync());
+        datosMesas = SinMesasConCuentaAbierta(datosMesas, (await ventasRepository.ObtenerMesasConCuentaAbiertaAsync()).Keys.ToHashSet());
         var resultado = BuscarMejorAsignacion(cantidadPersonas, TimeOnly.FromDateTime(ahora), duracionMinutos, datosMesas);
 
         return Result<AsignacionSugeridaResponse>.Ok(new AsignacionSugeridaResponse
@@ -430,7 +430,7 @@ public class ReservasService(
         var mesaOcupada = mesas.FirstOrDefault(m => !EstaLibre(m, horasReservadas, horaActual, duracionMinutos));
         if (mesaOcupada is not null) return Result<ReservaWalkInResponse>.Conflict($"La mesa {mesaOcupada.NumeroMesa} ya tiene otra reserva activa que se solapa con este horario.");
 
-        var mesaConCuenta = PrimeraMesaConCuenta(mesas, await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync());
+        var mesaConCuenta = PrimeraMesaConCuenta(mesas, (await ventasRepository.ObtenerMesasConCuentaAbiertaAsync()).Keys.ToHashSet());
         if (mesaConCuenta is not null) return Result<ReservaWalkInResponse>.Conflict($"La mesa {mesaConCuenta.NumeroMesa} tiene una cuenta abierta.");
 
         var estadoConfirmada = await reservasRepository.ObtenerEstadoAsync(Confirmada);
@@ -560,17 +560,37 @@ public class ReservasService(
     }
 
     /// <summary>
-    /// Una cuenta abierta bloquea la mesa para una reserva que empieza dentro del turno actual (ahora + duracion).
-    /// Una reserva posterior si puede tomarla: se supone que la cuenta estara cerrada para entonces.
+    /// Cuando se estima que se libera una mesa con cuenta abierta: la llegada del cliente mas la duracion del turno,
+    /// nunca antes de ahora (si ya paso, la cuenta sigue abierta y se asume que cierra de un momento a otro).
     /// </summary>
-    private static bool CuentaBloqueaMesa(DateTime inicioReserva, DateTime ahora, int duracionMinutos) =>
-        inicioReserva < ahora.AddMinutes(duracionMinutos);
+    private static DateTime LiberacionEstimada(DateTime ancla, DateTime ahora, int duracionMinutos)
+    {
+        var fin = ancla.AddMinutes(duracionMinutos);
+        return fin > ahora ? fin : ahora;
+    }
 
-    /// <summary>Mesas ocupadas por una cuenta abierta que bloquean una reserva en esa fecha y hora (sin consultar si no aplica).</summary>
-    private async Task<HashSet<int>> ObtenerMesasBloqueadasPorCuentaAsync(DateOnly fecha, TimeOnly hora, int duracionMinutos) =>
-        CuentaBloqueaMesa(fecha.ToDateTime(hora), DateTime.Now, duracionMinutos)
-            ? await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync()
-            : [];
+    /// <summary>
+    /// Mesas que una cuenta abierta bloquea para una reserva que empieza en <paramref name="inicioReserva"/>: las que
+    /// se estima que aun estaran ocupadas a esa hora. Una reserva posterior si puede tomarlas.
+    /// </summary>
+    private static HashSet<int> MesasBloqueadasPorCuenta(Dictionary<int, DateTime> cuentas, DateTime inicioReserva, DateTime ahora, int duracionMinutos) =>
+        cuentas
+            .Where(c => inicioReserva < LiberacionEstimada(c.Value, ahora, duracionMinutos))
+            .Select(c => c.Key)
+            .ToHashSet();
+
+    /// <summary>Mesas bloqueadas por una cuenta abierta para una reserva en esa fecha y hora (sin consultar si ya no puede aplicar).</summary>
+    private async Task<HashSet<int>> ObtenerMesasBloqueadasPorCuentaAsync(DateOnly fecha, TimeOnly hora, int duracionMinutos)
+    {
+        var ahora = DateTime.Now;
+        var inicio = fecha.ToDateTime(hora);
+
+        // La llegada nunca es posterior a ahora, asi que ninguna liberacion estimada pasa de ahora + duracion.
+        if (inicio >= ahora.AddMinutes(duracionMinutos))
+            return [];
+
+        return MesasBloqueadasPorCuenta(await ventasRepository.ObtenerMesasConCuentaAbiertaAsync(), inicio, ahora, duracionMinutos);
+    }
 
     private static DatosMesasDelDia SinMesasConCuentaAbierta(DatosMesasDelDia datosMesas, HashSet<int> mesasConCuenta) =>
         mesasConCuenta.Count == 0
@@ -660,13 +680,13 @@ public class ReservasService(
     /// Mesas con cuenta abierta, solo si hoy cae en el rango consultado (la cuenta abierta solo afecta al dia de hoy);
     /// asi el calendario no hace la consulta para meses futuros.
     /// </summary>
-    private async Task<HashSet<int>> ObtenerMesasConCuentaDeHoyAsync(DateOnly desde, DateOnly hasta, DateTime ahora)
+    private async Task<Dictionary<int, DateTime>> ObtenerMesasConCuentaDeHoyAsync(DateOnly desde, DateOnly hasta, DateTime ahora)
     {
         var hoy = DateOnly.FromDateTime(ahora);
-        return hoy >= desde && hoy <= hasta ? await ventasRepository.ObtenerIdsMesaConCuentaAbiertaAsync() : [];
+        return hoy >= desde && hoy <= hasta ? await ventasRepository.ObtenerMesasConCuentaAbiertaAsync() : [];
     }
 
-    private static DisponibilidadFechaResponse CalcularDisponibilidad(DateOnly fecha, DatosDisponibilidad datosDisponibilidad, Dictionary<int, List<TimeOnly>>? horasReservadas, HashSet<int> mesasConCuentaHoy, DateTime ahora, int duracionMinutos, int intervaloMinutos)
+    private static DisponibilidadFechaResponse CalcularDisponibilidad(DateOnly fecha, DatosDisponibilidad datosDisponibilidad, Dictionary<int, List<TimeOnly>>? horasReservadas, Dictionary<int, DateTime> cuentasHoy, DateTime ahora, int duracionMinutos, int intervaloMinutos)
     {
         var respuesta = new DisponibilidadFechaResponse { Fecha = fecha };
         var hoy = DateOnly.FromDateTime(ahora);
@@ -689,9 +709,9 @@ public class ReservasService(
         {
             if (fecha == hoy && hora <= horaActual) continue;
 
-            // Hoy, una cuenta abierta bloquea la mesa en los horarios que caen dentro del turno actual.
-            var datosHora = fecha == hoy && CuentaBloqueaMesa(fecha.ToDateTime(hora), ahora, duracionMinutos)
-                ? SinMesasConCuentaAbierta(datosMesas, mesasConCuentaHoy)
+            // Hoy, una cuenta abierta bloquea la mesa hasta que se estima que se libera.
+            var datosHora = fecha == hoy
+                ? SinMesasConCuentaAbierta(datosMesas, MesasBloqueadasPorCuenta(cuentasHoy, fecha.ToDateTime(hora), ahora, duracionMinutos))
                 : datosMesas;
             if (BuscarMejorAsignacion(datosDisponibilidad.CantidadPersonas, hora, duracionMinutos, datosHora).RequiereManual) continue;
 

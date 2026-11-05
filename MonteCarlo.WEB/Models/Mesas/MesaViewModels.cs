@@ -47,6 +47,10 @@ public class MesaCuentaApiResponse
     public decimal Total { get; set; }
     public int Productos { get; set; }
     public string Version { get; set; } = "";
+
+    /// <summary>Paso el tiempo de uso de la mesa (llegada + duracion del turno) mas la tolerancia para cobrar.</summary>
+    public bool Antigua { get; set; }
+    public DateTime VenceDesde { get; set; }
 }
 
 /// <summary>Datos de GET api/mesas/resumen para los indicadores del panel.</summary>
@@ -55,6 +59,7 @@ public class ResumenMesasApiResponse
     public int MesasHabilitadas { get; set; }
     public int MesasDisponibles { get; set; }
     public int MesasOcupadas { get; set; }
+    public int CuentasAntiguas { get; set; }
     public decimal PorcentajeOcupacion { get; set; }
     public string? MensajeContextual { get; set; }
 }

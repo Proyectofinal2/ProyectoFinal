@@ -842,6 +842,10 @@ GO
      cuantos minutos se ofrece un horario de llegada seleccionable
      en el calendario de disponibilidad (antes hardcodeado en 30
      minutos en el codigo).
+   - ToleranciaCobroMinutos (HU-CON-002): minutos de tolerancia
+     despues de terminar el tiempo de uso de la mesa
+     (DuracionReservaMinutos) antes de marcar una cuenta abierta
+     como antigua, es decir "Por cobrar" (ver alter_database-6.sql).
    ------------------------------------------------------------ */
 INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Etiqueta, Descripcion) VALUES
     ('UmbralConfirmacionAutomatica', '4',
@@ -858,7 +862,10 @@ INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Etiqueta, Descripcion) VALUE
         'Horas antes de la reserva en que se envía el recordatorio automático al cliente.'),
     ('IntervaloCalendarioDisponibilidadMinutos', '30',
         'Intervalo del calendario de disponibilidad (minutos)',
-        'Cada cuántos minutos se muestra un horario de llegada seleccionable en el calendario de disponibilidad.');
+        'Cada cuántos minutos se muestra un horario de llegada seleccionable en el calendario de disponibilidad.'),
+    ('ToleranciaCobroMinutos', '30',
+        'Tolerancia para cobrar (minutos)',
+        'Minutos que se esperan después de terminar el tiempo de uso de la mesa (duración de reserva) antes de marcar la cuenta abierta como «Por cobrar». Con 0 se marca justo al terminar el turno. Ej.: con turno de 90 min y tolerancia de 30, se marca a las 2 h de haberse sentado el cliente.');
 GO
 
 

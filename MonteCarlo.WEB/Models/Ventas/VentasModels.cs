@@ -28,6 +28,10 @@ public class CuentaApiResponse
     public bool PuedeLiberarSinConsumo { get; set; }
     public string? Bloqueo { get; set; }
 
+    /// <summary>La cuenta abierta paso el tiempo de uso de la mesa (llegada + duracion del turno) mas la tolerancia para cobrar.</summary>
+    public bool Antigua { get; set; }
+    public DateTime? VenceDesde { get; set; }
+
     /// <summary>
     /// Lineas activas (no anuladas) de la cuenta, la mas reciente primero: es el orden en que se quitan las
     /// unidades. Una sola fuente para la lista de la cuenta y para la caja.

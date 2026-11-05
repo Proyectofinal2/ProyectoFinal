@@ -41,10 +41,15 @@
                         <div class="mb-4">
                             <label asp-for="Parametros[i].Valor" class="form-label mc-required">@parametro.Etiqueta</label>
                             <input asp-for="Parametros[i].Valor" type="text" inputmode="numeric" class="form-control"
-                                   data-mc-original="@parametro.ValorOriginal" />
+                                   data-mc-original="@parametro.ValorOriginal" data-mc-clave="@parametro.Clave" />
                             @if (!string.IsNullOrWhiteSpace(parametro.Descripcion))
                             {
                             <div class="form-text">@parametro.Descripcion</div>
+                            }
+                            @if (parametro.Clave == "ToleranciaCobroMinutos")
+                            {
+                            @* Resultado calculado con los valores que estan en pantalla (se actualiza al escribir). *@
+                            <div class="form-text fw-semibold" data-mc-tolerancia-hint aria-live="polite"></div>
                             }
                             <span asp-validation-for="Parametros[i].Valor" class="text-danger small"></span>
                             @if (parametro.FechaModificacion is { } fecha)
@@ -72,3 +77,30 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // ToleranciaCobroMinutos: muestra en que momento una cuenta pasa a "Por cobrar" con los valores actuales
+        // (duracion de reserva + tolerancia), sin esperar a guardar.
+        (function () {
+            const hint = document.querySelector("[data-mc-tolerancia-hint]");
+            const tolerancia = document.querySelector('[data-mc-clave="ToleranciaCobroMinutos"]');
+            const duracion = document.querySelector('[data-mc-clave="DuracionReservaMinutos"]');
+            if (!hint || !tolerancia || !duracion) return;
+
+            function actualizar() {
+                const t = Number(tolerancia.value), d = Number(duracion.value);
+                if (!Number.isInteger(t) || !Number.isInteger(d) || t < 0 || d < 1 || tolerancia.value.trim() === "" || duracion.value.trim() === "") {
+                    hint.textContent = "";
+                    return;
+                }
+                hint.textContent = "Con el turno de " + window.mc.duracion(d) + " y esta tolerancia, una cuenta se marca «Por cobrar» "
+                    + window.mc.duracion(d + t) + " después de sentarse el cliente.";
+            }
+
+            tolerancia.addEventListener("input", actualizar);
+            duracion.addEventListener("input", actualizar);
+            actualizar();
+        })();
+    </script>
+}

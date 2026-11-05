@@ -51,13 +51,25 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
             d => new CuentaAbiertaResumen(d.IdReserva, d.IdVenta, d.Total, d.Productos, Convert.ToBase64String(d.RowVersion)));
     }
 
-    public async Task<HashSet<int>> ObtenerIdsMesaConCuentaAbiertaAsync() =>
-        (await context.ReservasMesa
+    public async Task<Dictionary<int, DateTime>> ObtenerMesasConCuentaAbiertaAsync()
+    {
+        var filas = await context.ReservasMesa
             .AsNoTracking()
             .Where(rm => rm.Reserva.EstadoReserva.Nombre == "Confirmada"
                          && rm.Reserva.Ventas.Any(v => v.Estado == VentaEstados.Abierta))
-            .Select(rm => rm.IdMesa)
-            .ToListAsync()).ToHashSet();
+            .Select(rm => new
+            {
+                rm.IdMesa,
+                rm.Reserva.FechaAtencion,
+                FechaVenta = rm.Reserva.Ventas.Where(v => v.Estado == VentaEstados.Abierta).Select(v => v.FechaVenta).First()
+            })
+            .ToListAsync();
+
+        // Una mesa con dos cuentas abiertas (no deberia pasar) se toma por la mas reciente.
+        return filas
+            .GroupBy(f => f.IdMesa)
+            .ToDictionary(g => g.Key, g => g.Max(f => f.FechaAtencion ?? f.FechaVenta));
+    }
 
     public void Agregar(Venta venta) => context.Ventas.Add(venta);
 

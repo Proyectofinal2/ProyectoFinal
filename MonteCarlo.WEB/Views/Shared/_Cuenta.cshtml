@@ -23,7 +23,7 @@
 
     <p class="mc-cuenta__meta">
         <strong>@c.Cliente</strong> · @c.Personas @(c.Personas == 1 ? "persona" : "personas")
-        @if (sentados is not null && (abierta || c.Estado == "SinPedidos"))
+        @if (sentados is not null && !c.Antigua && (abierta || c.Estado == "SinPedidos"))
         {
             <text> · sentados hace @sentados</text>
         }
@@ -36,6 +36,15 @@
     @if (c.Bloqueo is not null)
     {
         <div class="alert @(c.Estado == "Cobrada" ? "alert-success" : "alert-warning") mc-cuenta__aviso" role="status">@c.Bloqueo</div>
+    }
+
+    @if (c.Antigua && c.VenceDesde is not null)
+    {
+        <div class="alert alert-warning mc-cuenta__aviso mc-cuenta__antigua" role="status">
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+            <strong>Cuenta antigua.</strong> Superó el tiempo de uso de la mesa el @c.VenceDesde.Value.ToString("dd/MM/yyyy") a las @c.VenceDesde.Value.ToString("HH:mm").
+            Resuélvela cobrándola o, si está vacía, liberando la mesa.
+        </div>
     }
 
     <div class="mc-cuenta__error alert alert-danger" role="alert" data-mc-cuenta-error hidden></div>

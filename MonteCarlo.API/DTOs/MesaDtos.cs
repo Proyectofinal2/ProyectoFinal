@@ -86,6 +86,12 @@ public class MesaCuentaResponse
 
     /// <summary>RowVersion en base64.</summary>
     public string Version { get; set; } = null!;
+
+    /// <summary>Paso el tiempo de uso de la mesa (llegada + duracion del turno) mas el margen (CuentaVencimiento): ya solo queda cobrarla.</summary>
+    public bool Antigua { get; set; }
+
+    /// <summary>Desde cuando es antigua; sirve para el aviso «Esta cuenta venció el...».</summary>
+    public DateTime VenceDesde { get; set; }
 }
 
 /// <summary>Indicadores actuales de mesas para el panel administrativo.</summary>
@@ -102,6 +108,9 @@ public class ResumenMesasResponse
 
     /// <summary>Porcentaje de mesas ocupadas sobre las habilitadas.</summary>
     public decimal PorcentajeOcupacion { get; set; }
+
+    /// <summary>Cuentas abiertas antiguas (por reserva: una union de dos mesas cuenta una vez).</summary>
+    public int CuentasAntiguas { get; set; }
 
     /// <summary>Se informa cuando no hay mesas habilitadas para calcular la ocupacion.</summary>
     public string? MensajeContextual { get; set; }
