@@ -37,6 +37,17 @@ public class VentasController(IVentasService ventasService) : ControllerBase
     public async Task<IActionResult> AgregarPedido(int idReserva, [FromBody] AgregarPedidoRequest request) =>
         this.Responder(await ventasService.AgregarPedidoAsync(idReserva, request, IdUsuarioAutenticado));
 
+    /// <summary>
+    /// Registra una venta para llevar (sin reserva ni mesa): productos, metodo de pago y el total que vio la pantalla.
+    /// Idempotente por clave. 409 si los precios o la disponibilidad cambiaron.
+    /// </summary>
+    [HttpPost("ventas/para-llevar")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegistrarParaLlevar([FromBody] ParaLlevarRequest request) =>
+        this.Responder(await ventasService.RegistrarParaLlevarAsync(request, IdUsuarioAutenticado));
+
     /// <summary>Quita una linea (o parte de ella) de una cuenta abierta; queda anulada con quien y cuando.</summary>
     [HttpPost("ventas/lineas/{idDetalle:int}/anular")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
@@ -75,11 +86,11 @@ public class VentasController(IVentasService ventasService) : ControllerBase
     public async Task<IActionResult> LiberarSinConsumo(int idReserva) =>
         this.Responder(await ventasService.LiberarSinConsumoAsync(idReserva, IdUsuarioAutenticado));
 
-    /// <summary>Metodos de pago activos.</summary>
+    /// <summary>Metodos de pago activos (los que se ofrecen al cobrar); con <c>todos=true</c>, tambien los deshabilitados (para filtrar ventas antiguas).</summary>
     [HttpGet("metodos-pago")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ObtenerMetodosPago() =>
-        this.Responder(await ventasService.ObtenerMetodosPagoAsync());
+    public async Task<IActionResult> ObtenerMetodosPago([FromQuery] bool todos = false) =>
+        this.Responder(await ventasService.ObtenerMetodosPagoAsync(todos));
 
     /// <summary>Catalogo vendible (producto disponible y categoria activa) agrupado por categoria.</summary>
     [HttpGet("productos/venta")]

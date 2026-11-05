@@ -21,6 +21,12 @@
     ViewData["Subtitle"] = "Plano del salon: distribucion, estado en vivo y asignacion sin reserva.";
 }
 
+@section PageActions {
+    <a asp-controller="Ventas" asp-action="ParaLlevar" class="btn btn-primary mc-btn-add">
+        <i class="bi bi-bag-plus mc-btn-add__icono" aria-hidden="true"></i> Venta para llevar
+    </a>
+}
+
 <div class="mc-mesas-card" id="mc-mesas-root" data-es-administrador-general="@(Model.EsAdministradorGeneral ? "true" : "false")">
     <div class="mc-mesas-toolbar">
         <p id="mc-mode-hint"></p>

@@ -1409,19 +1409,14 @@
       });
   }
 
-  /* ---------------- Caja de pedido ---------------- */
-  function montarCaja(html) {
-    var anterior = document.getElementById("mcCajaModal");
-    if (anterior) {
-      bootstrap.Modal.getOrCreateInstance(anterior).dispose();
-      anterior.remove();
-    }
-
-    var contenedor = document.createElement("div");
-    contenedor.innerHTML = html.trim();
-    var modalEl = contenedor.firstElementChild;
-    document.body.appendChild(modalEl);
-
+  /* ---------------- Caja de venta ----------------
+     iniciarCaja es el nucleo de la caja (menu, busqueda, categorias, carrito y ticket) y no sabe que hacer al confirmar:
+     lo comparten el modal de agregar pedidos a una mesa (montarCaja) y la pagina de venta para llevar
+     (initCajaParaLlevar). opciones:
+       textoConfirmar(nuevas, quitadas, totalNuevo) -> texto del boton de confirmar
+       puedeConfirmar(nuevas, quitadas)             -> si se habilita
+     Devuelve lo que necesita quien confirma. */
+  function iniciarCaja(modalEl, opciones) {
     var carrito = []; // pedido nuevo: [{ id, nombre, precio, cantidad }]
     var clave = crypto.randomUUID(); // un reintento del mismo pedido no lo duplica
     var enviando = false;
@@ -1575,9 +1570,11 @@
       if (quitadas > 0) {
         partes.push(quitadas + (quitadas === 1 ? " se quitar\u00e1" : " se quitar\u00e1n"));
       }
-      resumenEl.textContent = partes.length > 0 ? partes.join(" \u00b7 ") : "Usa + y \u2212 para armar el pedido";
-      confirmarEl.textContent = nuevas > 0 && quitadas === 0 ? "Agregar a la cuenta" : "Guardar cambios";
-      confirmarEl.disabled = (nuevas === 0 && quitadas === 0) || enviando;
+      if (resumenEl) {
+        resumenEl.textContent = partes.join(" · ");
+      }
+      confirmarEl.textContent = opciones.textoConfirmar(nuevas, quitadas, totalNuevo);
+      confirmarEl.disabled = !opciones.puedeConfirmar(nuevas, quitadas) || enviando;
 
       // Menu: la cantidad de cada producto es lo que quedara en la cuenta (lo que ya tenia, mas lo nuevo, menos lo quitado).
       var seleccionados = 0;
@@ -1716,17 +1713,57 @@
       }
     });
 
-    confirmarEl.addEventListener("click", async function () {
-      var operaciones = operacionesQuitar();
-      if (enviando || (carrito.length === 0 && operaciones.length === 0)) {
+    pintar();
+
+    return {
+      clave: clave,
+      carrito: carrito,
+      confirmarEl: confirmarEl,
+      errorEl: errorEl,
+      buscarEl: buscarEl,
+      pintar: pintar,
+      operacionesQuitar: operacionesQuitar,
+      estaEnviando: function () {
+        return enviando;
+      },
+      setEnviando: function (valor) {
+        enviando = valor;
+      },
+    };
+  }
+
+  /* Caja de pedido (modal): agrega un pedido a la cuenta de una mesa y/o quita productos de ella. */
+  function montarCaja(html) {
+    var anterior = document.getElementById("mcCajaModal");
+    if (anterior) {
+      bootstrap.Modal.getOrCreateInstance(anterior).dispose();
+      anterior.remove();
+    }
+
+    var contenedor = document.createElement("div");
+    contenedor.innerHTML = html.trim();
+    var modalEl = contenedor.firstElementChild;
+    document.body.appendChild(modalEl);
+
+    var caja = iniciarCaja(modalEl, {
+      textoConfirmar: function (nuevas, quitadas) {
+        return nuevas > 0 && quitadas === 0 ? "Agregar a la cuenta" : "Guardar cambios";
+      },
+      puedeConfirmar: function (nuevas, quitadas) {
+        return nuevas > 0 || quitadas > 0;
+      },
+    });
+    caja.confirmarEl.addEventListener("click", async function () {
+      var operaciones = caja.operacionesQuitar();
+      if (caja.estaEnviando() || (caja.carrito.length === 0 && operaciones.length === 0)) {
         return;
       }
-      enviando = true;
-      confirmarEl.disabled = true;
-      errorEl.hidden = true;
+      caja.setEnviando(true);
+      caja.confirmarEl.disabled = true;
+      caja.errorEl.hidden = true;
       var idReserva = Number(modalEl.dataset.idReserva);
       var etiquetaMesa = modalEl.dataset.mesa;
-      var hayNuevo = carrito.length > 0;
+      var hayNuevo = caja.carrito.length > 0;
       var unidadesQuitadas = operaciones.reduce(function (suma, op) {
         return suma + op.cantidad;
       }, 0);
@@ -1738,8 +1775,8 @@
       // si algo falla a medias se cierra la caja y se vuelve a pedir la cuenta.
       if (hayNuevo) {
         var r = await enviarJson("/admin/ventas/cuenta/" + idReserva + "/pedidos", {
-          claveIdempotencia: clave,
-          lineas: carrito.map(function (l) {
+          claveIdempotencia: caja.clave,
+          lineas: caja.carrito.map(function (l) {
             return { idProducto: l.id, cantidad: l.cantidad };
           }),
         });
@@ -1758,7 +1795,7 @@
         }
         fallo = anulacion.fallo;
       }
-      enviando = false;
+      caja.setEnviando(false);
 
       function cerrarYAvisar(detalle) {
         modalEl.addEventListener(
@@ -1789,9 +1826,9 @@
       }
 
       if (!aplicado) {
-        errorEl.textContent = fallo.message;
-        errorEl.hidden = false;
-        pintar();
+        caja.errorEl.textContent = fallo.message;
+        caja.errorEl.hidden = false;
+        caja.pintar();
         if (fallo.cuenta) {
           emitirCambio(document, {
             tipo: "desactualizada",
@@ -1816,11 +1853,81 @@
       modalEl.remove();
     });
 
-    pintar();
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
     modalEl.addEventListener("shown.bs.modal", function () {
-      buscarEl.focus();
+      caja.buscarEl.focus();
     }, { once: true });
+  }
+
+
+  /* Venta para llevar (HU-CON-003): la misma caja como pagina. Confirmar = elegir metodo de pago y cobrar al momento. */
+  function initCajaParaLlevar() {
+    var raiz = document.querySelector("[data-mc-caja-pagina]");
+    if (!raiz) {
+      return;
+    }
+    var pagosEl = raiz.querySelector("[data-mc-caja-pagos]");
+    var errorPagoEl = raiz.querySelector("[data-mc-caja-pago-error]");
+
+    function metodo() {
+      return pagosEl.querySelector("input:checked");
+    }
+
+    var caja = iniciarCaja(raiz, {
+      textoConfirmar: function (nuevas, quitadas, totalNuevo) {
+        if (nuevas === 0) {
+          return "Cobrar";
+        }
+        var m = metodo();
+        return "Cobrar " + colones(totalNuevo) + (m ? " con " + m.dataset.nombre : "");
+      },
+      puedeConfirmar: function (nuevas) {
+        return nuevas > 0;
+      },
+    });
+
+    pagosEl.addEventListener("change", function () {
+      pagosEl.classList.remove("is-invalid");
+      errorPagoEl.hidden = true;
+      caja.pintar();
+    });
+
+    caja.confirmarEl.addEventListener("click", async function () {
+      if (caja.estaEnviando() || caja.carrito.length === 0) {
+        return;
+      }
+      var elegido = metodo();
+      if (!elegido) {
+        pagosEl.classList.add("is-invalid");
+        errorPagoEl.hidden = false;
+        return;
+      }
+
+      caja.setEnviando(true);
+      caja.confirmarEl.disabled = true;
+      caja.errorEl.hidden = true;
+      var total = caja.carrito.reduce(function (suma, l) {
+        return suma + l.cantidad * l.precio;
+      }, 0);
+      var respuesta = await enviarJson("/admin/ventas/para-llevar", {
+        claveIdempotencia: caja.clave,
+        idMetodoPago: Number(elegido.value),
+        totalEsperado: total,
+        lineas: caja.carrito.map(function (l) {
+          return { idProducto: l.id, cantidad: l.cantidad };
+        }),
+      });
+
+      if (respuesta.success && respuesta.redirect) {
+        // El aviso lo muestra el listado de ventas (viaja en TempData); no se vuelve a habilitar para no duplicar la venta.
+        window.location.href = respuesta.redirect;
+        return;
+      }
+      caja.errorEl.textContent = respuesta.message || "No se pudo registrar la venta. Intenta de nuevo.";
+      caja.errorEl.hidden = false;
+      caja.setEnviando(false);
+      caja.pintar();
+    });
   }
 
   function initCuentas() {
@@ -1901,5 +2008,6 @@
     initReservationCalendars();
     initTimePickers();
     initCuentas();
+    initCajaParaLlevar();
   });
 })();

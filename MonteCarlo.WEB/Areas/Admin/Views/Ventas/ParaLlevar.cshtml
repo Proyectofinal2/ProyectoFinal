@@ -1,0 +1,22 @@
+@*
+    Venta para llevar (HU-CON-003): la caja como pagina. Sin reserva ni mesa; se elige el metodo de pago y se cobra al
+    momento. El menu y el ticket son el parcial compartido _Caja (el mismo de agregar pedidos a una mesa); el cobro
+    lo envia site.js (initCajaParaLlevar) a POST admin/ventas/para-llevar y, si sale bien, vuelve al listado de ventas.
+*@
+@using MonteCarlo.WEB.Models.Ventas
+@model CajaViewModel
+@{
+    ViewData["Title"] = "Venta para llevar";
+    ViewData["Subtitle"] = "Cobra al momento, sin reserva ni mesa.";
+    ViewData["Icon"] = "bi-bag";
+}
+
+@section PageActions {
+    <a asp-controller="VentasListado" asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver a Ventas
+    </a>
+}
+
+<div class="mc-caja mc-caja--pagina mc-caja__cuerpo" data-mc-caja data-mc-caja-pagina data-cuenta-total="0" data-lineas="[]">
+    <partial name="_Caja" model="Model" />
+</div>

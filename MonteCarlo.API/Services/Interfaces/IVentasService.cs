@@ -13,6 +13,12 @@ public interface IVentasService
     /// <summary>Quita una linea (o parte de ella) de una cuenta abierta: queda anulada con quien y cuando.</summary>
     Task<Result<CuentaResponse>> AnularLineaAsync(int idDetalle, AnularLineaRequest request, int idUsuario);
 
+    /// <summary>
+    /// Registra una venta para llevar (HU-CON-003): nace Cobrada, sin reserva ni mesa. Idempotente por clave; 409 si los
+    /// precios o la disponibilidad de los productos cambiaron desde que la pantalla armo el pedido.
+    /// </summary>
+    Task<Result<CobroResponse>> RegistrarParaLlevarAsync(ParaLlevarRequest request, int idUsuario);
+
     /// <summary>Cobra la cuenta abierta: finaliza la reserva y libera la mesa. 409 si el total cambio.</summary>
     Task<Result<CobroResponse>> CobrarAsync(int idReserva, CobrarRequest request, int idUsuario);
 
@@ -28,7 +34,7 @@ public interface IVentasService
     /// <summary>Libera la mesa de una reserva sentada hoy (cierre sin consumo); 400 si la mesa no tiene reserva sentada.</summary>
     Task<Result<CobroResponse>> LiberarSinConsumoPorMesaAsync(int idMesa, int idUsuario);
 
-    Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync();
+    Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync(bool incluirInactivos = false);
 
     /// <summary>Productos disponibles con categoria activa, agrupados por categoria, para el selector.</summary>
     Task<Result<List<CategoriaVentaResponse>>> ObtenerCatalogoAsync();

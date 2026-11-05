@@ -1,55 +1,135 @@
-﻿@using MonteCarlo.WEB.Models.Ventas
+﻿@using MonteCarlo.WEB.Models.UI
+@using MonteCarlo.WEB.Models.Ventas
 @model FiltroVentasViewModel
 @{
     ViewData["Title"] = "Ventas";
     ViewData["Subtitle"] = "Consulta el historial de ventas del restaurante.";
+    ViewData["Icon"] = "bi-receipt";
+
+    // Resumen de lo que muestra el listado (con el filtro de fechas y de estado aplicado). Solo las Cobradas son ingreso.
+    var cobradas = Model.Ventas.Where(v => v.Estado == "Cobrada").ToList();
+    var abiertas = Model.Ventas.Where(v => v.Estado == "Abierta").ToList();
+
+    var hoy = DateTime.Today;
+    var desde = Model.FechaInicio ?? hoy;
+    var hasta = Model.FechaFin ?? desde;
+    var fechaDesde = desde.ToString("yyyy-MM-dd");
+    var fechaHasta = hasta.ToString("yyyy-MM-dd");
+    var hayFiltros = desde != hoy || hasta != hoy || Model.IdMetodoPago is not null
+        || !string.IsNullOrEmpty(Model.Estado) || !string.IsNullOrEmpty(Model.TipoVenta);
+
+    // Parametros que conservan los enlaces del origen y de la paginacion.
+    var parametros = new Dictionary<string, string?>
+    {
+        ["FechaInicio"] = fechaDesde,
+        ["FechaFin"] = fechaHasta,
+        ["TipoVenta"] = string.IsNullOrEmpty(Model.TipoVenta) ? null : Model.TipoVenta,
+        ["IdMetodoPago"] = Model.IdMetodoPago?.ToString(),
+        ["Estado"] = string.IsNullOrEmpty(Model.Estado) ? null : Model.Estado
+    };
 }
 
-<form asp-action="Index" method="get" class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label">Desde</label>
-                <input name="FechaInicio" type="date" class="form-control" value="@Model.FechaInicio?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Hasta</label>
-                <input name="FechaFin" type="date" class="form-control" value="@Model.FechaFin?.ToString("yyyy-MM-dd")" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Origen</label>
-                <select name="TipoVenta" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Consumo" selected="@(Model.TipoVenta == "Consumo")">Consumo</option>
-                    <option value="Takeout" selected="@(Model.TipoVenta == "Takeout")">Takeout</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Método Pago</label>
-                <select name="IdMetodoPago" class="form-select">
-                    <option value="">Todos</option>
-                    @foreach (var m in Model.MetodosPago)
-                    {
-                        <option value="@m.IdMetodoPago" selected="@(Model.IdMetodoPago == m.IdMetodoPago)">@m.Nombre</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Estado</label>
-                <select name="Estado" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Abierta" selected="@(Model.Estado == "Abierta")">Abierta</option>
-                    <option value="Cobrada" selected="@(Model.Estado == "Cobrada")">Cobrada</option>
-                    <option value="Anulada" selected="@(Model.Estado == "Anulada")">Anulada</option>
-                    <option value="Abandonada" selected="@(Model.Estado == "Abandonada")">Abandonada</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-            </div>
+@section PageActions {
+    <a asp-controller="Ventas" asp-action="ParaLlevar" class="btn btn-primary mc-btn-add">
+        <i class="bi bi-bag-plus mc-btn-add__icono" aria-hidden="true"></i> Venta para llevar
+    </a>
+}
+
+<section class="mc-stats" aria-label="Resumen de ventas">
+    <div class="mc-stat">
+        <span class="mc-stat__icono" aria-hidden="true"><i class="bi bi-receipt"></i></span>
+        <div>
+            <span class="mc-stat__valor">@Model.Ventas.Count</span>
+            <span class="mc-stat__etiqueta">Ventas listadas</span>
         </div>
     </div>
-</form>
+    <div class="mc-stat">
+        <span class="mc-stat__icono mc-stat__icono--info" aria-hidden="true"><i class="bi bi-cash-coin"></i></span>
+        <div>
+            <span class="mc-stat__valor">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(cobradas.Sum(v => v.Total))</span>
+            <span class="mc-stat__etiqueta">Cobrado (@cobradas.Count)</span>
+        </div>
+    </div>
+    <div class="mc-stat">
+        <span class="mc-stat__icono mc-stat__icono--warning" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+        <div>
+            <span class="mc-stat__valor">@abiertas.Count</span>
+            <span class="mc-stat__etiqueta">Cuentas abiertas (@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(abiertas.Sum(v => v.Total)))</span>
+        </div>
+    </div>
+</section>
+
+@* Filtros por GET que se aplican al cambiarlos: rango de fechas con atajos, metodo de pago y estado; el origen son enlaces con conteo. *@
+<div class="mc-toolbar">
+    <form id="filtros-ventas" asp-action="Index" method="get" role="search" class="mc-toolbar__fila">
+        <div class="mc-rango" role="group" aria-label="Rango de fechas">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
+            <label for="FechaInicio" class="visually-hidden">Desde</label>
+            <input id="FechaInicio" name="FechaInicio" type="date" class="mc-rango__input" value="@fechaDesde" data-mc-autosubmit />
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <label for="FechaFin" class="visually-hidden">Hasta</label>
+            <input id="FechaFin" name="FechaFin" type="date" class="mc-rango__input" value="@fechaHasta" min="@fechaDesde" data-mc-autosubmit />
+        </div>
+
+        <div class="mc-chips" role="group" aria-label="Atajos de fecha">
+            @foreach (var (texto, d, h) in new[] { ("Hoy", hoy, hoy), ("Ayer", hoy.AddDays(-1), hoy.AddDays(-1)), ("Últimos 7 días", hoy.AddDays(-6), hoy), ("Este mes", new DateTime(hoy.Year, hoy.Month, 1), hoy) })
+            {
+                var activo = desde == d && hasta == h;
+                <a class="mc-preset @(activo ? "is-active" : null)" asp-action="Index"
+                   asp-route-FechaInicio="@d.ToString("yyyy-MM-dd")" asp-route-FechaFin="@h.ToString("yyyy-MM-dd")"
+                   asp-route-TipoVenta="@parametros["TipoVenta"]" asp-route-IdMetodoPago="@parametros["IdMetodoPago"]" asp-route-Estado="@parametros["Estado"]"
+                   aria-current="@(activo ? "true" : null)">@texto</a>
+            }
+        </div>
+
+        <div class="mc-toolbar__selects">
+            <label for="IdMetodoPago" class="visually-hidden">Método de pago</label>
+            <select id="IdMetodoPago" name="IdMetodoPago" class="mc-select" data-mc-autosubmit>
+                <option value="">Todos los métodos de pago</option>
+                @foreach (var m in Model.MetodosPago)
+                {
+                    <option value="@m.IdMetodoPago" selected="@(Model.IdMetodoPago == m.IdMetodoPago)">@m.Nombre@(m.Activo ? "" : " (deshabilitado)")</option>
+                }
+            </select>
+
+            <label for="Estado" class="visually-hidden">Estado</label>
+            <select id="Estado" name="Estado" class="mc-select" data-mc-autosubmit>
+                <option value="">Todos los estados</option>
+                @foreach (var estado in new[] { "Abierta", "Cobrada", "Anulada", "Abandonada" })
+                {
+                    <option value="@estado" selected="@(Model.Estado == estado)">@estado</option>
+                }
+            </select>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.TipoVenta))
+        {
+            <input type="hidden" name="TipoVenta" value="@Model.TipoVenta" />
+        }
+    </form>
+
+    <div class="mc-toolbar__fila">
+        @* Origen de la venta: en mesa o para llevar, con cuantas hay de cada una en el rango. *@
+        <nav class="mc-segment" aria-label="Origen de la venta">
+            @foreach (var (valor, texto, icono, conteo) in new[] {
+                ("", "Todas", "bi-receipt", Model.ConteoConsumo + Model.ConteoParaLlevar),
+                ("Consumo", "En mesa", "bi-cup-hot", Model.ConteoConsumo),
+                ("Takeout", "Para llevar", "bi-bag", Model.ConteoParaLlevar) })
+            {
+                var activo = (Model.TipoVenta ?? "") == valor;
+                <a class="mc-segment__op @(activo ? "is-active" : null)" asp-action="Index"
+                   asp-route-FechaInicio="@fechaDesde" asp-route-FechaFin="@fechaHasta"
+                   asp-route-IdMetodoPago="@parametros["IdMetodoPago"]" asp-route-Estado="@parametros["Estado"]"
+                   asp-route-TipoVenta="@(valor == "" ? null : valor)"
+                   aria-current="@(activo ? "true" : null)"><i class="bi @icono me-1" aria-hidden="true"></i>@texto<span class="mc-segment__conteo">@conteo</span></a>
+            }
+        </nav>
+        @if (hayFiltros)
+        {
+            <a asp-action="Index" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Restablecer a hoy</a>
+        }
+    </div>
+</div>
 
 @if (Model.Ventas.Count == 0)
 {
@@ -57,8 +137,8 @@
         <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
                  {
                      Icono = "bi-receipt",
-                     Titulo = "No hay ventas",
-                     Descripcion = "No se encontraron ventas para los filtros seleccionados."
+                     Titulo = "No hay ventas para estos filtros",
+                     Descripcion = "Prueba con otro rango de fechas o quita algún filtro. Las ventas en ₡0 no se listan."
                  })" />
     </div>
 }
@@ -66,7 +146,7 @@ else
 {
     <div class="mc-table-card">
         <div class="table-responsive">
-            <table class="table mc-table align-middle">
+            <table class="table mc-table mc-ventas align-middle">
                 <thead>
                     <tr>
                         <th>Folio</th>
@@ -79,38 +159,32 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var venta in Model.Ventas)
+                    @foreach (var venta in Model.PaginaActual)
                     {
-                        <tr>
+                        <tr class="@(venta.TipoVenta == "Takeout" ? "mc-fila--llevar" : "mc-fila--mesa")">
                             <td class="fw-medium">@venta.Folio</td>
                             <td>@venta.FechaVenta.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@venta.TipoVenta</td>
-                            <td>@(venta.MetodoPago ?? "-")</td>
-                            <td class="text-end">@venta.Total.ToString("C")</td>
                             <td>
-                                @if (venta.Estado == "Cobrada")
+                                @if (venta.TipoVenta == "Takeout")
                                 {
-                                    <span class="badge text-bg-success">Cobrada</span>
-                                }
-                                else if (venta.Estado == "Anulada")
-                                {
-                                    <span class="badge text-bg-danger">Anulada</span>
-                                }
-                                else if (venta.Estado == "Abandonada")
-                                {
-                                    <span class="badge text-bg-secondary">Abandonada</span>
+                                    <span class="mc-badge mc-badge--info"><i class="bi bi-bag me-1" aria-hidden="true"></i>Para llevar</span>
                                 }
                                 else
                                 {
-                                    <span class="badge text-bg-warning">Abierta</span>
+                                    <span class="mc-badge mc-badge--neutral"><i class="bi bi-cup-hot me-1" aria-hidden="true"></i>En mesa</span>
                                 }
+                            </td>
+                            <td><partial name="_MetodoPago" model="new MetodoPagoVisualViewModel(venta.MetodoPago, venta.MetodoPagoActivo ?? true)" /></td>
+                            <td class="text-end text-nowrap">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(venta.Total)</td>
+                            <td>
+                                <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Venta(venta.Estado)" />
                             </td>
                             <!-- NUEVA CELDA DE ACCIONES -->
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                <button type="button" class="btn btn-sm btn-primary"
                                         data-bs-toggle="modal" data-bs-target="#modalDetalle"
                                         data-id="@venta.IdVenta">
-                                    <i class="bi bi-eye"></i> Ver Detalle
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver detalle
                                 </button>
                             </td>
                         </tr>
@@ -119,6 +193,21 @@ else
             </table>
         </div>
     </div>
+}
+
+@if (Model.Ventas.Count > 0)
+{
+    <partial name="_Paginacion" model="@(new PaginacionViewModel
+             {
+                 Accion = "Index",
+                 Controlador = "VentasListado",
+                 Pagina = Model.Pagina,
+                 TotalPaginas = Model.TotalPaginas,
+                 Total = Model.Ventas.Count,
+                 TamanoPagina = FiltroVentasViewModel.TamanoPagina,
+                 Sustantivo = "ventas",
+                 Parametros = parametros
+             })" />
 }
 
 <!-- Modal Detalle de Venta (HU-CON-005) -->
@@ -142,6 +231,12 @@ else
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Al cambiar una fecha, "Hasta" nunca queda antes de "Desde" (el formulario se envia solo).
+            document.getElementById('filtros-ventas').addEventListener('mc:autosubmit', function () {
+                var desde = document.getElementById('FechaInicio'), hasta = document.getElementById('FechaFin');
+                if (desde.value && (!hasta.value || hasta.value < desde.value)) hasta.value = desde.value;
+            });
+
             var modalDetalle = document.getElementById('modalDetalle');
             modalDetalle.addEventListener('show.bs.modal', function (event) {
                 // Botón que abrió el modal

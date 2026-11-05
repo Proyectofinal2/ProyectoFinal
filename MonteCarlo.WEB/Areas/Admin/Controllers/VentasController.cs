@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MonteCarlo.WEB.Models;
 using MonteCarlo.WEB.Models.Autenticacion;
+using MonteCarlo.WEB.Models.Catalogo;
 using MonteCarlo.WEB.Models.Ventas;
 using MonteCarlo.WEB.Services.Interfaces;
 
@@ -24,7 +26,8 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         if (!success || cuenta is null)
             return ErrorParcial(message);
 
-        var (_, _, metodos) = await ventasApiService.ObtenerMetodosPagoAsync();
+        // Se piden todos: el deshabilitado se muestra en gris y sin poder elegirse.
+        var (_, _, metodos) = await ventasApiService.ObtenerMetodosPagoAsync(incluirInactivos: true);
         return PartialView("_Cuenta", new CuentaViewModel { Cuenta = cuenta, MetodosPago = metodos ?? [] });
     }
 
@@ -78,6 +81,39 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         return Json(new { success, message, data, cuenta });
     }
 
+    /// <summary>Venta para llevar (HU-CON-003): la caja como pagina, con metodo de pago y cobro.</summary>
+    [HttpGet("para-llevar")]
+    public async Task<IActionResult> ParaLlevar()
+    {
+        var (okMenu, mensajeMenu, categorias) = await ventasApiService.ObtenerCatalogoVentaAsync();
+        var (_, _, metodos) = await ventasApiService.ObtenerMetodosPagoAsync(incluirInactivos: true);
+        if (!okMenu)
+            TempData[Alerta.Error] = mensajeMenu;
+
+        return View(new CajaViewModel { ParaLlevar = true, Categorias = categorias ?? [], MetodosPago = metodos ?? [] });
+    }
+
+    /// <summary>
+    /// Registra la venta para llevar. Si sale bien, el aviso viaja en TempData al listado de ventas y la respuesta
+    /// trae la direccion a la que vuelve la pantalla.
+    /// </summary>
+    [HttpPost("para-llevar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegistrarParaLlevar([FromBody] ParaLlevarBody body)
+    {
+        var lineas = (body.Lineas ?? []).Select(l => (l.IdProducto, l.Cantidad));
+        var (success, message, data, _) = await ventasApiService.RegistrarParaLlevarAsync(
+            body.ClaveIdempotencia, body.IdMetodoPago, body.TotalEsperado, lineas);
+
+        string? redirect = null;
+        if (success && data is not null)
+        {
+            TempData[Alerta.Exito] = $"Venta para llevar {data.Folio} registrada · {Colones.Formato(data.Total)} con {data.MetodoPago}";
+            redirect = Url.Action("Index", "VentasListado");
+        }
+        return Json(new { success, message, data, redirect });
+    }
+
     [HttpPost("cuenta/{idReserva:int}/cerrar-sin-cobro")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CerrarSinCobro(int idReserva, [FromBody] CerrarSinCobroBody body)
@@ -99,4 +135,5 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public record AnularLineaBody(int? Cantidad, string? Motivo);
     public record CobrarBody(int IdMetodoPago, decimal TotalEsperado, string? Version);
     public record CerrarSinCobroBody(string? Motivo, string? Version);
+    public record ParaLlevarBody(Guid ClaveIdempotencia, int IdMetodoPago, decimal TotalEsperado, List<LineaBody>? Lineas);
 }

@@ -61,11 +61,13 @@ public class VentasService(
         cuenta.PuedeCerrarSinCobro = cuenta.Antigua && cuenta.PuedeCobrar;
     }
 
-    public async Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync()
+    public async Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync(bool incluirInactivos = false)
     {
-        var metodos = await metodosPagoRepository.ObtenerActivosAsync();
+        var metodos = incluirInactivos
+            ? await metodosPagoRepository.ObtenerTodosAsync()
+            : await metodosPagoRepository.ObtenerActivosAsync();
         var respuesta = metodos
-            .Select(m => new MetodoPagoResponse { IdMetodoPago = m.IdMetodoPago, Nombre = m.Nombre })
+            .Select(m => new MetodoPagoResponse { IdMetodoPago = m.IdMetodoPago, Nombre = m.Nombre, Activo = m.Activo })
             .ToList();
 
         return Result<List<MetodoPagoResponse>>.Ok(respuesta, "Metodos de pago obtenidos exitosamente.");
@@ -119,7 +121,7 @@ public class VentasService(
         if (!cuentaActual.PuedeAgregar)
             return ConflictoConCuenta<CuentaResponse>(cuentaActual.Bloqueo ?? "La cuenta no admite mas pedidos.", cuentaActual);
 
-        var (lineas, errorLineas) = NormalizarLineas(request.Lineas);
+        var (lineas, errorLineas) = NormalizarLineas(request.Lineas, "el pedido");
         if (errorLineas is not null)
             return Result<CuentaResponse>.BadRequest(errorLineas);
 
@@ -154,17 +156,7 @@ public class VentasService(
         };
         venta.Pedidos.Add(pedido);
 
-        foreach (var linea in lineas)
-        {
-            venta.Detalles.Add(new DetalleVenta
-            {
-                Venta = venta,
-                Pedido = pedido,
-                IdProducto = linea.IdProducto,
-                Cantidad = linea.Cantidad,
-                PrecioUnitario = catalogo[linea.IdProducto].Precio
-            });
-        }
+        AgregarDetalles(venta, pedido, lineas, catalogo);
 
         RecalcularTotal(venta);
         if (!esNueva)
@@ -178,6 +170,69 @@ public class VentasService(
             return errorGuardado;
 
         return await ObtenerCuentaTrasCambioAsync(idReserva, esNueva ? "Cuenta abierta con el primer pedido." : "Pedido registrado.");
+    }
+
+    // ============================================================
+    // Venta para llevar (HU-CON-003)
+    // ============================================================
+
+    public async Task<Result<CobroResponse>> RegistrarParaLlevarAsync(ParaLlevarRequest request, int idUsuario)
+    {
+        if (request.ClaveIdempotencia == Guid.Empty)
+            return Result<CobroResponse>.BadRequest("Falta la clave de la venta.");
+
+        // Reintento o doble clic: la venta ya esta registrada, se devuelve tal cual.
+        var existente = await ventasRepository.ObtenerPedidoPorClaveAsync(request.ClaveIdempotencia);
+        if (existente is not null)
+        {
+            if (existente.Venta.IdReserva is not null)
+                return Result<CobroResponse>.Conflict("La clave de la venta ya se uso en otra cuenta. Intenta de nuevo.");
+
+            var metodoPrevio = existente.Venta.IdMetodoPago is { } id ? await metodosPagoRepository.ObtenerPorIdAsync(id) : null;
+            return Result<CobroResponse>.Ok(MapearCobro(existente.Venta, null, metodoPrevio?.Nombre), "La venta ya estaba registrada.");
+        }
+
+        var (lineas, errorLineas) = NormalizarLineas(request.Lineas, "la venta");
+        if (errorLineas is not null)
+            return Result<CobroResponse>.BadRequest(errorLineas);
+
+        var metodo = await metodosPagoRepository.ObtenerPorIdAsync(request.IdMetodoPago);
+        if (metodo is null || !metodo.Activo)
+            return Result<CobroResponse>.BadRequest("El metodo de pago no es valido.");
+
+        var catalogo = (await productosRepository.ObtenerDisponiblesParaVentaAsync(lineas.Select(l => l.IdProducto).ToList()))
+            .ToDictionary(p => p.IdProducto);
+        if (lineas.Any(l => !catalogo.ContainsKey(l.IdProducto)))
+            return Result<CobroResponse>.Conflict("Uno de los productos ya no esta disponible. Actualiza el menu e intenta de nuevo.");
+
+        var total = lineas.Sum(l => l.Cantidad * catalogo[l.IdProducto].Precio);
+        if (request.TotalEsperado != total)
+            return Result<CobroResponse>.Conflict($"Los precios cambiaron: el total ahora es ₡{total:N0}. Actualiza el menu e intenta de nuevo.");
+
+        var ahora = DateTime.Now;
+        var venta = new Venta
+        {
+            TipoVenta = VentaTipos.Takeout,
+            Estado = VentaEstados.Cobrada,
+            IdUsuarioRegistro = idUsuario,
+            FechaVenta = ahora,
+            IdMetodoPago = metodo.IdMetodoPago,
+            FechaCobro = ahora,
+            IdUsuarioCobro = idUsuario
+        };
+        ventasRepository.Agregar(venta);
+
+        // Los productos cuelgan de un pedido (FK compuesta): la venta para llevar tiene uno solo.
+        var pedido = new PedidoVenta { Venta = venta, IdUsuario = idUsuario, Fecha = ahora, ClaveIdempotencia = request.ClaveIdempotencia };
+        venta.Pedidos.Add(pedido);
+        AgregarDetalles(venta, pedido, lineas, catalogo);
+        RecalcularTotal(venta);
+
+        var errorGuardado = await GuardarAsync<CobroResponse>("La venta no se pudo registrar. Intenta de nuevo.");
+        if (errorGuardado is not null)
+            return errorGuardado;
+
+        return Result<CobroResponse>.Ok(MapearCobro(venta, null, metodo.Nombre), "Venta para llevar registrada.");
     }
 
     public async Task<Result<CuentaResponse>> AnularLineaAsync(int idDetalle, AnularLineaRequest request, int idUsuario)
@@ -448,8 +503,27 @@ public class VentasService(
         }
     }
 
-    /// <summary>Une las lineas repetidas del mismo producto y valida cuantas hay y sus cantidades.</summary>
-    private static (List<LineaPedidoRequest> Lineas, string? Error) NormalizarLineas(List<LineaPedidoRequest>? solicitadas)
+    /// <summary>Agrega a la venta una linea por producto del pedido, con el precio vigente del catalogo (se congela aqui).</summary>
+    private static void AgregarDetalles(Venta venta, PedidoVenta pedido, List<LineaPedidoRequest> lineas, Dictionary<int, Producto> catalogo)
+    {
+        foreach (var linea in lineas)
+        {
+            venta.Detalles.Add(new DetalleVenta
+            {
+                Venta = venta,
+                Pedido = pedido,
+                IdProducto = linea.IdProducto,
+                Cantidad = linea.Cantidad,
+                PrecioUnitario = catalogo[linea.IdProducto].Precio
+            });
+        }
+    }
+
+    /// <summary>
+    /// Une las lineas repetidas del mismo producto y valida cuantas hay y sus cantidades.
+    /// <paramref name="destino"/> completa el mensaje de "al menos un producto" ("el pedido", "la venta").
+    /// </summary>
+    private static (List<LineaPedidoRequest> Lineas, string? Error) NormalizarLineas(List<LineaPedidoRequest>? solicitadas, string destino)
     {
         var lineas = (solicitadas ?? [])
             .GroupBy(l => l.IdProducto)
@@ -458,7 +532,7 @@ public class VentasService(
 
         var error = lineas.Count switch
         {
-            0 => "Agrega al menos un producto para registrar el pedido.",
+            0 => $"Agrega al menos un producto para registrar {destino}.",
             > MaxLineasPorPedido => $"Un pedido admite hasta {MaxLineasPorPedido} productos distintos.",
             _ when lineas.Any(l => l.Cantidad is < 1 or > MaxCantidadPorLinea) =>
                 $"La cantidad de cada producto debe estar entre 1 y {MaxCantidadPorLinea}.",
@@ -485,12 +559,12 @@ public class VentasService(
     private static Result<T> ConflictoConCuenta<T>(string mensaje, CuentaResponse cuenta) =>
         new(false, mensaje, default, 409, cuenta);
 
-    private static CobroResponse MapearCobro(Venta? venta, Reserva reserva, string? metodoPago) => new()
+    private static CobroResponse MapearCobro(Venta? venta, Reserva? reserva, string? metodoPago) => new()
     {
         IdVenta = venta?.IdVenta,
         Folio = venta is null ? null : Folio(venta.IdVenta),
-        IdReserva = reserva.IdReserva,
-        NumerosMesa = NumerosMesa(reserva),
+        IdReserva = reserva?.IdReserva,
+        NumerosMesa = reserva is null ? [] : NumerosMesa(reserva),
         Total = venta?.Total ?? 0,
         MetodoPago = metodoPago
     };
@@ -597,6 +671,7 @@ public class VentasService(
             TipoVenta = v.TipoVenta,
             Total = v.Total,
             MetodoPago = v.MetodoPago?.Nombre,
+            MetodoPagoActivo = v.MetodoPago?.Activo,
             Estado = v.Estado
         }).ToList();
 
@@ -618,6 +693,7 @@ public class VentasService(
             Motivo = venta.MotivoAnulacion,
             Total = venta.Total,
             MetodoPago = venta.MetodoPago?.Nombre,
+            MetodoPagoActivo = venta.MetodoPago?.Activo,
             UsuarioRegistro = venta.UsuarioRegistro.NombreCompleto,
             Lineas = venta.Detalles.Select(d => new LineaDetalleResponse
             {
