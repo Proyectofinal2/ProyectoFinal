@@ -35,17 +35,21 @@ public class MesasService(
 
         var mesasOcupadas = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Ocupada");
         var totalHabilitadas = mesasHabilitadas.Count;
-        var cuentasAntiguas = mesasHabilitadas
-            .Where(x => x.Respuesta.Cuenta?.Antigua == true)
-            .Select(x => x.Respuesta.ReservaActual!.IdReserva)
-            .Distinct()
-            .Count();
+        // Por reserva: una union de dos mesas comparte la cuenta y cuenta una sola vez.
+        var cuentasPorReserva = mesasHabilitadas
+            .Where(x => x.Respuesta.Cuenta is not null)
+            .GroupBy(x => x.Respuesta.ReservaActual!.IdReserva)
+            .Select(g => g.First().Respuesta.Cuenta!)
+            .ToList();
+        var cuentasAntiguas = cuentasPorReserva.Count(c => c.Antigua);
 
         var resumen = new ResumenMesasResponse
         {
             MesasHabilitadas = totalHabilitadas,
             MesasDisponibles = mesasHabilitadas.Count(x => x.Respuesta.Estado == "Disponible"),
             MesasOcupadas = mesasOcupadas,
+            CuentasAbiertas = cuentasPorReserva.Count,
+            ConsumoEnCurso = cuentasPorReserva.Sum(c => c.Total),
             CuentasAntiguas = cuentasAntiguas,
             PorcentajeOcupacion = totalHabilitadas == 0
                 ? 0

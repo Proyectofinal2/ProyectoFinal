@@ -109,6 +109,12 @@ public class ResumenMesasResponse
     /// <summary>Porcentaje de mesas ocupadas sobre las habilitadas.</summary>
     public decimal PorcentajeOcupacion { get; set; }
 
+    /// <summary>Cuentas abiertas con pedidos, incluidas las antiguas (por reserva).</summary>
+    public int CuentasAbiertas { get; set; }
+
+    /// <summary>Suma de los totales de las cuentas abiertas: consumo aun sin cobrar.</summary>
+    public decimal ConsumoEnCurso { get; set; }
+
     /// <summary>Cuentas abiertas antiguas (por reserva: una union de dos mesas cuenta una vez).</summary>
     public int CuentasAntiguas { get; set; }
 

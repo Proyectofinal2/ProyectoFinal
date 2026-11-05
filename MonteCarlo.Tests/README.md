@@ -99,7 +99,7 @@ Una cuenta abierta es antigua (por cobrar) cuando pasó el tiempo de uso de la m
 | Comportamiento | Pruebas |
 |---|---|
 | Cálculo del vencimiento: llegada + turno + margen, otra duración, margen 0, cruza la medianoche, límite exacto, dentro del turno / del margen / pasado | `CuentaVencimientoTests` (funciones puras: no necesitan SQL Server) |
-| Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca | `CuentaAntiguaTests` |
+| Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca; el resumen de Inicio (`CuentasAbiertas`, `ConsumoEnCurso`) suma una vez por reserva aunque sean dos mesas | `CuentaAntiguaTests` |
 
 `alter_database-6.sql` (clave `ToleranciaCobroMinutos`) se verificó a mano en una base desechable: aborta con mensaje sin `ConfiguracionSistema` y es idempotente (dos corridas, una fila).
 
@@ -113,7 +113,7 @@ G1 y R1 ya están corregidos (fase A1). Pendiente en el mismo plan: liberación 
 
 ## Checkpoint
 
-- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 66 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
+- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 67 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
 - [x] Concurrencia: doble primer pedido y doble cobro.
 - [ ] Equivalencia `alter_database-5.sql` (ejecutado dos veces) vs `database.sql` (columnas, CHECK, FK, índices).
 - [ ] Autorización por rol de `VentasController` y `Mesas/liberar` (a nivel de atributos).
