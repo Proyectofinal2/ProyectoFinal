@@ -26,6 +26,7 @@ public class CuentaApiResponse
     public bool PuedeAgregar { get; set; }
     public bool PuedeCobrar { get; set; }
     public bool PuedeLiberarSinConsumo { get; set; }
+    public bool PuedeCerrarSinCobro { get; set; }
     public string? Bloqueo { get; set; }
 
     /// <summary>La cuenta abierta paso el tiempo de uso de la mesa (llegada + duracion del turno) mas la tolerancia para cobrar.</summary>
@@ -205,6 +206,7 @@ public class VentaDetalleApiResponse
     public DateTime FechaVenta { get; set; }
     public string TipoVenta { get; set; } = "";
     public string Estado { get; set; } = "";
+    public string? Motivo { get; set; }
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
     public string UsuarioRegistro { get; set; } = "";

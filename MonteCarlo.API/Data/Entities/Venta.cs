@@ -15,7 +15,7 @@ public class Venta
     /// <summary>Consumo / Takeout (ver <see cref="VentaTipos"/>).</summary>
     public string TipoVenta { get; set; } = null!;
 
-    /// <summary>Abierta / Cobrada / Anulada (ver <see cref="VentaEstados"/>).</summary>
+    /// <summary>Abierta / Cobrada / Anulada / Abandonada (ver <see cref="VentaEstados"/>).</summary>
     public string Estado { get; set; } = VentaEstados.Abierta;
     public int? IdReserva { get; set; }
 
@@ -61,4 +61,7 @@ public static class VentaEstados
     public const string Abierta = "Abierta";
     public const string Cobrada = "Cobrada";
     public const string Anulada = "Anulada";
+
+    /// <summary>Cuenta con productos cerrada sin cobrar (el cliente se fue sin pagar). No es ingreso.</summary>
+    public const string Abandonada = "Abandonada";
 }

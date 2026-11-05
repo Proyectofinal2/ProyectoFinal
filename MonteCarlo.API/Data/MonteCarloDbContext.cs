@@ -508,7 +508,7 @@ public class MonteCarloDbContext : DbContext
             entity.ToTable("Venta", t =>
             {
                 t.HasCheckConstraint("CK_Venta_Tipo", "TipoVenta IN ('Consumo', 'Takeout')");
-                t.HasCheckConstraint("CK_Venta_Estado", "Estado IN ('Abierta', 'Cobrada', 'Anulada')");
+                t.HasCheckConstraint("CK_Venta_Estado", "Estado IN ('Abierta', 'Cobrada', 'Anulada', 'Abandonada')");
                 t.HasCheckConstraint("CK_Venta_Total", "Total >= 0");
                 t.HasCheckConstraint(
                     "CK_Venta_TipoReserva",
@@ -517,12 +517,15 @@ public class MonteCarloDbContext : DbContext
                     "CK_Venta_Abierta",
                     "Estado <> 'Abierta' OR (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)");
                 t.HasCheckConstraint(
+                    "CK_Venta_Abandonada",
+                    "Estado <> 'Abandonada' OR (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)");
+                t.HasCheckConstraint(
                     "CK_Venta_Cobro",
-                    "Estado = 'Abierta' OR (FechaCobro IS NOT NULL AND IdUsuarioCobro IS NOT NULL AND (Total = 0 OR IdMetodoPago IS NOT NULL))");
+                    "Estado IN ('Abierta', 'Abandonada') OR (FechaCobro IS NOT NULL AND IdUsuarioCobro IS NOT NULL AND (Total = 0 OR IdMetodoPago IS NOT NULL))");
                 t.HasCheckConstraint(
                     "CK_Venta_Anulacion",
-                    "(Estado = 'Anulada' AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR " +
-                    "(Estado <> 'Anulada' AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)");
+                    "(Estado IN ('Anulada', 'Abandonada') AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR " +
+                    "(Estado NOT IN ('Anulada', 'Abandonada') AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)");
             });
             entity.HasKey(e => e.IdVenta).HasName("PK_Venta");
             entity.HasIndex(e => e.FechaVenta).HasDatabaseName("IX_Venta_Fecha");

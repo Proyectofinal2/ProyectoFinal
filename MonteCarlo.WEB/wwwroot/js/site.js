@@ -1118,7 +1118,7 @@
 
        Eventos para la pantalla anfitriona (en document):
          mc:cuenta-cambio  detail: { tipo, mensaje, idReserva, data }
-           tipo = "pedido" | "quitar" | "cobro" | "sin-consumo" | "desactualizada"
+           tipo = "pedido" | "quitar" | "cobro" | "sin-consumo" | "sin-cobro" | "desactualizada"
        -------------------------------------------------------- */
   var colones = window.mc.colones;
   var enviarJson = window.mc.enviarJson;
@@ -1318,6 +1318,38 @@
           " con " + nombreMetodo;
       }
       resolverAccion(raiz, "cobro", respuesta, mensaje);
+    });
+  }
+
+  var MOTIVO_MIN = 3;
+
+  function motivoSinCobro(raiz) {
+    var campo = raiz.querySelector("[data-mc-cuenta-sincobro-motivo]");
+    return campo ? campo.value.trim() : "";
+  }
+
+  function ejecutarCerrarSinCobro(raiz) {
+    var motivo = motivoSinCobro(raiz);
+    if (motivo.length < MOTIVO_MIN) {
+      return;
+    }
+    limpiarErrorCuenta(raiz);
+    var etiquetaMesa = raiz.dataset.mesa;
+    bloquearControles(raiz, true);
+    enviarJson("/admin/ventas/cuenta/" + raiz.dataset.idReserva + "/cerrar-sin-cobro", {
+      motivo: motivo,
+      version: raiz.dataset.version || null,
+    }).then(function (respuesta) {
+      var mensaje = "";
+      if (respuesta.success && respuesta.data) {
+        mensaje =
+          etiquetaMesa +
+          (esPlural(etiquetaMesa) ? " liberadas" : " liberada") +
+          " · " + respuesta.data.folio +
+          " cerrada sin cobro · " + colones(respuesta.data.total) +
+          " · motivo: " + motivo;
+      }
+      resolverAccion(raiz, "sin-cobro", respuesta, mensaje);
     });
   }
 
@@ -1812,12 +1844,29 @@
         abrirCaja(raiz, objetivo.closest("[data-mc-cuenta-agregar]"));
       } else if (objetivo.closest("[data-mc-cuenta-cobrar]")) {
         ejecutarCobro(raiz);
+      } else if (objetivo.closest("[data-mc-cuenta-sincobro]")) {
+        var confirmar = raiz.querySelector("[data-mc-cuenta-confirm-sincobro]");
+        confirmar.hidden = false;
+        confirmar.querySelector("[data-mc-cuenta-sincobro-motivo]").focus();
+      } else if (objetivo.closest("[data-mc-cuenta-sincobro-no]")) {
+        raiz.querySelector("[data-mc-cuenta-confirm-sincobro]").hidden = true;
+      } else if (objetivo.closest("[data-mc-cuenta-sincobro-si]")) {
+        ejecutarCerrarSinCobro(raiz);
       } else if (objetivo.closest("[data-mc-cuenta-liberar]")) {
         raiz.querySelector("[data-mc-cuenta-confirm-liberar]").hidden = false;
       } else if (objetivo.closest("[data-mc-cuenta-liberar-no]")) {
         raiz.querySelector("[data-mc-cuenta-confirm-liberar]").hidden = true;
       } else if (objetivo.closest("[data-mc-cuenta-liberar-si]")) {
         ejecutarLiberar(raiz);
+      }
+    });
+
+    // El motivo es obligatorio: el boton de confirmar se habilita con tres caracteres o mas.
+    document.addEventListener("input", function (event) {
+      var campo = event.target.closest && event.target.closest("[data-mc-cuenta-sincobro-motivo]");
+      var raiz = campo && cuentaDe(campo);
+      if (raiz) {
+        raiz.querySelector("[data-mc-cuenta-sincobro-si]").disabled = motivoSinCobro(raiz).length < MOTIVO_MIN;
       }
     });
 

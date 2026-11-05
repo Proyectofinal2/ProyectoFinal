@@ -25,6 +25,7 @@ public class VentasService(
     private const int MaxCantidadPorLinea = 99;
     private const string MotivoQuitadoPorDefecto = "Quitado de la cuenta";
     private const string ReservaNoEncontrada = "No se encontro la reserva.";
+    private const string MotivoCuentaCerradaSinCobro = "Cuenta cerrada sin cobro";
 
     // ============================================================
     // Consulta
@@ -57,6 +58,7 @@ public class VentasService(
 
         cuenta.VenceDesde = venceDesde;
         cuenta.Antigua = DateTime.Now > venceDesde;
+        cuenta.PuedeCerrarSinCobro = cuenta.Antigua && cuenta.PuedeCobrar;
     }
 
     public async Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync()
@@ -241,13 +243,9 @@ public class VentasService(
             return ConflictoConCuenta<CobroResponse>(
                 cuenta.Bloqueo ?? "La cuenta no tiene productos. Si no hubo consumo, libera la mesa sin consumo.", cuenta);
 
-        byte[] versionVista;
-        try { versionVista = Convert.FromBase64String(request.Version!); }
-        catch (FormatException) { return Result<CobroResponse>.BadRequest("La version de la cuenta no es valida."); }
-
-        if (request.TotalEsperado != venta.Total || !versionVista.AsSpan().SequenceEqual(venta.RowVersion))
-            return ConflictoConCuenta<CobroResponse>(
-                $"La cuenta cambio: el total ahora es ₡{venta.Total:N0}. Revisala antes de cobrar.", cuenta);
+        var errorVista = ValidarCuentaVista<CobroResponse>(venta, request.Version, request.TotalEsperado, cuenta);
+        if (errorVista is not null)
+            return errorVista;
 
         var metodo = await metodosPagoRepository.ObtenerPorIdAsync(request.IdMetodoPago);
         if (metodo is null || !metodo.Activo)
@@ -271,6 +269,50 @@ public class VentasService(
             return errorGuardado;
 
         return Result<CobroResponse>.Ok(MapearCobro(venta, reserva, metodo.Nombre), "Cuenta cobrada. La mesa quedo libre.");
+    }
+
+    public async Task<Result<CobroResponse>> CerrarSinCobroAsync(int idReserva, CerrarSinCobroRequest request, int idUsuario)
+    {
+        var motivo = request.Motivo?.Trim();
+        if (string.IsNullOrEmpty(motivo) || motivo.Length < 3)
+            return Result<CobroResponse>.BadRequest("El motivo debe tener entre 3 y 300 caracteres.");
+
+        var (reserva, venta) = await CargarAsync(idReserva);
+        if (reserva is null)
+            return Result<CobroResponse>.NotFound(ReservaNoEncontrada);
+
+        var cuenta = ConstruirCuenta(reserva, venta);
+        await AnotarVencimientoAsync(cuenta, reserva, venta);
+
+        if (venta is null || !cuenta.PuedeCobrar)
+            return ConflictoConCuenta<CobroResponse>(
+                cuenta.Bloqueo ?? "La cuenta no tiene productos. Si no hubo consumo, libera la mesa sin consumo.", cuenta);
+        if (!cuenta.PuedeCerrarSinCobro)
+            return ConflictoConCuenta<CobroResponse>(
+                "La cuenta todavia no esta vencida: cobrala o espera a que pase el tiempo de uso de la mesa.", cuenta);
+
+        var errorVista = ValidarCuentaVista<CobroResponse>(venta, request.Version, null, cuenta);
+        if (errorVista is not null)
+            return errorVista;
+
+        var errorEstado = await FinalizarReservaAsync<CobroResponse>(reserva);
+        if (errorEstado is not null)
+            return errorEstado;
+
+        // Se conservan el total y las lineas: queda registrado cuanto se consumio sin cobrar.
+        ventasRepository.MarcarModificada(venta);
+        venta.Estado = VentaEstados.Abandonada;
+        venta.MotivoAnulacion = motivo;
+        venta.FechaAnulacion = DateTime.Now;
+        venta.IdUsuarioAnulacion = idUsuario;
+
+        reserva.MotivoCancelacion = MotivoCuentaCerradaSinCobro;
+
+        var errorGuardado = await GuardarAsync<CobroResponse>("La cuenta cambio mientras se cerraba. Revisala e intenta de nuevo.");
+        if (errorGuardado is not null)
+            return errorGuardado;
+
+        return Result<CobroResponse>.Ok(MapearCobro(venta, reserva, null), "Cuenta cerrada sin cobro. La mesa quedo libre.");
     }
 
     public async Task<Result<CobroResponse>> LiberarSinConsumoAsync(int idReserva, int idUsuario)
@@ -346,6 +388,23 @@ public class VentasService(
         var reserva = await reservasRepository.ObtenerParaCuentaAsync(idReserva);
         var venta = reserva is null ? null : await ventasRepository.ObtenerPorReservaAsync(idReserva);
         return (reserva, venta);
+    }
+
+    /// <summary>
+    /// Compara lo que vio la pantalla con la cuenta actual: la version (RowVersion) y, si se envia, el total (dos cambios
+    /// que se compensan dejan el mismo total pero cambian la version). 400 si la version no es valida; 409 con la cuenta
+    /// actual si cambio; null si coincide.
+    /// </summary>
+    private static Result<T>? ValidarCuentaVista<T>(Venta venta, string? version, decimal? totalEsperado, CuentaResponse cuenta)
+    {
+        byte[] versionVista;
+        try { versionVista = Convert.FromBase64String(version ?? ""); }
+        catch (FormatException) { return Result<T>.BadRequest("La version de la cuenta no es valida."); }
+
+        if ((totalEsperado is not null && totalEsperado != venta.Total) || !versionVista.AsSpan().SequenceEqual(venta.RowVersion))
+            return ConflictoConCuenta<T>($"La cuenta cambio: el total ahora es ₡{venta.Total:N0}. Revisala antes de continuar.", cuenta);
+
+        return null;
     }
 
     /// <summary>Pasa la reserva a Finalizada (la mesa queda libre). Devuelve null si salio bien, o el error si falta el estado.</summary>
@@ -479,6 +538,8 @@ public class VentasService(
             return "La cuenta ya fue cobrada.";
         if (venta?.Estado == VentaEstados.Anulada)
             return "La cuenta fue anulada.";
+        if (venta?.Estado == VentaEstados.Abandonada)
+            return $"La cuenta fue cerrada sin cobro: {venta.MotivoAnulacion}";
         if (estadoReserva != Confirmada)
             return $"La reserva esta en estado \"{estadoReserva}\": no se puede registrar consumo.";
         if (reserva.ReservaMesas.Count == 0)
@@ -554,6 +615,7 @@ public class VentasService(
             FechaVenta = venta.FechaVenta,
             TipoVenta = venta.TipoVenta,
             Estado = venta.Estado,
+            Motivo = venta.MotivoAnulacion,
             Total = venta.Total,
             MetodoPago = venta.MetodoPago?.Nombre,
             UsuarioRegistro = venta.UsuarioRegistro.NombreCompleto,

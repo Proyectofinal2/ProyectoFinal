@@ -102,6 +102,16 @@ Una cuenta abierta es antigua (por cobrar) cuando pasó el tiempo de uso de la m
 | Reservas del día informa el consumo: cuenta abierta con productos (total, folio, unidades), cobrada y sin cuenta (esc. 12); rango de fechas; indicadores de retraso y de tiempo excedido; la llegada solo se registra el mismo día | `ReservasDelDiaConsumoTests` |
 | Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca; el resumen de Inicio (`CuentasAbiertas`, `ConsumoEnCurso`) suma una vez por reserva aunque sean dos mesas | `CuentaAntiguaTests` |
 
+### Cerrar sin cobro (HU-CON-002 esc. 15, fase B)
+
+| Criterio | Pruebas (clase → método) |
+|---|---|
+| Cuenta antigua con productos: queda `Abandonada` con motivo, fecha y usuario; conserva total y líneas; la reserva se finaliza y la mesa se libera; no es cobrada ni tiene método de pago | `CerrarSinCobroTests.CerrarSinCobro_cuentaAntiguaConProductos_quedaAbandonadaConSuHistorial` |
+| Solo con la cuenta vencida (409 si aún no), con la versión vigente (409 con la cuenta actual), con motivo de 3 a 300 caracteres (400) y con productos (409 manda a liberar) | `CerrarSinCobroTests` (`..._cuentaAunNoVencida_...`, `..._versionDesactualizada_...`, `..._motivoVacioOMuyCorto_...`, `..._cuentaSinProductos_...`, `..._seOfreceSoloCuandoVence`) |
+| Reglas de la base: `Abandonada` exige motivo, fecha y usuario de la baja, no admite método de pago ni datos de cobro; una venta cobrada no admite datos de baja | `RestriccionesVentaTests` (`Venta_abandonada...`, `Venta_cobradaConDatosDeBaja_seRechaza`) |
+
+`alter_database-7.sql` (estado `Abandonada`) se verificó a mano en bases desechables: sobre una base creada con el `database.sql` anterior, dos corridas dejan los ocho CHECK de `Venta` idénticos a los de una base creada con el `database.sql` nuevo; aborta con mensaje si falta el alter 5.
+
 `alter_database-6.sql` (clave `ToleranciaCobroMinutos`) se verificó a mano en una base desechable: aborta con mensaje sin `ConfiguracionSistema` y es idempotente (dos corridas, una fila).
 
 ### Huecos conocidos (fijan el comportamiento actual)
@@ -114,7 +124,7 @@ G1 y R1 ya están corregidos (fase A1). Pendiente en el mismo plan: liberación 
 
 ## Checkpoint
 
-- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 76 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
+- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 89 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
 - [x] Concurrencia: doble primer pedido y doble cobro.
 - [ ] Equivalencia `alter_database-5.sql` (ejecutado dos veces) vs `database.sql` (columnas, CHECK, FK, índices).
 - [ ] Autorización por rol de `VentasController` y `Mesas/liberar` (a nivel de atributos).

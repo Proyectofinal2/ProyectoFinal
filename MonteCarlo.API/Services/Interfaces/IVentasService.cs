@@ -16,6 +16,12 @@ public interface IVentasService
     /// <summary>Cobra la cuenta abierta: finaliza la reserva y libera la mesa. 409 si el total cambio.</summary>
     Task<Result<CobroResponse>> CobrarAsync(int idReserva, CobrarRequest request, int idUsuario);
 
+    /// <summary>
+    /// Cierra sin cobrar una cuenta antigua con productos (el cliente se fue sin pagar): queda Abandonada con quien,
+    /// cuando y por que, conserva su total y lineas, finaliza la reserva y libera la mesa. No es ingreso.
+    /// </summary>
+    Task<Result<CobroResponse>> CerrarSinCobroAsync(int idReserva, CerrarSinCobroRequest request, int idUsuario);
+
     /// <summary>Cierra la reserva sin consumo y libera la mesa, sin registrar una venta; solo con la cuenta vacia.</summary>
     Task<Result<CobroResponse>> LiberarSinConsumoAsync(int idReserva, int idUsuario);
 

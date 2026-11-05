@@ -571,7 +571,7 @@ GO
 CREATE TABLE dbo.Venta (
     IdVenta            INT IDENTITY(1,1) NOT NULL,
     TipoVenta          NVARCHAR(20)   NOT NULL, -- 'Consumo' / 'Takeout'
-    Estado             NVARCHAR(10)   NOT NULL, -- 'Abierta' / 'Cobrada' / 'Anulada'
+    Estado             NVARCHAR(10)   NOT NULL, -- 'Abierta' / 'Cobrada' / 'Anulada' / 'Abandonada'
     IdReserva          INT            NULL,
     IdMetodoPago       INT            NULL,
     Total              DECIMAL(10,2)  NOT NULL DEFAULT 0,
@@ -585,7 +585,7 @@ CREATE TABLE dbo.Venta (
     RowVersion         ROWVERSION     NOT NULL,
     CONSTRAINT PK_Venta PRIMARY KEY (IdVenta),
     CONSTRAINT CK_Venta_Tipo CHECK (TipoVenta IN ('Consumo', 'Takeout')),
-    CONSTRAINT CK_Venta_Estado CHECK (Estado IN ('Abierta', 'Cobrada', 'Anulada')),
+    CONSTRAINT CK_Venta_Estado CHECK (Estado IN ('Abierta', 'Cobrada', 'Anulada', 'Abandonada')),
     CONSTRAINT CK_Venta_Total CHECK (Total >= 0),
     CONSTRAINT CK_Venta_TipoReserva CHECK (
         (TipoVenta = 'Consumo'  AND IdReserva IS NOT NULL) OR
@@ -595,13 +595,17 @@ CREATE TABLE dbo.Venta (
         Estado <> 'Abierta' OR
         (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)
     ),
+    CONSTRAINT CK_Venta_Abandonada CHECK (
+        Estado <> 'Abandonada' OR
+        (TipoVenta = 'Consumo' AND IdMetodoPago IS NULL AND FechaCobro IS NULL AND IdUsuarioCobro IS NULL)
+    ),
     CONSTRAINT CK_Venta_Cobro CHECK (
-        Estado = 'Abierta' OR
+        Estado IN ('Abierta', 'Abandonada') OR
         (FechaCobro IS NOT NULL AND IdUsuarioCobro IS NOT NULL AND (Total = 0 OR IdMetodoPago IS NOT NULL))
     ),
     CONSTRAINT CK_Venta_Anulacion CHECK (
-        (Estado = 'Anulada' AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR
-        (Estado <> 'Anulada' AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)
+        (Estado IN ('Anulada', 'Abandonada') AND MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL AND IdUsuarioAnulacion IS NOT NULL) OR
+        (Estado NOT IN ('Anulada', 'Abandonada') AND MotivoAnulacion IS NULL AND FechaAnulacion IS NULL AND IdUsuarioAnulacion IS NULL)
     ),
     CONSTRAINT FK_Venta_Reserva
         FOREIGN KEY (IdReserva) REFERENCES dbo.Reserva (IdReserva),

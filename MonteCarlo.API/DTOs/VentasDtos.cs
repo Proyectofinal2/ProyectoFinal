@@ -16,7 +16,7 @@ public class CuentaResponse
     /// <summary>Folio legible (V-000123); el mismo registro se llama cuenta mientras esta abierta y venta una vez cobrada.</summary>
     public string? Folio { get; set; }
 
-    /// <summary>SinPedidos / Abierta / Cobrada / Anulada.</summary>
+    /// <summary>SinPedidos / Abierta / Cobrada / Anulada / Abandonada.</summary>
     public string Estado { get; set; } = "SinPedidos";
 
     /// <summary>Estado de la reserva (Confirmada, Finalizada...), para explicar un bloqueo.</summary>
@@ -43,6 +43,9 @@ public class CuentaResponse
 
     /// <summary>Solo con la cuenta vacia y el cliente ya llegado.</summary>
     public bool PuedeLiberarSinConsumo { get; set; }
+
+    /// <summary>Cuenta antigua (vencida) con productos: se puede cerrar sin cobrar. Solo lo informa GET de la cuenta.</summary>
+    public bool PuedeCerrarSinCobro { get; set; }
 
     /// <summary>Por que no se puede registrar consumo (reserva no confirmada, sin mesa...). Nulo si se puede.</summary>
     public string? Bloqueo { get; set; }
@@ -126,7 +129,7 @@ public class CobrarRequest
     public string? Version { get; set; }
 }
 
-/// <summary>Resultado de cobrar o de liberar una mesa sin consumo.</summary>
+/// <summary>Resultado de cobrar, de liberar una mesa sin consumo o de cerrar una cuenta sin cobro.</summary>
 public class CobroResponse
 {
     /// <summary>Nulo en un cierre sin consumo: no se registra una venta.</summary>
@@ -138,6 +141,18 @@ public class CobroResponse
 
     /// <summary>Nulo en un cierre sin consumo.</summary>
     public string? MetodoPago { get; set; }
+}
+
+public class CerrarSinCobroRequest
+{
+    /// <summary>Por que se cierra sin cobrar (ej.: el cliente se fue sin pagar). Obligatorio.</summary>
+    [Required(ErrorMessage = "Indica el motivo del cierre.")]
+    [StringLength(300, MinimumLength = 3, ErrorMessage = "El motivo debe tener entre 3 y 300 caracteres.")]
+    public string? Motivo { get; set; }
+
+    /// <summary>Version (RowVersion en base64) de la cuenta que vio la pantalla; si cambio, no se cierra (409).</summary>
+    [Required(ErrorMessage = "Falta la version de la cuenta.")]
+    public string? Version { get; set; }
 }
 
 public class MetodoPagoResponse
@@ -192,6 +207,9 @@ public class VentaDetalleResponse
     public DateTime FechaVenta { get; set; }
     public string TipoVenta { get; set; } = null!;
     public string Estado { get; set; } = null!;
+
+    /// <summary>Motivo de la baja (Anulada o Abandonada); nulo en los demas estados.</summary>
+    public string? Motivo { get; set; }
     public decimal Total { get; set; }
     public string? MetodoPago { get; set; }
     public string UsuarioRegistro { get; set; } = null!;

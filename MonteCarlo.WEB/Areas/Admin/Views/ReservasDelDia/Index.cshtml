@@ -272,6 +272,11 @@ else
                                     <span class="fw-medium">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(consumo.Total)</span>
                                     <span class="mc-reservas__sub">Cuenta abierta</span>
                                 }
+                                else if (consumo is { Estado: "Abandonada" })
+                                {
+                                    <span class="fw-medium">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(consumo.Total)</span>
+                                    <span class="mc-reservas__sub text-danger"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Cerrada sin cobro</span>
+                                }
                                 else if (consumo is { Estado: "Cobrada", Total: > 0 })
                                 {
                                     <span class="fw-medium">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(consumo.Total)</span>
@@ -500,7 +505,7 @@ else
             document.addEventListener('mc:cuenta-cambio', function (e) {
                 var d = e.detail || {};
                 huboCambio = true;
-                if (d.tipo === 'cobro' || d.tipo === 'sin-consumo') {
+                if (d.tipo === 'cobro' || d.tipo === 'sin-consumo' || d.tipo === 'sin-cobro') {
                     try { sessionStorage.setItem('mc.reservas.aviso', d.mensaje); } catch (err) { /* sin almacenamiento */ }
                     bootstrap.Offcanvas.getOrCreateInstance(cajon).hide();
                 } else {

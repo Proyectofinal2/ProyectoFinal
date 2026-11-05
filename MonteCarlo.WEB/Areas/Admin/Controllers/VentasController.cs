@@ -78,6 +78,14 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         return Json(new { success, message, data, cuenta });
     }
 
+    [HttpPost("cuenta/{idReserva:int}/cerrar-sin-cobro")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CerrarSinCobro(int idReserva, [FromBody] CerrarSinCobroBody body)
+    {
+        var (success, message, data, cuenta) = await ventasApiService.CerrarSinCobroAsync(idReserva, body.Motivo, body.Version);
+        return Json(new { success, message, data, cuenta });
+    }
+
     private ContentResult ErrorParcial(string mensaje)
     {
         Response.StatusCode = StatusCodes.Status409Conflict;
@@ -90,4 +98,5 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public record PedidoBody(Guid ClaveIdempotencia, List<LineaBody>? Lineas);
     public record AnularLineaBody(int? Cantidad, string? Motivo);
     public record CobrarBody(int IdMetodoPago, decimal TotalEsperado, string? Version);
+    public record CerrarSinCobroBody(string? Motivo, string? Version);
 }

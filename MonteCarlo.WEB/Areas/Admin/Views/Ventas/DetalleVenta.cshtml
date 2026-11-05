@@ -17,8 +17,13 @@
         <p>
             <span class="badge text-bg-secondary">@Model.TipoVenta</span>
             <span class="badge text-bg-info">@(Model.MetodoPago ?? "Sin método")</span>
-            <span class="badge text-bg-success">@Model.Estado</span>
+            <span class="badge @(Model.Estado switch { "Cobrada" => "text-bg-success", "Abierta" => "text-bg-warning", "Anulada" => "text-bg-danger", _ => "text-bg-secondary" })">@Model.Estado</span>
         </p>
+        @if (!string.IsNullOrWhiteSpace(Model.Motivo))
+        {
+            <p class="mb-1 text-muted small">Motivo</p>
+            <p>@Model.Motivo</p>
+        }
     </div>
 </div>
 
