@@ -73,53 +73,57 @@
                 </a>
             </li>
             <li>
-                <!-- CAMBIO AQUÍ: apuntamos al nuevo controlador -->
+                <!-- CAMBIO: apuntamos al nuevo controlador de listado -->
                 <a class="@ClaseActiva(controladorActual, "VentasListado")"
                    asp-area="Admin" asp-controller="VentasListado" asp-action="Index">
                     <i class="bi bi-receipt" aria-hidden="true"></i> Ventas
                 </a>
             </li>
 
-            @* HU-AUT-005 y HU-AUT-006: exclusivo del Administrador General.
-                El enlace se oculta ademas de protegerse en el controlador;
-                ocultar la interfaz no sustituye a la autorizacion. *@
-
-
             @if (esAdministradorGeneral)
             {
-            <li class="mc-sidebar__section">Configuracion</li>
-            <li>
-                <a class="@ClaseActiva(controladorActual, "Parametros")"
-                   asp-area="Admin" asp-controller="Parametros" asp-action="Index">
-                    <i class="bi bi-sliders" aria-hidden="true"></i> Parametros
-                </a>
-            </li>
-            <li>
-                <a class="@ClaseActiva(controladorActual, "Cierres")"
-                   asp-area="Admin" asp-controller="Cierres" asp-action="Index">
-                    <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
-                </a>
-            </li>
-            <li>
-                <a class="@ClaseActiva(controladorActual, "HistorialCierres")"
-                   asp-area="Admin" asp-controller="HistorialCierres" asp-action="Index">
-                    <i class="bi bi-clock-history" aria-hidden="true"></i> Historial de cierres
-                </a>
-            </li>
-            <li>
-                <a class="@ClaseActiva(controladorActual, "HorariosOperacion")"
-                   asp-area="Admin" asp-controller="HorariosOperacion" asp-action="Index">
-                    <i class="bi bi-clock" aria-hidden="true"></i> Horarios
-                </a>
-            </li>
+                <li class="mc-sidebar__section">Configuracion</li>
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "Parametros")"
+                       asp-area="Admin" asp-controller="Parametros" asp-action="Index">
+                        <i class="bi bi-sliders" aria-hidden="true"></i> Parametros
+                    </a>
+                </li>
 
-            <li class="mc-sidebar__section">Seguridad</li>
-            <li>
-                <a class="@ClaseActiva(controladorActual, "Usuarios")"
-                   asp-area="Admin" asp-controller="Usuarios" asp-action="Index">
-                    <i class="bi bi-people" aria-hidden="true"></i> Cuentas de administrador
-                </a>
-            </li>
+                <!-- NUEVO ENLACE PARA HU-CFG-007 -->
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "MetodosPago")"
+                       asp-area="Admin" asp-controller="MetodosPago" asp-action="Index">
+                        <i class="bi bi-credit-card" aria-hidden="true"></i> Métodos de Pago
+                    </a>
+                </li>
+
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "Cierres")"
+                       asp-area="Admin" asp-controller="Cierres" asp-action="Index">
+                        <i class="bi bi-calendar-x" aria-hidden="true"></i> Cierres
+                    </a>
+                </li>
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "HistorialCierres")"
+                       asp-area="Admin" asp-controller="HistorialCierres" asp-action="Index">
+                        <i class="bi bi-clock-history" aria-hidden="true"></i> Historial de cierres
+                    </a>
+                </li>
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "HorariosOperacion")"
+                       asp-area="Admin" asp-controller="HorariosOperacion" asp-action="Index">
+                        <i class="bi bi-clock" aria-hidden="true"></i> Horarios
+                    </a>
+                </li>
+
+                <li class="mc-sidebar__section">Seguridad</li>
+                <li>
+                    <a class="@ClaseActiva(controladorActual, "Usuarios")"
+                       asp-area="Admin" asp-controller="Usuarios" asp-action="Index">
+                        <i class="bi bi-people" aria-hidden="true"></i> Cuentas de administrador
+                    </a>
+                </li>
             }
         </ul>
     </div>
