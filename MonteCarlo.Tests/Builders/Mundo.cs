@@ -27,7 +27,7 @@ public sealed class Sesion : IDisposable
         var ventasRepo = new VentasRepository(Db);
         var reservasRepo = new ReservasRepository(Db);
         var mesasRepo = new MesasRepository(Db);
-        var configuracion = new ConfiguracionService(new ConfiguracionRepository(Db));
+        var configuracion = new ConfiguracionService(new ConfiguracionRepository(Db), new MetodosPagoRepository(Db));
 
         Ventas = new VentasService(ventasRepo, reservasRepo, new ProductosRepository(Db), new MetodosPagoRepository(Db),
             configuracion, NullLogger<VentasService>.Instance);

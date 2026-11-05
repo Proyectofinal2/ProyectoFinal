@@ -37,4 +37,8 @@ public interface IConfiguracionApiService
         string? busqueda, int? diaSemana, int? idUsuario, string? accion, DateOnly? desde, DateOnly? hasta, int pagina);
 
     Task<(bool Success, string Message, List<UsuarioHistorialHorarioOperacionApiResponse>? Data)> ObtenerUsuariosHistorialHorariosOperacionAsync();
+
+    Task<(bool Success, string Message, List<MetodoPagoAdminApiResponse>? Data)> ObtenerMetodosPagoAdminAsync();
+    Task<(bool Success, string Message)> CrearMetodoPagoAsync(string nombre);
+    Task<(bool Success, string Message)> CambiarEstadoMetodoPagoAsync(int id, bool activo);
 }

@@ -6,11 +6,9 @@ using MonteCarlo.API.Services.Interfaces;
 
 namespace MonteCarlo.API.Controllers;
 
-
 /// HU-CFG-001 / HU-CFG-006: parametros dinamicos del sistema (ConfiguracionSistema).
 /// No hay un set fijo de claves: se expone todo lo que exista en la tabla.
 /// Solo el rol "General" puede consultarlos y modificarlos.
-
 [ApiController]
 [Route("api/configuracion")]
 [Authorize(Roles = "General")]
@@ -36,6 +34,35 @@ public class ConfiguracionController(IConfiguracionService configuracionService)
 
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
+            : ApiResponse.ErrorResponse(result.Message));
+    }
+
+    // ============================================================
+    // HU-CFG-007: Métodos de Pago
+    // ============================================================
+
+    [HttpGet("metodos-pago")]
+    public async Task<IActionResult> ObtenerMetodosPagoAdmin()
+    {
+        var result = await configuracionService.ObtenerMetodosPagoAdminAsync();
+        return StatusCode(result.StatusCode, ApiResponse.SuccessResponse(result.Message, result.Data));
+    }
+
+    [HttpPost("metodos-pago")]
+    public async Task<IActionResult> CrearMetodoPago([FromBody] CrearMetodoPagoRequest request)
+    {
+        var result = await configuracionService.CrearMetodoPagoAsync(request);
+        return StatusCode(result.StatusCode, result.Success
+            ? ApiResponse.SuccessResponse(result.Message, result.Data)
+            : ApiResponse.ErrorResponse(result.Message));
+    }
+
+    [HttpPut("metodos-pago/{id:int}/estado")]
+    public async Task<IActionResult> CambiarEstadoMetodoPago(int id, [FromBody] CambiarEstadoMetodoPagoRequest request)
+    {
+        var result = await configuracionService.CambiarEstadoMetodoPagoAsync(id, request.Activo);
+        return StatusCode(result.StatusCode, result.Success
+            ? ApiResponse.SuccessResponse(result.Message)
             : ApiResponse.ErrorResponse(result.Message));
     }
 }

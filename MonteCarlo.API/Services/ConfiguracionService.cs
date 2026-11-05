@@ -1,3 +1,4 @@
+using MonteCarlo.API.Data;
 using MonteCarlo.API.Data.Entities;
 using MonteCarlo.API.Data.Repositories.Interfaces;
 using MonteCarlo.API.DTOs;
@@ -5,7 +6,10 @@ using MonteCarlo.API.Services.Interfaces;
 
 namespace MonteCarlo.API.Services;
 
-public class ConfiguracionService(IConfiguracionRepository configuracionRepository) : IConfiguracionService
+// CAMBIO: Se agregó IMetodosPagoRepository al constructor
+public class ConfiguracionService(
+    IConfiguracionRepository configuracionRepository,
+    IMetodosPagoRepository metodosPagoRepository) : IConfiguracionService
 {
     // ============================================================
     // Claves de ConfiguracionSistema y sus valores por defecto.
@@ -13,23 +17,15 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
 
     public const string ClaveUmbral = "UmbralConfirmacionAutomatica";
 
-    /// <summary>Duracion estimada de un turno/reserva (HU-CFG-006), usada para
-    /// solapamiento y disponibilidad.</summary>
     public const string ClaveDuracionReserva = "DuracionReservaMinutos";
     private const int DuracionReservaPorDefecto = 90;
 
-    /// <summary>Ventana de bloqueo para no asignar un walk-in a una mesa con una
-    /// reserva confirmada por llegar. Independiente de ClaveDuracionReserva.</summary>
     public const string ClaveVentanaAlertaReservaProxima = "VentanaAlertaReservaProximaMinutos";
     private const int VentanaAlertaReservaProximaPorDefecto = 30;
 
-    /// <summary>Horas de anticipacion con que se envia el recordatorio automatico
-    /// al cliente antes de su reserva (HU-CFG-006 / HU-NOT-003).</summary>
     public const string ClaveAnticipacionRecordatorio = "AnticipacionRecordatorioHoras";
     private const int AnticipacionRecordatorioPorDefecto = 24;
 
-    /// <summary>Intervalo entre horarios de llegada ofrecidos en el calendario de
-    /// disponibilidad (HU-RES-002), ej. cada 30 min: 12:00, 12:30, 13:00...</summary>
     public const string ClaveIntervaloCalendario = "IntervaloCalendarioDisponibilidadMinutos";
     private const int IntervaloCalendarioPorDefecto = 30;
 
@@ -40,8 +36,7 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
     private const int ToleranciaCobroPorDefecto = 30;
 
     // ============================================================
-    // Lectura usada por el resto del sistema (solapamiento, bloqueo
-    // de walk-in, recordatorios) para leer un parametro vigente.
+    // Lectura usada por el resto del sistema
     // ============================================================
 
     public Task<int> ObtenerValorToleranciaCobroAsync() =>
@@ -71,13 +66,9 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
             : porDefecto;
 
     // ============================================================
-    // Pantalla dinamica de Parametros: muestra TODO lo que exista en
-    // ConfiguracionSistema y guarda solo lo que cambió (PATCH simplificado).
+    // Pantalla dinamica de Parametros
     // ============================================================
 
-    /// <summary>Rango válido (min/max) de las claves numéricas conocidas. Es la única
-    /// metadata que sigue en código (regla de negocio); Etiqueta/Descripcion ya
-    /// viven en la base de datos. Una clave sin rango solo exige no venir vacía.</summary>
     private static readonly Dictionary<string, (int Min, int Max)> RangosParametros = new()
     {
         [ClaveUmbral] = (1, 1000),
@@ -101,8 +92,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
 
         if (request.Parametros.Count > 0)
         {
-            // Solo se consultan las claves recibidas: si el admin cambió 1 de 10
-            // parámetros, no hace falta traer los otros 9 para aplicar el patch.
             var clavesRecibidas = request.Parametros.Select(p => p.Clave).Distinct().ToArray();
             var porClave = (await configuracionRepository.ObtenerVariasAsync(clavesRecibidas)).ToDictionary(c => c.Clave);
 
@@ -112,8 +101,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
                 return Result<ConfiguracionGeneralResponse>.BadRequest(errorValidacion);
             }
 
-            // Se usa Aggregate con "|" (no "||") a propósito: deben aplicarse todos
-            // los parámetros recibidos aunque alguno anterior ya haya cambiado.
             huboCambios = request.Parametros
                 .DistinctBy(p => p.Clave)
                 .Aggregate(false, (cambio, item) => cambio | ActualizarSiCambio(porClave, item.Clave, item.Valor, idUsuario));
@@ -124,8 +111,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
             }
         }
 
-        // Recargar el set completo (no solo lo tocado) para repintar toda la
-        // pantalla, trayendo además el nombre del usuario que modificó cada uno.
         var configuracionesActuales = await configuracionRepository.ObtenerTodasAsync();
 
         return Result<ConfiguracionGeneralResponse>.Ok(
@@ -135,8 +120,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
                 : "No había cambios que guardar.");
     }
 
-    /// <summary>Valida valor no vacío y, si la clave tiene rango conocido, que esté
-    /// dentro de él. Devuelve el primer error, o null si todos son válidos.</summary>
     private static string? ValidarParametros(
         List<ActualizarParametroItem> parametros, Dictionary<string, ConfiguracionSistema> porClave)
     {
@@ -162,9 +145,6 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
         return null;
     }
 
-    /// <summary>Actualiza el valor en memoria solo si cambió respecto al actual (o si
-    /// el parámetro no existía), para no pisar la fecha/usuario de los que no se tocaron.
-    /// Devuelve true si el parámetro quedó marcado para guardar.</summary>
     private bool ActualizarSiCambio(Dictionary<string, ConfiguracionSistema> porClave, string clave, string valor, int idUsuario)
     {
         if (!porClave.TryGetValue(clave, out var config))
@@ -196,4 +176,46 @@ public class ConfiguracionService(IConfiguracionRepository configuracionReposito
             UsuarioModificacion = c.UsuarioModificacion?.NombreCompleto
         }).ToList()
     };
+
+    // ============================================================
+    // HU-CFG-007: Métodos de Pago
+    // ============================================================
+
+    public async Task<Result<List<MetodoPagoAdminResponse>>> ObtenerMetodosPagoAdminAsync()
+    {
+        var metodos = await metodosPagoRepository.ObtenerTodosAsync();
+        return Result<List<MetodoPagoAdminResponse>>.Ok(metodos.Select(m => new MetodoPagoAdminResponse
+        {
+            IdMetodoPago = m.IdMetodoPago,
+            Nombre = m.Nombre,
+            Activo = m.Activo
+        }).ToList(), "Métodos obtenidos.");
+    }
+
+    public async Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request)
+    {
+        if (await metodosPagoRepository.ExisteNombreAsync(request.Nombre))
+            return Result<MetodoPagoAdminResponse>.BadRequest("Ya existe un método de pago con ese nombre.");
+
+        var nuevo = new MetodoPago { Nombre = request.Nombre, Activo = true };
+        metodosPagoRepository.Agregar(nuevo);
+        await metodosPagoRepository.GuardarCambiosAsync();
+
+        return Result<MetodoPagoAdminResponse>.Ok(new MetodoPagoAdminResponse
+        {
+            IdMetodoPago = nuevo.IdMetodoPago,
+            Nombre = nuevo.Nombre,
+            Activo = nuevo.Activo
+        }, "Método de pago creado.");
+    }
+
+    public async Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo)
+    {
+        var metodo = await metodosPagoRepository.ObtenerPorIdAsync(id);
+        if (metodo is null) return Result.BadRequest("Método de pago no encontrado.");
+
+        metodo.Activo = activo;
+        await metodosPagoRepository.GuardarCambiosAsync();
+        return Result.Ok(activo ? "Método habilitado." : "Método deshabilitado.");
+    }
 }

@@ -31,4 +31,8 @@ public interface IConfiguracionService
 
     Task<Result<ConfiguracionGeneralResponse>> ActualizarConfiguracionGeneralAsync(
         ActualizarConfiguracionGeneralRequest request, int idUsuario);
+
+    Task<Result<List<MetodoPagoAdminResponse>>> ObtenerMetodosPagoAdminAsync();
+    Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request);
+    Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo);
 }

@@ -90,40 +90,4 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public record PedidoBody(Guid ClaveIdempotencia, List<LineaBody>? Lineas);
     public record AnularLineaBody(int? Cantidad, string? Motivo);
     public record CobrarBody(int IdMetodoPago, decimal TotalEsperado, string? Version);
-
-    /// <summary>HU-CON-004: Listado de ventas con filtros.</summary>
-    [HttpGet("listado")]
-    public async Task<IActionResult> Index(FiltroVentasViewModel filtro)
-    {
-        // Si no hay fechas, por defecto busca hoy
-        if (!filtro.FechaInicio.HasValue)
-        {
-            filtro.FechaInicio = DateTime.Today;
-            filtro.FechaFin = DateTime.Today;
-        }
-
-        var (success, message, ventas) = await ventasApiService.ObtenerListadoAsync(filtro);
-
-        if (success)
-            filtro.Ventas = ventas ?? [];
-        else
-            TempData["Alerta.Error"] = message;
-
-        // Cargamos los métodos de pago para el select
-        var (_, _, metodos) = await ventasApiService.ObtenerMetodosPagoAsync();
-        filtro.MetodosPago = metodos ?? [];
-
-        // Le decimos explícitamente dónde está la vista
-        return View("~/Areas/Admin/Views/Ventas/Index.cshtml", filtro);
-    }
-
-    [HttpGet("listado/detalle/{idVenta:int}")]
-    public async Task<IActionResult> Detalle(int idVenta)
-    {
-        var (success, message, data) = await ventasApiService.ObtenerDetalleAsync(idVenta);
-        if (!success || data is null)
-            return Content($"<div class='alert alert-danger'>{message}</div>", "text/html");
-
-        return PartialView("DetalleVenta", data);
-    }
 }

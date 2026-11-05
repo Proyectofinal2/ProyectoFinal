@@ -142,4 +142,34 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
             return (false, "Error inesperado. Intenta de nuevo.", default);
         }
     }
+
+    // ============================================================
+    // HU-CFG-007: Métodos de Pago
+    // ============================================================
+
+    public Task<(bool Success, string Message, List<MetodoPagoAdminApiResponse>? Data)> ObtenerMetodosPagoAdminAsync() =>
+        EjecutarAsync<List<MetodoPagoAdminApiResponse>>(
+            () => httpClient.GetAsync("configuracion/metodos-pago"),
+            "Métodos de pago obtenidos.",
+            "No se pudieron obtener los métodos de pago. Intenta de nuevo.");
+
+    public async Task<(bool Success, string Message)> CrearMetodoPagoAsync(string nombre)
+    {
+        var resultado = await EjecutarAsync<MetodoPagoAdminApiResponse>(
+            () => httpClient.PostAsJsonAsync("configuracion/metodos-pago", new { Nombre = nombre }),
+            "Método de pago creado.",
+            "No se pudo crear el método de pago.");
+
+        return (resultado.Success, resultado.Message);
+    }
+
+    public async Task<(bool Success, string Message)> CambiarEstadoMetodoPagoAsync(int id, bool activo)
+    {
+        var resultado = await EjecutarAsync<object>(
+            () => httpClient.PutAsJsonAsync($"configuracion/metodos-pago/{id}/estado", new { Activo = activo }),
+            "Estado del método de pago actualizado.",
+            "No se pudo actualizar el estado del método de pago.");
+
+        return (resultado.Success, resultado.Message);
+    }
 }
