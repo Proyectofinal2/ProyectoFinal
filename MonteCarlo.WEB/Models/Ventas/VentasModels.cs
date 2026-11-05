@@ -96,8 +96,8 @@ public class LineaCuentaApiResponse
 
 public class CobroApiResponse
 {
-    public int IdVenta { get; set; }
-    public string Folio { get; set; } = "";
+    public int? IdVenta { get; set; }
+    public string? Folio { get; set; }
     public int IdReserva { get; set; }
     public List<int> NumerosMesa { get; set; } = [];
     public decimal Total { get; set; }

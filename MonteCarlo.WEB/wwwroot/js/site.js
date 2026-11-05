@@ -1332,7 +1332,7 @@
           mensaje =
             etiquetaMesa +
             (esPlural(etiquetaMesa) ? " liberadas" : " liberada") +
-            " sin consumo · " + respuesta.data.folio + " · total ₡0";
+            " sin consumo · no se registró una venta";
         }
         resolverAccion(raiz, "sin-consumo", respuesta, mensaje);
       },
