@@ -43,12 +43,12 @@ public class ReservasController(IReservasService reservasService) : ControllerBa
         return Responder(result);
     }
 
-    /// Reservas del dia (hoy si no se indica fecha).
+    /// Reservas del dia (hoy si no se indica fecha) o de un rango de fechas con <c>hasta</c>.
     [Authorize(Roles = "General,Regular")]
     [HttpGet("del-dia")]
-    public async Task<IActionResult> ObtenerDelDia([FromQuery] DateOnly? fecha)
+    public async Task<IActionResult> ObtenerDelDia([FromQuery] DateOnly? fecha, [FromQuery] DateOnly? hasta)
     {
-        var result = await reservasService.ObtenerDelDiaAsync(fecha ?? DateOnly.FromDateTime(DateTime.Now));
+        var result = await reservasService.ObtenerDelDiaAsync(fecha ?? DateOnly.FromDateTime(DateTime.Now), hasta);
         return Responder(result);
     }
 

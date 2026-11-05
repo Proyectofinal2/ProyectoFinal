@@ -61,12 +61,12 @@ Al empezar un ticket nuevo: agrega su fila aquí, escribe primero las pruebas de
 
 ### HU-CON-002 (#35): criterio → pruebas
 
-Los criterios 10 (vistas Tarjetas/Plano) y 12 (Reservas del día, Paso 2) **no son automatizables aquí** o no están implementados: revisión manual.
+El criterio 10 (vistas Tarjetas/Plano) y la parte visual del 12 (columna, botones y cajón de Reservas del día) **no son automatizables aquí**: revisión manual. Del 12 se prueba el dato `Consumo` (`ReservasDelDiaConsumoTests`).
 
 | Criterio | Pruebas (clase → método) |
 |---|---|
 | 1 Registro y cierre exitoso | `CobrarTests`: `Cobrar_cuentaConPedidos_marcaCobradaFinalizaLaReservaYLiberaLaMesa`, `Cobrar_precioCongeladoAlAgregar...`, `Cobrar_reservaConDosMesasUnidas...` |
-| 2 Cierre sin consumo | `LiberarSinConsumoTests`: `..._cuentaVacia_creaVentaCobradaEnCeroSinMetodoDePago`, `..._conProductosActivos_devuelve409...` |
+| 2 Cierre sin consumo | `LiberarSinConsumoTests`: `..._cuentaQueNuncaTuvoPedidos_finalizaYLiberaSinCrearVenta`, `..._cuentaAbiertaConTodosLosProductosQuitados_cierraLaCuentaEnCero`, `..._conProductosActivos_devuelve409...` |
 | 3 Producto no disponible | `AgregarPedidoTests`: `..._productoDeshabilitado_devuelve409YLaCuentaNoCambia` |
 | 4 Reserva no Confirmada | `AgregarPedidoTests`: `..._reservaNoConfirmada_devuelve409ConLaCuentaYNoCreaVenta`, `ReservaInexistente_devuelve404...` |
 | 5 Agregar pedidos | `AgregarPedidoTests`: `primerPedido_abreLaCuenta...`, `segundoPedido_...`, `mismaClaveDosVeces_...` (idempotencia), `dosPrimerosPedidosSimultaneos_...` (concurrencia), `cantidadFueraDeRango_...` |
@@ -99,7 +99,8 @@ Una cuenta abierta es antigua (por cobrar) cuando pasó el tiempo de uso de la m
 | Comportamiento | Pruebas |
 |---|---|
 | Cálculo del vencimiento: llegada + turno + margen, otra duración, margen 0, cruza la medianoche, límite exacto, dentro del turno / del margen / pasado | `CuentaVencimientoTests` (funciones puras: no necesitan SQL Server) |
-| Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca | `CuentaAntiguaTests` |
+| Reservas del día informa el consumo: cuenta abierta con productos (total, folio, unidades), cobrada y sin cuenta (esc. 12); rango de fechas; indicadores de retraso y de tiempo excedido; la llegada solo se registra el mismo día | `ReservasDelDiaConsumoTests` |
+| Mesas y cuenta marcan `Antigua` / `VenceDesde` (dentro de la tolerancia no, pasada sí, con tolerancia 0 al terminar el turno); resumen cuenta antiguas; una cuenta cobrada no se marca; el resumen de Inicio (`CuentasAbiertas`, `ConsumoEnCurso`) suma una vez por reserva aunque sean dos mesas | `CuentaAntiguaTests` |
 
 `alter_database-6.sql` (clave `ToleranciaCobroMinutos`) se verificó a mano en una base desechable: aborta con mensaje sin `ConfiguracionSistema` y es idempotente (dos corridas, una fila).
 
@@ -113,7 +114,7 @@ G1 y R1 ya están corregidos (fase A1). Pendiente en el mismo plan: liberación 
 
 ## Checkpoint
 
-- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 66 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
+- [x] Proyecto en `MonteCarlo.slnx`, base temporal segura, 76 pruebas verdes (HU-CON-002, cuentas antiguas y reservas con cuenta abierta).
 - [x] Concurrencia: doble primer pedido y doble cobro.
 - [ ] Equivalencia `alter_database-5.sql` (ejecutado dos veces) vs `database.sql` (columnas, CHECK, FK, índices).
 - [ ] Autorización por rol de `VentasController` y `Mesas/liberar` (a nivel de atributos).

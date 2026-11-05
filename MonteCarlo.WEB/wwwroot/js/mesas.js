@@ -111,8 +111,8 @@
         const porLiberar = mesas.filter(m => m.minutosHastaSiguienteReserva != null);
         if (porLiberar.length === 0) { aviso.classList.add("d-none"); return; }
         aviso.textContent = "⚠ " + (porLiberar.length === 1
-            ? "1 mesa debe liberarse pronto para su proxima reserva."
-            : porLiberar.length + " mesas deben liberarse pronto para su proxima reserva.");
+            ? "1 mesa debe cobrarse o liberarse pronto para su próxima reserva."
+            : porLiberar.length + " mesas deben cobrarse o liberarse pronto para su próxima reserva.");
         aviso.classList.remove("d-none");
     }
 
@@ -422,10 +422,29 @@
         abrirPanel();
     }
 
+    // Lo que el panel mostro la ultima vez: si el refresco trae otro estado o otra version de la cuenta, se vuelve a pintar.
+    let firmaPanel = null;
+    const firmaDe = mesa => estadoVisual(mesa).clave + "|" + (mesa.cuenta ? mesa.cuenta.version : "");
+
+    // El refresco del tablero no pisa un panel con interaccion en curso (modal abierto, confirmacion en linea o foco dentro).
+    function panelEnUso() {
+        const panel = document.getElementById("mc-panel");
+        return !!document.querySelector(".modal.show")
+            || !!panel.querySelector(".mc-confirmar")
+            || panel.contains(document.activeElement) && document.activeElement !== panel;
+    }
+
+    function refrescarPanelSiCambio() {
+        const mesa = mesas.find(m => m.idMesa === seleccionadaId);
+        if (!mesa || modo !== "asignar" || firmaDe(mesa) === firmaPanel || panelEnUso()) return;
+        abrirPanel();
+    }
+
     function abrirPanel() {
         const panel = document.getElementById("mc-panel");
         const mesa = mesas.find(m => m.idMesa === seleccionadaId);
         if (!mesa) { panel.classList.remove("is-open"); return; }
+        firmaPanel = firmaDe(mesa);
 
         document.getElementById("mc-panel-numero").textContent = "M" + mesa.numeroMesa;
 
@@ -704,9 +723,9 @@
     document.getElementById("btn-modo-asignar").addEventListener("click", () => { modo = "asignar"; aplicarModo(); cargarMesas(); });
 
     // Refresco: la hora avanza ("En n min", esperas, tiempo sentado), asi que el tablero se vuelve a pedir.
-    setInterval(() => { if (modo === "asignar" && !document.hidden && !arrastrando) cargarMesas(); }, 20000);
+    setInterval(() => { if (modo === "asignar" && !document.hidden && !arrastrando) cargarMesas().then(refrescarPanelSiCambio); }, 20000);
     window.addEventListener("resize", () => { if (modo === "editar" || vista === "plano") renderizar(); });
-    document.addEventListener("visibilitychange", () => { if (modo === "asignar" && !document.hidden) cargarMesas(); });
+    document.addEventListener("visibilitychange", () => { if (modo === "asignar" && !document.hidden) cargarMesas().then(refrescarPanelSiCambio); });
 
     aplicarModo();
     cargarMesas();

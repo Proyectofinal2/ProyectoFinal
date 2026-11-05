@@ -59,6 +59,8 @@ public class ResumenMesasApiResponse
     public int MesasHabilitadas { get; set; }
     public int MesasDisponibles { get; set; }
     public int MesasOcupadas { get; set; }
+    public int CuentasAbiertas { get; set; }
+    public decimal ConsumoEnCurso { get; set; }
     public int CuentasAntiguas { get; set; }
     public decimal PorcentajeOcupacion { get; set; }
     public string? MensajeContextual { get; set; }

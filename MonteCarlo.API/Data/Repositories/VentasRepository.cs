@@ -14,6 +14,9 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
             .AsSplitQuery()
             .FirstOrDefaultAsync(v => v.IdReserva == idReserva);
 
+    public Task<bool> ExisteParaReservaAsync(int idReserva) =>
+        context.Ventas.AsNoTracking().AnyAsync(v => v.IdReserva == idReserva);
+
     public Task<PedidoVenta?> ObtenerPedidoPorClaveAsync(Guid clave) =>
         context.PedidosVenta
             .AsNoTracking()
@@ -49,6 +52,29 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
         return datos.ToDictionary(
             d => d.IdReserva,
             d => new CuentaAbiertaResumen(d.IdReserva, d.IdVenta, d.Total, d.Productos, Convert.ToBase64String(d.RowVersion)));
+    }
+
+    public async Task<Dictionary<int, VentaReservaResumen>> ObtenerResumenVentasPorReservaAsync(IReadOnlyCollection<int> idsReserva)
+    {
+        if (idsReserva.Count == 0)
+            return [];
+
+        var datos = await context.Ventas
+            .AsNoTracking()
+            .Where(v => v.IdReserva != null && idsReserva.Contains(v.IdReserva.Value))
+            .Select(v => new
+            {
+                IdReserva = v.IdReserva!.Value,
+                v.IdVenta,
+                v.Estado,
+                v.Total,
+                Productos = v.Detalles.Where(d => !d.Anulado).Sum(d => (int?)d.Cantidad) ?? 0
+            })
+            .ToListAsync();
+
+        return datos.ToDictionary(
+            d => d.IdReserva,
+            d => new VentaReservaResumen(d.IdReserva, d.IdVenta, d.Estado, d.Total, d.Productos));
     }
 
     public async Task<Dictionary<int, DateTime>> ObtenerMesasConCuentaAbiertaAsync()

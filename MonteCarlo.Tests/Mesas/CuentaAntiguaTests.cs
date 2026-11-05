@@ -103,6 +103,27 @@ public class CuentaAntiguaTests(SqlServerFixture fixture) : PruebaSql(fixture)
     }
 
     [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "7")]
+    public async Task Resumen_cuentasAbiertas_sumaElConsumoUnaVezPorReservaAunqueSeanDosMesas()
+    {
+        var antes = (await S.Mesas.ObtenerResumenAsync()).Data!;
+        var (idSimple, _) = await CuentaAbiertaAsync(DateTime.Now.AddMinutes(-5));
+        var mesaA = Mundo.CrearMesa();
+        var mesaB = Mundo.CrearMesa();
+        var unida = Mundo.CrearReserva([mesaA, mesaB], fecha: DateOnly.FromDateTime(DateTime.Now), hora: new TimeOnly(0, 0),
+            fechaAtencion: DateTime.Now.AddMinutes(-5));
+        var producto = Mundo.CrearProducto();
+        await S.Ventas.AgregarPedidoAsync(unida.IdReserva, Pedido((producto.IdProducto, 2)), Mundo.IdUsuario);
+        var consumo = (await S.Ventas.ObtenerCuentaAsync(idSimple)).Data!.Total
+            + (await S.Ventas.ObtenerCuentaAsync(unida.IdReserva)).Data!.Total;
+
+        var despues = (await S.Mesas.ObtenerResumenAsync()).Data!;
+
+        Assert.Equal(2, despues.CuentasAbiertas - antes.CuentasAbiertas);
+        Assert.Equal(consumo, despues.ConsumoEnCurso - antes.ConsumoEnCurso);
+    }
+
+    [SqlFact]
     [Trait("HU", "CON-002"), Trait("Escenario", "13")]
     public async Task ObtenerCuenta_abiertaDeAyer_esAntiguaYLaDeHoyNo()
     {

@@ -3,13 +3,7 @@
 @model PanelIndexViewModel
 @{
     ViewData["Title"] = "Panel administrativo";
-    ViewData["Subtitle"] = "Estado actual y analisis de reservas del restaurante.";
-}
-
-@section PageActions {
-    <button form="filtros-reporte" type="submit" class="btn btn-primary">
-        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i> Actualizar
-    </button>
+    ViewData["Subtitle"] = "Estado actual y análisis de reservas del restaurante.";
 }
 
 @if (!string.IsNullOrWhiteSpace(Model.ErrorResumen))
@@ -32,15 +26,15 @@
         </div>
 
         <div class="row g-3">
-            <div class="col-sm-6 col-xl-3">
+            <div class="col-sm-6 col-xl-4">
                 <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
                     <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--neutral"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
                     <p class="mc-dashboard-scorecard__label">Mesas habilitadas</p>
                     <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.MesasHabilitadas</p>
-                    <p class="mc-dashboard-scorecard__help">Disponibles para la operacion.</p>
+                    <p class="mc-dashboard-scorecard__help">Disponibles para la operación.</p>
                 </div></article>
             </div>
-            <div class="col-sm-6 col-xl-3">
+            <div class="col-sm-6 col-xl-4">
                 <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
                     <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--success"><i class="bi bi-check2-circle" aria-hidden="true"></i></span>
                     <p class="mc-dashboard-scorecard__label">Mesas disponibles</p>
@@ -48,7 +42,7 @@
                     <p class="mc-dashboard-scorecard__help">Listas para atender ahora.</p>
                 </div></article>
             </div>
-            <div class="col-sm-6 col-xl-3">
+            <div class="col-sm-6 col-xl-4">
                 <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
                     <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--warning"><i class="bi bi-people" aria-hidden="true"></i></span>
                     <p class="mc-dashboard-scorecard__label">Mesas ocupadas</p>
@@ -56,12 +50,37 @@
                     <p class="mc-dashboard-scorecard__help">Con una reserva en curso.</p>
                 </div></article>
             </div>
-            <div class="col-sm-6 col-xl-3">
+            <div class="col-sm-6 col-xl-4">
                 <article class="card mc-dashboard-scorecard mc-accent-top h-100"><div class="card-body">
                     <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--accent"><i class="bi bi-pie-chart" aria-hidden="true"></i></span>
-                    <p class="mc-dashboard-scorecard__label">Ocupacion</p>
+                    <p class="mc-dashboard-scorecard__label">Ocupación</p>
                     <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.PorcentajeOcupacion.ToString("0.#") %</p>
                     <p class="mc-dashboard-scorecard__help">Sobre mesas habilitadas.</p>
+                </div></article>
+            </div>
+            <div class="col-sm-6 col-xl-4">
+                <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--info"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Cuentas abiertas</p>
+                    <p class="mc-dashboard-scorecard__value">@Model.ResumenMesas.CuentasAbiertas</p>
+                    <p class="mc-dashboard-scorecard__help">
+                        @if (Model.ResumenMesas.CuentasAntiguas > 0)
+                        {
+                            <a asp-controller="Mesas" asp-action="Index" class="text-danger fw-medium"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>@Model.ResumenMesas.CuentasAntiguas por cobrar</a>
+                        }
+                        else
+                        {
+                            <text>Mesas con pedidos sin cobrar.</text>
+                        }
+                    </p>
+                </div></article>
+            </div>
+            <div class="col-sm-6 col-xl-4">
+                <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                    <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--danger"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+                    <p class="mc-dashboard-scorecard__label">Consumo en curso</p>
+                    <p class="mc-dashboard-scorecard__value">₡@Model.ResumenMesas.ConsumoEnCurso.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-CR"))</p>
+                    <p class="mc-dashboard-scorecard__help">Total de las cuentas abiertas.</p>
                 </div></article>
             </div>
         </div>
@@ -78,8 +97,8 @@
 <section class="mc-dashboard-section" aria-labelledby="analisis-reservas">
     <div class="mc-dashboard__section-header">
         <div>
-            <h2 id="analisis-reservas" class="h4 mb-1">Analisis de reservas</h2>
-            <p class="mc-dashboard__section-copy mb-0">Resultados segun la fecha programada de cada reserva.</p>
+            <h2 id="analisis-reservas" class="h4 mb-1">Análisis de reservas</h2>
+            <p class="mc-dashboard__section-copy mb-0">Resultados según la fecha programada de cada reserva.</p>
         </div>
 
         <form id="filtros-reporte" asp-action="Index" method="get" class="mc-dashboard-report-filters">
@@ -173,7 +192,7 @@
 
             <div class="mc-table-card mt-4">
                 <div class="table-responsive"><table class="table mc-table align-middle">
-                    <caption class="visually-hidden">Distribucion de reservas por estado</caption>
+                    <caption class="visually-hidden">Distribución de reservas por estado</caption>
                     <thead><tr><th scope="col">Estado</th><th scope="col" class="text-end">Cantidad de reservas</th><th scope="col" class="text-end">Porcentaje</th></tr></thead>
                     <tbody>
                         @foreach (var fila in Model.ReporteReservas.DistribucionPorEstado)

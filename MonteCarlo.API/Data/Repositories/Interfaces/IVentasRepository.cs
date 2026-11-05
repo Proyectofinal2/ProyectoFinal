@@ -6,6 +6,9 @@ namespace MonteCarlo.API.Data.Repositories.Interfaces;
 /// <summary>Resumen de una cuenta abierta para pintar las mesas sin cargar sus lineas.</summary>
 public record CuentaAbiertaResumen(int IdReserva, int IdVenta, decimal Total, int Productos, string Version);
 
+/// <summary>Venta (en cualquier estado) de una reserva, sin sus lineas, para mostrar el consumo en Reservas del dia.</summary>
+public record VentaReservaResumen(int IdReserva, int IdVenta, string Estado, decimal Total, int Productos);
+
 public interface IVentasRepository
 {
     /// <summary>
@@ -13,6 +16,9 @@ public interface IVentasRepository
     /// Entidad rastreada: sirve para leer y para modificar.
     /// </summary>
     Task<Venta?> ObtenerPorReservaAsync(int idReserva);
+
+    /// <summary>Si la reserva ya tiene una venta (en cualquier estado), consultado de nuevo en la base.</summary>
+    Task<bool> ExisteParaReservaAsync(int idReserva);
 
     /// <summary>El pedido con esa clave de idempotencia (con su venta), si ya se registro.</summary>
     Task<PedidoVenta?> ObtenerPedidoPorClaveAsync(Guid clave);
@@ -25,6 +31,9 @@ public interface IVentasRepository
 
     /// <summary>Cuentas abiertas de esas reservas en una sola consulta (total, unidades y version).</summary>
     Task<Dictionary<int, CuentaAbiertaResumen>> ObtenerResumenCuentasAbiertasAsync(IReadOnlyCollection<int> idsReserva);
+
+    /// <summary>La venta de cada una de esas reservas (a lo sumo una por reserva), en cualquier estado, en una sola consulta.</summary>
+    Task<Dictionary<int, VentaReservaResumen>> ObtenerResumenVentasPorReservaAsync(IReadOnlyCollection<int> idsReserva);
 
     /// <summary>
     /// Mesas ocupadas por una reserva Confirmada con cuenta abierta, de cualquier dia (la cuenta mantiene la mesa

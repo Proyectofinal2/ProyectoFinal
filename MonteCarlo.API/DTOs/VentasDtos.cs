@@ -129,8 +129,9 @@ public class CobrarRequest
 /// <summary>Resultado de cobrar o de liberar una mesa sin consumo.</summary>
 public class CobroResponse
 {
-    public int IdVenta { get; set; }
-    public string Folio { get; set; } = null!;
+    /// <summary>Nulo en un cierre sin consumo: no se registra una venta.</summary>
+    public int? IdVenta { get; set; }
+    public string? Folio { get; set; }
     public int IdReserva { get; set; }
     public List<int> NumerosMesa { get; set; } = [];
     public decimal Total { get; set; }

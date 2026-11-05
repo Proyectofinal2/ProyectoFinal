@@ -294,28 +294,24 @@ public class VentasService(
         if (errorEstado is not null)
             return errorEstado;
 
-        var ahora = DateTime.Now;
-        if (venta is null)
+        // Sin consumo no hay venta: una cuenta que nunca tuvo pedidos solo finaliza la reserva y libera la mesa.
+        // Si ya habia una cuenta abierta (con todos sus productos quitados), se cierra en cero para conservar su historial.
+        if (venta is not null)
         {
-            venta = new Venta
-            {
-                TipoVenta = VentaTipos.Consumo,
-                IdReserva = idReserva,
-                IdUsuarioRegistro = idUsuario,
-                FechaVenta = ahora
-            };
-            ventasRepository.Agregar(venta);
-        }
-        else
-        {
+            var ahora = DateTime.Now;
             ventasRepository.MarcarModificada(venta);
+            venta.Estado = VentaEstados.Cobrada;
+            venta.Total = 0;
+            venta.IdMetodoPago = null;
+            venta.FechaCobro = ahora;
+            venta.IdUsuarioCobro = idUsuario;
         }
 
-        venta.Estado = VentaEstados.Cobrada;
-        venta.Total = 0;
-        venta.IdMetodoPago = null;
-        venta.FechaCobro = ahora;
-        venta.IdUsuarioCobro = idUsuario;
+        else if (await ventasRepository.ExisteParaReservaAsync(idReserva))
+        {
+            // Un pedido entro mientras se liberaba la mesa (la reserva no tiene token de concurrencia).
+            return Result<CobroResponse>.Conflict("La cuenta cambio mientras se liberaba la mesa. Revisala e intenta de nuevo.");
+        }
 
         reserva.MotivoCancelacion = "Liberada sin consumo";
 
@@ -423,19 +419,20 @@ public class VentasService(
     private static void RecalcularTotal(Venta venta) =>
         venta.Total = venta.Detalles.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario);
 
-    private static string Folio(int idVenta) => $"V-{idVenta:D6}";
+    /// <summary>Folio legible de una venta (V-000123); unico formato en listados, cuentas y Reservas.</summary>
+    internal static string Folio(int idVenta) => $"V-{idVenta:D6}";
 
     /// <summary>409 que lleva la cuenta actual, para que la pantalla se refresque sin otra llamada.</summary>
     private static Result<T> ConflictoConCuenta<T>(string mensaje, CuentaResponse cuenta) =>
         new(false, mensaje, default, 409, cuenta);
 
-    private static CobroResponse MapearCobro(Venta venta, Reserva reserva, string? metodoPago) => new()
+    private static CobroResponse MapearCobro(Venta? venta, Reserva reserva, string? metodoPago) => new()
     {
-        IdVenta = venta.IdVenta,
-        Folio = Folio(venta.IdVenta),
+        IdVenta = venta?.IdVenta,
+        Folio = venta is null ? null : Folio(venta.IdVenta),
         IdReserva = reserva.IdReserva,
         NumerosMesa = NumerosMesa(reserva),
-        Total = venta.Total,
+        Total = venta?.Total ?? 0,
         MetodoPago = metodoPago
     };
 
@@ -534,7 +531,7 @@ public class VentasService(
         var respuesta = ventas.Select(v => new VentaListadoResponse
         {
             IdVenta = v.IdVenta,
-            Folio = $"V-{v.IdVenta:D5}", // Formato de folio
+            Folio = Folio(v.IdVenta),
             FechaVenta = v.FechaVenta,
             TipoVenta = v.TipoVenta,
             Total = v.Total,
@@ -553,7 +550,7 @@ public class VentasService(
         var response = new VentaDetalleResponse
         {
             IdVenta = venta.IdVenta,
-            Folio = $"V-{venta.IdVenta:D5}",
+            Folio = Folio(venta.IdVenta),
             FechaVenta = venta.FechaVenta,
             TipoVenta = venta.TipoVenta,
             Estado = venta.Estado,

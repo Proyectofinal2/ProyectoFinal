@@ -26,6 +26,9 @@ public interface IReservasRepository
     /// Reservas de una fecha con cliente, estado y mesas, ordenadas por hora (entidades rastreadas).
     Task<List<Reserva>> ObtenerPorFechaAsync(DateOnly fecha);
 
+    /// <summary>Reservas de un rango de fechas (ambas incluidas), ordenadas por fecha y hora.</summary>
+    Task<List<Reserva>> ObtenerPorRangoAsync(DateOnly desde, DateOnly hasta);
+
     /// <summary>HU-OPE-005: reservas de hoy en adelante cuyo nombre o teléfono coincidan con el término.</summary>
     Task<List<Reserva>> BuscarPorNombreOTelefonoAsync(string termino, int limite);
 

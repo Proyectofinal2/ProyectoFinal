@@ -12,7 +12,7 @@ public interface IReservasApiService
 
     Task<(bool Success, string Message, ReservaApiResponse? Data)> CrearAsync(DatosReservaViewModel modelo);
 
-    Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> ObtenerReservasDelDiaAsync(DateOnly fecha);
+    Task<(bool Success, string Message, List<ReservaDelDiaApiResponse>? Data)> ObtenerReservasDelDiaAsync(DateOnly desde, DateOnly hasta);
 
     Task<(bool Success, string Message, List<EstadoReservaReporteApiResponse>? Data)> ObtenerEstadosReporteAsync();
 
