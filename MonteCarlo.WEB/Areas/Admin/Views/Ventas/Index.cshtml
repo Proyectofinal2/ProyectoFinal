@@ -41,6 +41,7 @@
                     <option value="Abierta" selected="@(Model.Estado == "Abierta")">Abierta</option>
                     <option value="Cobrada" selected="@(Model.Estado == "Cobrada")">Cobrada</option>
                     <option value="Anulada" selected="@(Model.Estado == "Anulada")">Anulada</option>
+                    <option value="Abandonada" selected="@(Model.Estado == "Abandonada")">Abandonada</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -94,6 +95,10 @@ else
                                 else if (venta.Estado == "Anulada")
                                 {
                                     <span class="badge text-bg-danger">Anulada</span>
+                                }
+                                else if (venta.Estado == "Abandonada")
+                                {
+                                    <span class="badge text-bg-secondary">Abandonada</span>
                                 }
                                 else
                                 {

@@ -40,6 +40,37 @@ public class RestriccionesVentaTests(SqlServerFixture fixture) : PruebaSql(fixtu
             Venta("Estado, Total, FechaCobro, IdUsuarioCobro", "'Cobrada', 100, SYSDATETIME(), @u", NuevaReserva()));
 
     [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Regla", "CK_Venta_Abandonada")]
+    public void Venta_abandonadaConMotivoFechaYUsuario_seAcepta() =>
+        Assert.Equal(0, Venta("Estado, Total, MotivoAnulacion, FechaAnulacion, IdUsuarioAnulacion",
+            "'Abandonada', 100, 'Se fue sin pagar', SYSDATETIME(), @u", NuevaReserva()));
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Regla", "CK_Venta_Abandonada")]
+    public void Venta_abandonadaSinMotivo_seRechaza() =>
+        Assert.Equal(ViolacionCheckOFk, Venta("Estado, Total, FechaAnulacion, IdUsuarioAnulacion",
+            "'Abandonada', 100, SYSDATETIME(), @u", NuevaReserva()));
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Regla", "CK_Venta_Abandonada")]
+    public void Venta_abandonadaConMetodoDePagoOCobro_seRechaza()
+    {
+        const string baja = "MotivoAnulacion, FechaAnulacion, IdUsuarioAnulacion";
+        const string valoresBaja = "'Se fue sin pagar', SYSDATETIME(), @u";
+
+        Assert.Equal(ViolacionCheckOFk,
+            Venta($"Estado, Total, IdMetodoPago, {baja}", $"'Abandonada', 100, @m, {valoresBaja}", NuevaReserva()));
+        Assert.Equal(ViolacionCheckOFk,
+            Venta($"Estado, Total, FechaCobro, IdUsuarioCobro, {baja}", $"'Abandonada', 100, SYSDATETIME(), @u, {valoresBaja}", NuevaReserva()));
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Regla", "CK_Venta_Anulacion")]
+    public void Venta_cobradaConDatosDeBaja_seRechaza() =>
+        Assert.Equal(ViolacionCheckOFk, Venta("Estado, Total, FechaCobro, IdUsuarioCobro, MotivoAnulacion, FechaAnulacion, IdUsuarioAnulacion",
+            "'Cobrada', 0, SYSDATETIME(), @u, 'x', SYSDATETIME(), @u", NuevaReserva()));
+
+    [SqlFact]
     [Trait("HU", "CON-002"), Trait("Regla", "UQ_Venta_Reserva")]
     public void Venta_dosParaLaMismaReserva_seRechaza()
     {

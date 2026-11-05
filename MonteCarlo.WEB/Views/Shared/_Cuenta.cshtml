@@ -43,7 +43,7 @@
         <div class="alert alert-warning mc-cuenta__aviso mc-cuenta__antigua" role="status">
             <i class="bi bi-clock-history" aria-hidden="true"></i>
             <strong>Cuenta antigua.</strong> Superó el tiempo de uso de la mesa el @c.VenceDesde.Value.ToString("dd/MM/yyyy") a las @c.VenceDesde.Value.ToString("HH:mm").
-            Resuélvela cobrándola o, si está vacía, liberando la mesa.
+            Resuélvela cobrándola, liberando la mesa si está vacía o, si el cliente se fue sin pagar, cerrándola sin cobro.
         </div>
     }
 
@@ -181,6 +181,23 @@
                 <button type="button" class="btn btn-primary w-100 mc-cuenta__cobrar" data-mc-cuenta-cobrar>
                     <span data-mc-cuenta-cobrar-texto>Cobrar @CuentaViewModel.Dinero(c.Total)</span>
                 </button>
+            }
+
+            @if (c.PuedeCerrarSinCobro)
+            {
+                <button type="button" class="btn btn-link mc-cuenta__enlace text-danger" data-mc-cuenta-sincobro>Cerrar sin cobro</button>
+                <div class="mc-confirmar" data-mc-cuenta-confirm-sincobro hidden role="alertdialog" aria-labelledby="mcSinCobroTitulo-@c.IdReserva">
+                    <p class="mc-confirmar__texto" id="mcSinCobroTitulo-@c.IdReserva">
+                        ¿Cerrar la cuenta sin cobrarla? Queda como abandonada (no es ingreso), se conserva lo consumido y la mesa se libera.
+                    </p>
+                    <label class="form-label small mb-1" for="mcSinCobroMotivo-@c.IdReserva">Motivo (obligatorio)</label>
+                    <input type="text" class="form-control form-control-sm mb-2" id="mcSinCobroMotivo-@c.IdReserva" maxlength="300"
+                           placeholder="Ej.: el cliente se fue sin pagar" autocomplete="off" data-mc-cuenta-sincobro-motivo />
+                    <div class="mc-confirmar__acciones">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-mc-cuenta-sincobro-no>Cancelar</button>
+                        <button type="button" class="btn btn-sm btn-danger" data-mc-cuenta-sincobro-si disabled>Sí, cerrar sin cobro</button>
+                    </div>
+                </div>
             }
 
             @if (c.PuedeLiberarSinConsumo)

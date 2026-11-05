@@ -583,7 +583,7 @@
 
     document.addEventListener("mc:cuenta-cambio", async e => {
         const d = e.detail || {};
-        const cierra = d.tipo === "cobro" || d.tipo === "sin-consumo";
+        const cierra = d.tipo === "cobro" || d.tipo === "sin-consumo" || d.tipo === "sin-cobro";
         toast(d.mensaje, cierra ? 5000 : 3000);
         if (cierra) cerrarPanel();
         await cargarMesas();

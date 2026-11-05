@@ -21,6 +21,9 @@ public interface IVentasApiService
 
     Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> LiberarSinConsumoAsync(int idReserva);
 
+    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> CerrarSinCobroAsync(
+        int idReserva, string? motivo, string? version);
+
     Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync();
 
     Task<(bool Success, string Message, List<CategoriaVentaApiResponse>? Data)> ObtenerCatalogoVentaAsync();

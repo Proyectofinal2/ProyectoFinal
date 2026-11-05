@@ -56,6 +56,18 @@ public class VentasController(IVentasService ventasService) : ControllerBase
     public async Task<IActionResult> Cobrar(int idReserva, [FromBody] CobrarRequest request) =>
         this.Responder(await ventasService.CobrarAsync(idReserva, request, IdUsuarioAutenticado));
 
+    /// <summary>
+    /// Cierra sin cobrar una cuenta antigua con productos (queda Abandonada, no es ingreso) y libera la mesa.
+    /// Exige motivo y la version de la cuenta que vio la pantalla (409 con la cuenta actual si cambio).
+    /// </summary>
+    [HttpPost("ventas/cuentas/reserva/{idReserva:int}/cerrar-sin-cobro")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CerrarSinCobro(int idReserva, [FromBody] CerrarSinCobroRequest request) =>
+        this.Responder(await ventasService.CerrarSinCobroAsync(idReserva, request, IdUsuarioAutenticado));
+
     /// <summary>Cierra la reserva sin consumo y libera la mesa, sin registrar una venta. Solo con la cuenta vacia.</summary>
     [HttpPost("ventas/cuentas/reserva/{idReserva:int}/liberar-sin-consumo")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]

@@ -44,6 +44,12 @@ public class VentasApiService(HttpClient httpClient, ILogger<VentasApiService> l
             () => httpClient.PostAsync($"ventas/cuentas/reserva/{idReserva}/liberar-sin-consumo", null),
             "Mesa liberada sin consumo.", "No se pudo liberar la mesa. Intenta de nuevo.");
 
+    public Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> CerrarSinCobroAsync(
+        int idReserva, string? motivo, string? version) =>
+        EjecutarAsync<CobroApiResponse>(
+            () => httpClient.PostAsJsonAsync($"ventas/cuentas/reserva/{idReserva}/cerrar-sin-cobro", new { motivo, version }),
+            "Cuenta cerrada sin cobro.", "No se pudo cerrar la cuenta. Intenta de nuevo.");
+
     public async Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync()
     {
         var (success, message, data, _) = await EjecutarAsync<List<MetodoPagoApiResponse>>(
