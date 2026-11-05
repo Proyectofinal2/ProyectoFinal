@@ -17,14 +17,28 @@ public class CuentaAbiertaYDisponibilidadTests(SqlServerFixture fixture) : Prueb
     private static int _telefono = Random.Shared.Next(1_000_000, 9_000_000);
 
     /// <summary>Mesa grande con una cuenta abierta de AYER (el turno ya paso y la mesa sigue ocupada).</summary>
-    private async Task<Mesa> MesaConCuentaDeAyerAsync()
+    private Task<Mesa> MesaConCuentaDeAyerAsync() => MesaConCuentaSentadaAsync(DateTime.Now.AddDays(-1));
+
+    /// <summary>
+    /// Mesa grande con una cuenta abierta cuyo cliente se sento en <paramref name="sentadoEn"/>. La hora de la reserva
+    /// se pone a medianoche del dia para que no se solape con los horarios que se prueban.
+    /// </summary>
+    private async Task<Mesa> MesaConCuentaSentadaAsync(DateTime sentadoEn)
     {
         var mesa = Mundo.CrearMesa(capacidad: 20);
-        var ayer = Mundo.CrearReserva([mesa], fecha: Mundo.Hoy.AddDays(-1), hora: new TimeOnly(20, 0),
-            fechaAtencion: DateTime.Now.AddDays(-1));
+        var reserva = Mundo.CrearReserva([mesa], fecha: DateOnly.FromDateTime(sentadoEn), hora: new TimeOnly(0, 0),
+            fechaAtencion: sentadoEn);
         var producto = Mundo.CrearProducto();
-        await S.Ventas.AgregarPedidoAsync(ayer.IdReserva, Pedido((producto.IdProducto, 1)), Mundo.IdUsuario);
+        await S.Ventas.AgregarPedidoAsync(reserva.IdReserva, Pedido((producto.IdProducto, 1)), Mundo.IdUsuario);
         return mesa;
+    }
+
+    /// <summary>Reserva Pendiente (sin mesa) que empieza dentro de <paramref name="minutos"/> minutos.</summary>
+    private Reserva ReservaPendienteEn(int minutos)
+    {
+        var inicio = DateTime.Now.AddMinutes(minutos);
+        return Mundo.CrearReserva(estado: "Pendiente", conMesa: false, atendida: false,
+            fecha: DateOnly.FromDateTime(inicio), hora: TimeOnly.FromDateTime(inicio));
     }
 
     /// <summary>Ejecuta la accion con solo esas mesas habilitadas y vuelve a habilitar las demas al terminar.</summary>
@@ -77,6 +91,45 @@ public class CuentaAbiertaYDisponibilidadTests(SqlServerFixture fixture) : Prueb
         var r = await S.Reservas.AsignarMesaAsync(manana.IdReserva, [mesa.IdMesa]);
 
         Assert.True(r.Success, r.Message);
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "14")]
+    public async Task AsignarMesa_recienSentado_bloqueaLaMesaHastaLaLiberacionEstimada()
+    {
+        // Sentados hace 5 min con turno de 90: se estima libre en ~85 min, asi que una reserva en 30 min no la toma.
+        var mesa = await MesaConCuentaSentadaAsync(DateTime.Now.AddMinutes(-5));
+        var reserva = ReservaPendienteEn(30);
+
+        var r = await S.Reservas.AsignarMesaAsync(reserva.IdReserva, [mesa.IdMesa]);
+
+        Assert.Equal(409, r.StatusCode);
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "14")]
+    public async Task AsignarMesa_sentadosHaceCasiUnTurno_dejaTomarLaMesaDespuesDeLaLiberacionEstimada()
+    {
+        // Sentados hace 80 min: se estima libre en ~10 min, asi que una reserva en 30 min si la toma
+        // (con la regla anterior, ahora + turno, se habria bloqueado hasta dentro de 90 min).
+        var mesa = await MesaConCuentaSentadaAsync(DateTime.Now.AddMinutes(-80));
+        var reserva = ReservaPendienteEn(30);
+
+        var r = await S.Reservas.AsignarMesaAsync(reserva.IdReserva, [mesa.IdMesa]);
+
+        Assert.True(r.Success, r.Message);
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "14")]
+    public async Task CrearWalkIn_cuentaQueYaPasoElTurno_sigueBloqueandoLaMesa()
+    {
+        // El walk-in empieza ahora: mientras la cuenta siga abierta la mesa esta ocupada, aunque ya paso su turno.
+        var mesa = await MesaConCuentaSentadaAsync(DateTime.Now.AddMinutes(-200));
+
+        var r = await S.Reservas.CrearWalkInAsync(new CrearReservaWalkInRequest { CantidadPersonas = 2, IdsMesa = [mesa.IdMesa] });
+
+        Assert.Equal(409, r.StatusCode);
     }
 
     // ---------- Crear reserva ----------
@@ -150,20 +203,35 @@ public class CuentaAbiertaYDisponibilidadTests(SqlServerFixture fixture) : Prueb
 
     [SqlFact]
     [Trait("HU", "CON-002"), Trait("Escenario", "14")]
-    public async Task Calendario_hoy_noOfreceHorariosDelTurnoActualConLaUnicaMesaOcupadaPorCuenta()
+    public async Task Calendario_hoy_noOfreceHorariosAntesDeLaLiberacionEstimadaDeLaUnicaMesaConCuenta()
     {
-        var mesa = await MesaConCuentaDeAyerAsync();
+        var sentadoEn = DateTime.Now.AddMinutes(-30);
+        var mesa = await MesaConCuentaSentadaAsync(sentadoEn);
+        var liberacion = sentadoEn.AddMinutes(90); // DuracionReservaMinutos por defecto en la base de pruebas
 
         await ConHorarioDeHoyAsync(() => ConSoloLasMesasAsync([mesa.IdMesa], async () =>
         {
-            var antes = DateTime.Now;
-            var duracion = 90; // valor por defecto de DuracionReservaMinutos en la base de pruebas
-
             var r = await S.Reservas.ObtenerDisponibilidadAsync(2, Mundo.Hoy);
 
             Assert.True(r.Success, r.Message);
             Assert.All(r.Data!.HorariosDisponibles,
-                hora => Assert.True(Mundo.Hoy.ToDateTime(hora) >= antes.AddMinutes(duracion), $"Se ofrecio {hora} dentro del turno."));
+                hora => Assert.True(Mundo.Hoy.ToDateTime(hora) >= liberacion, $"Se ofrecio {hora} antes de la liberacion estimada."));
+        }));
+    }
+
+    [SqlFact]
+    [Trait("HU", "CON-002"), Trait("Escenario", "14")]
+    public async Task Calendario_hoy_cuentaQueYaPasoElTurno_noBloqueaLosHorariosFuturos()
+    {
+        if (DateTime.Now.Hour >= 22) return;   // sin horarios futuros hoy cerca de la medianoche
+
+        var mesa = await MesaConCuentaSentadaAsync(DateTime.Now.AddMinutes(-200));
+
+        await ConHorarioDeHoyAsync(() => ConSoloLasMesasAsync([mesa.IdMesa], async () =>
+        {
+            var r = await S.Reservas.ObtenerDisponibilidadAsync(2, Mundo.Hoy);
+
+            Assert.NotEmpty(r.Data!.HorariosDisponibles);
         }));
     }
 

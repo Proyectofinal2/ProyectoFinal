@@ -16,6 +16,7 @@ public class VentasService(
     IReservasRepository reservasRepository,
     IProductosRepository productosRepository,
     IMetodosPagoRepository metodosPagoRepository,
+    IConfiguracionService configuracionService,
     ILogger<VentasService> logger) : IVentasService
 {
     private const string Confirmada = "Confirmada";
@@ -35,7 +36,27 @@ public class VentasService(
         if (reserva is null)
             return Result<CuentaResponse>.NotFound(ReservaNoEncontrada);
 
-        return Result<CuentaResponse>.Ok(ConstruirCuenta(reserva, venta), "Cuenta obtenida exitosamente.");
+        var cuenta = ConstruirCuenta(reserva, venta);
+        await AnotarVencimientoAsync(cuenta, reserva, venta);
+
+        return Result<CuentaResponse>.Ok(cuenta, "Cuenta obtenida exitosamente.");
+    }
+
+    /// <summary>
+    /// Marca si la cuenta abierta ya es antigua (ver <see cref="CuentaVencimiento"/>). Solo la consulta de la cuenta lo
+    /// calcula: es lo que pide el panel y evita leer horarios y margen en cada cambio de la cuenta.
+    /// </summary>
+    private async Task AnotarVencimientoAsync(CuentaResponse cuenta, Reserva reserva, Venta? venta)
+    {
+        if (venta?.Estado != VentaEstados.Abierta)
+            return;
+
+        var duracionMinutos = await configuracionService.ObtenerValorDuracionReservaAsync();
+        var toleranciaMinutos = await configuracionService.ObtenerValorToleranciaCobroAsync();
+        var venceDesde = CuentaVencimiento.Calcular(reserva.FechaAtencion ?? venta.FechaVenta, duracionMinutos, toleranciaMinutos);
+
+        cuenta.VenceDesde = venceDesde;
+        cuenta.Antigua = DateTime.Now > venceDesde;
     }
 
     public async Task<Result<List<MetodoPagoResponse>>> ObtenerMetodosPagoAsync()

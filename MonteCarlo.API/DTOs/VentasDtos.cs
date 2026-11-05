@@ -46,6 +46,12 @@ public class CuentaResponse
 
     /// <summary>Por que no se puede registrar consumo (reserva no confirmada, sin mesa...). Nulo si se puede.</summary>
     public string? Bloqueo { get; set; }
+
+    /// <summary>La cuenta abierta paso el tiempo de uso de la mesa (llegada + duracion del turno) mas el margen. Solo lo informa GET de la cuenta.</summary>
+    public bool Antigua { get; set; }
+
+    /// <summary>Desde cuando es antigua; solo con la cuenta abierta (GET de la cuenta).</summary>
+    public DateTime? VenceDesde { get; set; }
 }
 
 public class PedidoCuentaResponse

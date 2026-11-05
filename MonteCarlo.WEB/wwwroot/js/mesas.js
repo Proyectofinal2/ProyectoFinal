@@ -20,16 +20,22 @@
 
     function hhmm(t) { return (t || "").slice(0, 5); }
 
+    // "31 oct, 14:05": cuando se sento el cliente, para las cuentas antiguas (donde "sentados hace 103 h" no ayuda).
+    function fechaCorta(iso) {
+        const d = new Date(iso);
+        return isNaN(d) ? "" : d.toLocaleString("es-CR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+    }
+
     // Estado visual compartido por Tarjetas, Plano y panel (HU-CON-002 esc. 7 y 10).
     function estadoVisual(mesa) {
         const r = mesa.reservaActual, c = mesa.cuenta;
         const cliente = r ? `${r.cliente} · ${r.personas} pers.` : "";
-        const base = { excedeTurno: 0, pie: "" };
+        const base = { excedeTurno: 0, pie: "", antigua: false };
         if (mesa.estado === "Deshabilitada")
             return { ...base, clave: "mantenimiento", familia: "gris", badge: "Mantenimiento", principal: "Mantenimiento", secundaria: "No disponible" };
         if (mesa.estado === "Ocupada") {
             if (mesa.esperandoLlegada && r) {
-                return { ...base, clave: "esperando", familia: "ambar", badge: "Esperando llegada", principal: "Esperando", secundaria: cliente,
+                return { ...base, clave: "esperando", familia: "ambar", badge: "Esperando llegada", badgeCorto: "Esperando", principal: "Esperando", secundaria: cliente,
                     pie: `Reserva de las ${hhmm(r.horaReserva)} · ${r.minutosSentados} min de espera`, hora: hhmm(r.horaReserva) };
             }
             const sentados = r ? r.minutosSentados : 0;
@@ -37,10 +43,20 @@
             const sentadosTxt = r ? "Sentados hace " + formatoDuracion(sentados) : "";
             const nombre = r ? r.cliente : "";
             if (c) {
-                return { clave: "cuenta", familia: "rojo", badge: "Ocupada · con cuenta", principal: formatoColones(c.total),
-                    secundaria: `${c.productos} producto${c.productos === 1 ? "" : "s"} · ${nombre}`, pie: sentadosTxt, excedeTurno: exceso, sentados };
+                const secundaria = `${c.productos} producto${c.productos === 1 ? "" : "s"} · ${nombre}`;
+                if (c.antigua) {
+                    // Ya no hay nadie sentado: queda una cuenta sin cobrar de un dia anterior (o pasado el tiempo de uso mas la tolerancia).
+                    // Se muestra como "por cobrar", no como "ocupada", y se resalta para que se resuelva.
+                    const desde = r ? fechaCorta(r.ocupadaDesde) : "";
+                    const porCobrar = c.productos > 0;
+                    return { clave: "cuenta", familia: "alerta", antigua: true, excedeTurno: 0, sentados,
+                        badge: porCobrar ? "Cuenta pendiente de cobro" : "Cuenta pendiente de cierre", badgeCorto: porCobrar ? "Por cobrar" : "Por cerrar",
+                        principal: formatoColones(c.total), secundaria, pie: desde ? `Abierta desde el ${desde}` : "" };
+                }
+                return { clave: "cuenta", familia: "rojo", badge: "Ocupada · con cuenta", badgeCorto: "Con cuenta", principal: formatoColones(c.total),
+                    secundaria, pie: sentadosTxt, excedeTurno: exceso, sentados, antigua: false };
             }
-            return { clave: "sinpedido", familia: "rojo", badge: "Ocupada · sin pedido", principal: "Sin pedido", secundaria: cliente, pie: sentadosTxt, excedeTurno: exceso, sentados };
+            return { clave: "sinpedido", familia: "rojo", badge: "Ocupada · sin pedido", badgeCorto: "Sin pedido", principal: "Sin pedido", secundaria: cliente, pie: sentadosTxt, excedeTurno: exceso, sentados };
         }
         if (mesa.esProxima) {
             const pr = mesa.proximaReserva;
@@ -56,7 +72,8 @@
         verde: { bg: "#CFE3C7", border: "#5C9A4A", chair: "#B9D7AD" },
         rojo: { bg: "#E7B3AE", border: "#C0392B", chair: "#DFA09A" },
         ambar: { bg: "#F6DFA3", border: "#C98A1E", chair: "#F0CE86" },
-        gris: { bg: "#D8D5CE", border: "#ADA99F", chair: "#CFCCC4" }
+        gris: { bg: "#D8D5CE", border: "#ADA99F", chair: "#CFCCC4" },
+        alerta: { bg: "#F3C9C4", border: "#8E1B10", chair: "#E8AFA8" }
     };
 
     // Modo "Editar salon": colores segun el estado persistido, sin cuenta ni reserva.
@@ -202,13 +219,13 @@
             div.addEventListener("mousedown", e => iniciarInteraccion(e, mesa));
             layer.appendChild(div);
 
-            if (vis && vis.excedeTurno > 0) {
+            if (vis && (vis.antigua || vis.excedeTurno > 0)) {
+                // Una cuenta antigua es mas grave que pasarse del turno: la etiqueta la reemplaza (texto, no solo color).
                 const exceso = document.createElement("div");
-                exceso.className = "mc-mesa-tag";
-                exceso.style.left = (mesa.posX + size / 2 - 22) + "px";
+                exceso.className = "mc-mesa-tag " + (vis.antigua ? "is-antigua" : "is-exceso");
+                exceso.style.left = (mesa.posX + size / 2 - (vis.antigua ? 38 : 22)) + "px";
                 exceso.style.top = (mesa.posY - 24) + "px";
-                exceso.style.background = "#C0392B";
-                exceso.textContent = "+" + vis.excedeTurno + " min";
+                exceso.textContent = vis.antigua ? "⚠ Por cobrar" : "+" + vis.excedeTurno + " min";
                 layer.appendChild(exceso);
             }
 
@@ -254,28 +271,57 @@
         ["todas", "Todas", () => true],
         ["concuenta", "Con cuenta", v => v.clave === "cuenta"],
         ["sinpedido", "Sin pedido", v => v.clave === "sinpedido"],
+        ["antiguas", "Antiguas", v => v.antigua],
         ["esperando", "Esperando", v => v.clave === "esperando" || v.clave === "proxima"],
         ["libres", "Libres", v => v.clave === "libre"]
     ];
 
     function renderizarResumen() {
         const el = document.getElementById("mc-resumen");
-        if (modo !== "asignar") return;
+        if (modo !== "asignar") { document.getElementById("mc-aviso-antiguas").classList.add("d-none"); return; }
         const habilitadas = mesas.filter(m => m.estado !== "Deshabilitada");
         // Como en el prototipo, "ocupada" = sentados (con cuenta o sin pedido); esperando llegada no cuenta.
-        const ocupadas = habilitadas.filter(m => { const c = estadoVisual(m).clave; return c === "cuenta" || c === "sinpedido"; }).length;
+        // Una cuenta antigua tampoco: ya no hay nadie sentado, solo queda el cobro pendiente.
+        const ocupadas = habilitadas.filter(m => { const v = estadoVisual(m); return (v.clave === "cuenta" && !v.antigua) || v.clave === "sinpedido"; }).length;
         // Conteos por reserva: una union de dos mesas es una sola cuenta.
-        const cuentas = new Map(), sinPedido = new Set();
+        const cuentas = new Map(), sinPedido = new Set(), antiguas = new Set();
         mesas.forEach(m => {
             const v = estadoVisual(m);
             const id = m.reservaActual?.idReserva;
             if (v.clave === "cuenta" && id != null) cuentas.set(id, m.cuenta.total);
             if (v.clave === "sinpedido" && id != null) sinPedido.add(id);
+            if (v.antigua && id != null) antiguas.add(id);
         });
         const total = [...cuentas.values()].reduce((a, b) => a + b, 0);
         el.innerHTML = `<span>Ocupadas ${ocupadas} de ${habilitadas.length}</span>`
             + `<span class="is-cuentas">Cuentas abiertas ${cuentas.size} · ${formatoColones(total)}</span>`
-            + (sinPedido.size > 0 ? `<span class="is-sinpedido">${sinPedido.size} sin pedido</span>` : "");
+            + (sinPedido.size > 0 ? `<span class="is-sinpedido">${sinPedido.size} sin pedido</span>` : "")
+            + (antiguas.size > 0 ? `<span class="is-antiguas">${antiguas.size} ${antiguas.size === 1 ? "cuenta por cobrar" : "cuentas por cobrar"}</span>` : "");
+        renderizarAvisoAntiguas(antiguas, cuentas);
+    }
+
+    // Franja que pide resolver las cuentas antiguas (no bloquea la pantalla) y lleva directo al filtro «Antiguas».
+    function renderizarAvisoAntiguas(antiguas, cuentas) {
+        const aviso = document.getElementById("mc-aviso-antiguas");
+        if (antiguas.size === 0) { aviso.classList.add("d-none"); return; }
+        const n = antiguas.size;
+        const total = [...antiguas].reduce((suma, id) => suma + (cuentas.get(id) || 0), 0);
+        const texto = document.createElement("span");
+        texto.textContent = `${n === 1 ? "1 cuenta antigua" : n + " cuentas antiguas"} sin cerrar (${formatoColones(total)}). `
+            + "Cóbralas o, si no hubo consumo, libera la mesa.";
+        const ver = document.createElement("button");
+        ver.type = "button";
+        ver.textContent = "Ver cuentas antiguas";
+        ver.addEventListener("click", () => {
+            filtro = "antiguas";
+            vista = "tarjetas";
+            try { localStorage.setItem("mc.mesas.vista", vista); } catch { /* sin almacenamiento */ }
+            cerrarPanel(false);
+            aplicarVista();
+            renderizar();
+        });
+        aviso.replaceChildren(texto, ver);
+        aviso.classList.remove("d-none");
     }
 
     function renderizarTarjetas() {
@@ -304,16 +350,21 @@
             b.setAttribute("aria-label", `Mesa ${m.numeroMesa}, ${v.badge}`);
             b.innerHTML = `<div class="mc-tarjeta__top"><span class="mc-tarjeta__num">Mesa ${m.numeroMesa}</span><span class="mc-tarjeta__badge"></span></div>`
                 + `<div class="mc-tarjeta__principal"></div><div class="mc-tarjeta__sec"></div><div class="mc-tarjeta__pie"></div>`;
-            b.querySelector(".mc-tarjeta__badge").textContent = recomendada ? "★ Recomendada" : v.badge;
+            // La tarjeta usa el rotulo corto para que no se parta en dos lineas; el panel y aria-label llevan el largo.
+            b.querySelector(".mc-tarjeta__badge").textContent = recomendada ? "★ Recomendada" : (v.antigua ? "⚠ " : "") + (v.badgeCorto || v.badge);
             b.querySelector(".mc-tarjeta__principal").textContent = v.principal;
-            b.querySelector(".mc-tarjeta__sec").textContent = v.secundaria;
+            const sec = b.querySelector(".mc-tarjeta__sec");
+            sec.textContent = v.secundaria;
+            sec.title = v.secundaria;
             const pie = b.querySelector(".mc-tarjeta__pie");
             pie.append(document.createTextNode(v.pie));
+            pie.title = v.pie;
             if (v.excedeTurno > 0) {
-                const ex = document.createElement("span");
-                ex.className = "excede";
-                ex.textContent = ` · +${v.excedeTurno} min del turno`;
-                pie.append(ex);
+                // En su propia linea, debajo del pie: junto a "Sentados hace..." se cortaba con puntos suspensivos.
+                const ex = document.createElement("div");
+                ex.className = "mc-tarjeta__exceso";
+                ex.textContent = `+${v.excedeTurno} min del turno`;
+                b.appendChild(ex);
             }
             b.onclick = () => seleccionar(m.idMesa);
             cont.appendChild(b);

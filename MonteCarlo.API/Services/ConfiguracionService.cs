@@ -16,7 +16,6 @@ public class ConfiguracionService(
     // ============================================================
 
     public const string ClaveUmbral = "UmbralConfirmacionAutomatica";
-    private const int UmbralPorDefecto = 4;
 
     public const string ClaveDuracionReserva = "DuracionReservaMinutos";
     private const int DuracionReservaPorDefecto = 90;
@@ -30,12 +29,18 @@ public class ConfiguracionService(
     public const string ClaveIntervaloCalendario = "IntervaloCalendarioDisponibilidadMinutos";
     private const int IntervaloCalendarioPorDefecto = 30;
 
+    /// <summary>Minutos de tolerancia despues de terminar el tiempo de uso de la mesa
+    /// (ClaveDuracionReserva) antes de marcar "antigua" (por cobrar) una cuenta abierta
+    /// (HU-CON-002, ver CuentaVencimiento). Admite 0: se marca justo al terminar el turno.</summary>
+    public const string ClaveToleranciaCobro = "ToleranciaCobroMinutos";
+    private const int ToleranciaCobroPorDefecto = 30;
+
     // ============================================================
     // Lectura usada por el resto del sistema
     // ============================================================
 
-    public Task<int> ObtenerValorUmbralAsync() =>
-        ObtenerValorEnteroAsync(ClaveUmbral, UmbralPorDefecto);
+    public Task<int> ObtenerValorToleranciaCobroAsync() =>
+        ObtenerValorEnteroAsync(ClaveToleranciaCobro, ToleranciaCobroPorDefecto, minimo: 0);
 
     public Task<int> ObtenerValorDuracionReservaAsync() =>
         ObtenerValorEnteroAsync(ClaveDuracionReserva, DuracionReservaPorDefecto);
@@ -49,14 +54,14 @@ public class ConfiguracionService(
     public Task<int> ObtenerValorIntervaloCalendarioAsync() =>
         ObtenerValorEnteroAsync(ClaveIntervaloCalendario, IntervaloCalendarioPorDefecto);
 
-    private async Task<int> ObtenerValorEnteroAsync(string clave, int porDefecto)
+    private async Task<int> ObtenerValorEnteroAsync(string clave, int porDefecto, int minimo = 1)
     {
         var config = await configuracionRepository.ObtenerAsync(clave);
-        return LeerEntero(config, porDefecto);
+        return LeerEntero(config, porDefecto, minimo);
     }
 
-    private static int LeerEntero(ConfiguracionSistema? config, int porDefecto) =>
-        config is not null && int.TryParse(config.Valor, out var valor) && valor > 0
+    private static int LeerEntero(ConfiguracionSistema? config, int porDefecto, int minimo) =>
+        config is not null && int.TryParse(config.Valor, out var valor) && valor >= minimo
             ? valor
             : porDefecto;
 
@@ -71,6 +76,7 @@ public class ConfiguracionService(
         [ClaveVentanaAlertaReservaProxima] = (1, 1440),
         [ClaveAnticipacionRecordatorio] = (1, 168),
         [ClaveIntervaloCalendario] = (5, 180),
+        [ClaveToleranciaCobro] = (0, 240),
     };
 
     public async Task<Result<ConfiguracionGeneralResponse>> ObtenerConfiguracionGeneralAsync()

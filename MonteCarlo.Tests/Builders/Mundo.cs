@@ -30,7 +30,7 @@ public sealed class Sesion : IDisposable
         var configuracion = new ConfiguracionService(new ConfiguracionRepository(Db), new MetodosPagoRepository(Db));
 
         Ventas = new VentasService(ventasRepo, reservasRepo, new ProductosRepository(Db), new MetodosPagoRepository(Db),
-            NullLogger<VentasService>.Instance);
+            configuracion, NullLogger<VentasService>.Instance);
         Mesas = new MesasService(mesasRepo, reservasRepo, ventasRepo, configuracion);
         Reservas = new ReservasService(reservasRepo, mesasRepo, new ClientesRepository(Db), configuracion, ventasRepo,
             Substitute.For<INotificacionesService>());
