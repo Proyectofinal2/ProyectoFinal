@@ -54,7 +54,6 @@
                                 }
                                 else
                                 {
-
                                     <span class="badge text-bg-secondary">No disponible</span>
                                 }
                             </td>
@@ -62,10 +61,19 @@
                                 <form asp-action="CambiarEstado" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@m.IdMetodoPago" />
-                                    <input type="hidden" name="activo" value="@(!m.Activo)" />
-                                    <button type="submit" class="btn btn-sm @(m.Activo ? "btn-outline-danger" : "btn-outline-success")">
-                                        @(m.Activo ? "Deshabilitar" : "Habilitar")
-                                    </button>
+
+                                    @if (m.Activo)
+                                    {
+                                        <!-- Si está activo, enviamos false para deshabilitarlo -->
+                                        <input type="hidden" name="activo" value="false" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Deshabilitar</button>
+                                    }
+                                    else
+                                    {
+                                        <!-- Si NO está activo, enviamos true para habilitarlo -->
+                                        <input type="hidden" name="activo" value="true" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Habilitar</button>
+                                    }
                                 </form>
                             </td>
                         </tr>
