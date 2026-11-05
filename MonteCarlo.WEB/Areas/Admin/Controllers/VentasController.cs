@@ -12,7 +12,7 @@ namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 /// y actuan como proxy hacia la API. Si la cuenta cambio (409) la respuesta trae la cuenta actual en <c>cuenta</c>.
 /// </summary>
 [Area("Admin")]
-[Route("admin/ventas/listado")]
+[Route("admin/ventas")]
 [Authorize(Roles = $"{Roles.General},{Roles.Regular}")]
 public class VentasController(IVentasApiService ventasApiService) : Controller
 {
@@ -92,7 +92,7 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public record CobrarBody(int IdMetodoPago, decimal TotalEsperado, string? Version);
 
     /// <summary>HU-CON-004: Listado de ventas con filtros.</summary>
-    [HttpGet("")]
+    [HttpGet("listado")]
     public async Task<IActionResult> Index(FiltroVentasViewModel filtro)
     {
         // Si no hay fechas, por defecto busca hoy
@@ -117,7 +117,7 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         return View("~/Areas/Admin/Views/Ventas/Index.cshtml", filtro);
     }
 
-    [HttpGet("detalle/{idVenta:int}")]
+    [HttpGet("listado/detalle/{idVenta:int}")]
     public async Task<IActionResult> Detalle(int idVenta)
     {
         var (success, message, data) = await ventasApiService.ObtenerDetalleAsync(idVenta);
