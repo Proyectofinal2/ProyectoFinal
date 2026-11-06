@@ -72,6 +72,7 @@ public class AutenticacionController(IAuthApiService authApiService, ILogger<Aut
         {
             new Claim(System.Security.Claims.ClaimTypes.NameIdentifier, loginResponse!.IdUsuario.ToString()),
             new Claim(System.Security.Claims.ClaimTypes.Name, loginResponse.NombreCompleto),
+            new Claim("nombre_usuario", loginResponse.NombreUsuario ?? string.Empty),
             new Claim(System.Security.Claims.ClaimTypes.Email, loginResponse.CorreoElectronico),
             new Claim(System.Security.Claims.ClaimTypes.Role, loginResponse.Rol),
             new Claim("access_token", loginResponse.Token)

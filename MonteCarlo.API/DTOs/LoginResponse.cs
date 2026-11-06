@@ -12,6 +12,9 @@ public class LoginResponse
     /// <summary>Nombre completo del usuario.</summary>
     public string NombreCompleto { get; set; } = null!;
 
+    /// <summary>Nombre de usuario (login).</summary>
+    public string NombreUsuario { get; set; } = null!;
+
     /// <summary>Correo electrónico del usuario.</summary>
     public string CorreoElectronico { get; set; } = null!;
 
