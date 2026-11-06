@@ -18,7 +18,6 @@ public class MiCuentaController(IAuthApiService authApiService) : Controller
     [HttpGet]
     public IActionResult Index()
     {
-        // TODO conectar: leer los datos de la cuenta desde los claims.
         return View(new CambiarContrasenaViewModel());
     }
 

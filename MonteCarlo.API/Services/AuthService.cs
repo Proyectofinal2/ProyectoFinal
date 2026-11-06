@@ -77,6 +77,7 @@ public class AuthService(
         {
             IdUsuario = usuario.IdUsuario,
             NombreCompleto = usuario.NombreCompleto,
+            NombreUsuario = usuario.NombreUsuario,
             CorreoElectronico = usuario.CorreoElectronico,
             Rol = usuario.Rol,
             Token = token,

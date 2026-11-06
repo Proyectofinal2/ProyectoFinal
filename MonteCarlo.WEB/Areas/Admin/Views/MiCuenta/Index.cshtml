@@ -11,11 +11,10 @@
     ViewData["Title"] = "Mi cuenta";
     ViewData["Subtitle"] = "Consulta tus datos y actualiza tu contrasena.";
 
-    // TODO conectar: reemplazar por los claims de la sesion.
-    var nombreCompleto = "Ana Lopez";
-    var nombreUsuario = "alopez";
-    var correo = "ana.lopez@montecarlo.test";
-    var rol = "Administrador General";
+    var nombreCompleto = User.Identity?.Name ?? "";
+    var nombreUsuario = User.FindFirst("nombre_usuario")?.Value ?? "";
+    var correo = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+    var rol = User.IsInRole("General") ? "Administrador General" : "Administrador";
 }
 
 <div class="row g-4">
