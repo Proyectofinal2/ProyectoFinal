@@ -1,0 +1,16 @@
+@*
+    Pestanas de Cierres: Cierres e Historial de cierres (solo Administrador General).
+    Uso: <partial name="_CierresTabs" model='"cierres"' />
+    El modelo es la pestana activa: "cierres" o "historial".
+*@
+@model string
+
+<nav class="mc-tabs" aria-label="Secciones de cierres">
+    <a class="mc-tab @(Model == "cierres" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="Cierres" asp-action="Index"
+       aria-current="@(Model == "cierres" ? "page" : null)">Cierres</a>
+
+    <a class="mc-tab @(Model == "historial" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="HistorialCierres" asp-action="Index"
+       aria-current="@(Model == "historial" ? "page" : null)">Historial de cierres</a>
+</nav>

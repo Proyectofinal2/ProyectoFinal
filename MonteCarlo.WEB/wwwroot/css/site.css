@@ -3376,3 +3376,442 @@ a.mc-pager__btn:hover {
   border-color: var(--mc-border);
   color: var(--mc-ink-subtle);
 }
+
+/* Horarios de operacion: tabla de dias y panel de edicion rapida (HU-CFG-005).
+   Dos columnas: la tabla a la izquierda y el panel fijo a la derecha. En
+   pantallas angostas el panel es una hoja inferior que abre una barra fija. */
+.mc-hor-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mc-space-2) var(--mc-space-5);
+  margin-bottom: var(--mc-space-3);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-hor-resumen strong {
+  color: var(--mc-ink);
+  font-size: var(--mc-text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-hor-resumen__sucio {
+  margin-left: auto;
+  color: var(--mc-copper-700);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-hor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21.5rem;
+  gap: var(--mc-space-4);
+  align-items: start;
+}
+
+.mc-hor__tabla {
+  min-width: 0;
+}
+
+.mc-hor-lista {
+  font-size: var(--mc-text-sm);
+  background-color: var(--mc-elevated);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius-lg);
+  overflow: hidden;
+}
+
+.mc-hor-cab,
+.mc-hor-fila {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 4.5rem;
+  gap: var(--mc-space-2) var(--mc-space-4);
+  align-items: center;
+  padding: var(--mc-space-3) var(--mc-space-4);
+}
+
+.mc-hor-cab {
+  background-color: var(--mc-green-50);
+  border-bottom: 1px solid var(--mc-border);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-hor-fila {
+  border-top: 1px solid var(--mc-border);
+}
+
+.mc-hor-cab + .mc-hor-fila {
+  border-top: 0;
+}
+
+.mc-hor-fila:not(.is-fijo) {
+  cursor: pointer;
+}
+
+.mc-hor-fila:not(.is-fijo):not(.is-sel):hover {
+  background-color: var(--mc-green-50);
+}
+
+.mc-hor-fila.is-mod {
+  background-color: var(--mc-copper-50);
+}
+
+.mc-hor-fila.is-sel {
+  background-color: var(--mc-green-100);
+  box-shadow: inset 5px 0 0 var(--mc-green-500);
+}
+
+.mc-hor-fila.is-sel .mc-hor-pick span {
+  color: var(--mc-green-500);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-hor-fila.is-destacada {
+  animation: mc-hor-destello 1.6s ease-out;
+}
+
+@keyframes mc-hor-destello {
+  from {
+    background-color: var(--mc-copper-100);
+  }
+}
+
+.mc-hor-fila__dia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-2);
+  font-weight: var(--mc-weight-medium);
+}
+
+.mc-hor-fila__punto {
+  display: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--mc-copper-500);
+}
+
+.mc-hor-fila.is-mod .mc-hor-fila__punto {
+  display: inline-block;
+}
+
+.mc-hor-fila__horas,
+.mc-hor-panel__horas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-2);
+}
+
+.mc-hor-hora {
+  flex: 0 1 7rem;
+  min-width: 5.5rem;
+  padding-block: 0.4rem;
+  font-size: var(--mc-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.mc-hor-panel__horas .mc-hor-hora {
+  flex: 1 1 0;
+}
+
+.mc-hor-hora.is-invalid {
+  border-color: var(--mc-danger);
+  background-color: var(--mc-danger-bg);
+}
+
+.mc-hor-hora:disabled {
+  cursor: not-allowed;
+}
+
+.mc-hor-sep {
+  color: var(--mc-ink-muted);
+}
+
+
+.mc-hor-fila__dur {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mc-hor-fila__errores,
+.mc-hor-fila__aviso {
+  grid-column: 2 / -1;
+  margin: calc(-1 * var(--mc-space-1)) 0 0;
+}
+
+.mc-hor-fila__errores:empty {
+  display: none;
+}
+
+.mc-hor-fila__errores span {
+  display: block;
+}
+
+.mc-hor-fila__errores span:empty {
+  display: none;
+}
+
+.mc-hor-pick {
+  font-weight: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  margin: 0;
+  cursor: pointer;
+}
+
+.mc-hor-pick input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--mc-green-500);
+  cursor: pointer;
+}
+
+.mc-hor-pick input:disabled {
+  cursor: not-allowed;
+}
+
+/* Panel */
+.mc-hor-panel {
+  position: sticky;
+  top: var(--mc-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mc-space-4);
+  padding: var(--mc-space-4);
+  background-color: var(--mc-green-50);
+  border: 1px solid var(--mc-green-200);
+  border-radius: var(--mc-radius-lg);
+}
+
+.mc-hor-panel__cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-2);
+}
+
+.mc-hor-panel__titulo {
+  margin: 0;
+  font-size: var(--mc-text-lg);
+}
+
+.mc-hor-panel__cerrar,
+.mc-hor-mbar {
+  display: none;
+}
+
+.mc-hor-paso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mc-space-3);
+}
+
+.mc-hor-panel.is-sin-seleccion [data-hor-paso-horario] {
+  opacity: 0.55;
+}
+
+.mc-hor-panel.is-sin-seleccion .mc-hor-chips {
+  outline: 2px dashed var(--mc-green-200);
+  outline-offset: 4px;
+  border-radius: var(--mc-radius);
+}
+
+.mc-hor-paso__rotulo {
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mc-hor-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mc-space-2);
+}
+
+.mc-hor-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+  min-width: 0;
+  padding: var(--mc-space-2) var(--mc-space-3);
+  background-color: var(--mc-elevated);
+  border: 1.5px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
+  font-weight: var(--mc-weight-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mc-hor-chip__txt {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.mc-hor-chip::before {
+  content: "";
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--mc-border-strong);
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.mc-hor-chip[aria-pressed="true"] {
+  background-color: var(--mc-green-500);
+  border-color: var(--mc-green-500);
+  color: var(--mc-ink-inverse);
+  font-weight: var(--mc-weight-semibold);
+}
+
+.mc-hor-chip[aria-pressed="true"]::before {
+  content: "\2713";
+  border-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.mc-hor-chip:disabled {
+  background: transparent;
+  border-style: dashed;
+  color: var(--mc-ink-muted);
+  cursor: not-allowed;
+}
+
+.mc-hor-chip:disabled::before {
+  border-style: dashed;
+}
+
+.mc-hor-chip small {
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: var(--mc-weight-normal);
+}
+
+.mc-hor-atajos,
+.mc-hor-conteo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mc-space-2);
+}
+
+.mc-hor-atajos {
+  margin-top: var(--mc-space-3);
+}
+
+.mc-hor-conteo {
+  justify-content: space-between;
+  padding-top: var(--mc-space-1);
+}
+
+.mc-hor-panel__pie {
+  margin: 0;
+  padding-top: var(--mc-space-3);
+  border-top: 1px solid var(--mc-green-200);
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+@media (max-width: 1199.98px) {
+  .mc-hor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mc-hor-panel {
+    position: fixed;
+    z-index: 1030;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: var(--mc-radius-lg) var(--mc-radius-lg) 0 0;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+    visibility: hidden;
+    transform: translateY(105%);
+    transition:
+      transform 0.2s,
+      visibility 0.2s;
+  }
+
+  .mc-hor-panel.is-abierto {
+    visibility: visible;
+    transform: none;
+  }
+
+  .mc-hor-panel__cerrar {
+    display: inline-block;
+  }
+
+  .mc-hor-mbar {
+    position: fixed;
+    z-index: 1020;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--mc-space-3);
+    padding: var(--mc-space-3) var(--mc-space-4);
+    background-color: var(--mc-elevated);
+    border-top: 1px solid var(--mc-border-strong);
+  }
+
+  .mc-hor-mbar span {
+    flex: 1;
+    min-width: 0;
+    font-weight: var(--mc-weight-semibold);
+  }
+
+  [data-mc-horarios] {
+    padding-bottom: 4.5rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .mc-hor-cab,
+  .mc-hor-fila {
+    grid-template-columns: 1fr auto;
+  }
+
+  .mc-hor-cab span:not(:first-child) {
+    display: none;
+  }
+
+  .mc-hor-fila__horas,
+  .mc-hor-fila__errores,
+  .mc-hor-fila__aviso {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .mc-hor-fila__dur {
+    grid-row: 1;
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-hor-fila.is-destacada,
+  .mc-hor-panel {
+    animation: none;
+    transition: none;
+  }
+}

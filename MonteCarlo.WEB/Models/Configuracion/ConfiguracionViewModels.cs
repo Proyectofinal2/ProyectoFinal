@@ -118,6 +118,11 @@ public class HistorialCierresViewModel
     public DateOnly? Hasta { get; set; }
     public List<HistorialCierreApiResponse> Items { get; set; } = [];
 
+    public const int TamanoPagina = 10;
+    public int Pagina { get; set; } = 1;
+    public int TotalPaginas { get; set; } = 1;
+    public int Total { get; set; }
+
     public bool TieneFiltrosAplicados =>
         !string.IsNullOrEmpty(Tipo) || !string.IsNullOrEmpty(Accion) || Desde.HasValue || Hasta.HasValue;
 }
