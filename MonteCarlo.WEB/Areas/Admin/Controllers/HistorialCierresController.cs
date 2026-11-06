@@ -14,7 +14,7 @@ namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 public class HistorialCierresController(IConfiguracionApiService configuracionApiService) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(string? tipo, string? accion, DateOnly? desde, DateOnly? hasta)
+    public async Task<IActionResult> Index(string? tipo, string? accion, DateOnly? desde, DateOnly? hasta, int pagina = 1)
     {
         var modelo = new HistorialCierresViewModel { Tipo = tipo, Accion = accion, Desde = desde, Hasta = hasta };
 
@@ -23,7 +23,15 @@ public class HistorialCierresController(IConfiguracionApiService configuracionAp
 
         if (success)
         {
-            modelo.Items = data ?? [];
+            // La API devuelve el historial filtrado (maximo 200); se pagina aqui.
+            var todos = data ?? [];
+            modelo.Total = todos.Count;
+            modelo.TotalPaginas = Math.Max(1, (int)Math.Ceiling(todos.Count / (double)HistorialCierresViewModel.TamanoPagina));
+            modelo.Pagina = Math.Clamp(pagina, 1, modelo.TotalPaginas);
+            modelo.Items = todos
+                .Skip((modelo.Pagina - 1) * HistorialCierresViewModel.TamanoPagina)
+                .Take(HistorialCierresViewModel.TamanoPagina)
+                .ToList();
         }
         else
         {

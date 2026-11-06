@@ -3,11 +3,14 @@
     Muestra quien, cuando y por que se registro o elimino cada cierre.
 *@
 @using MonteCarlo.WEB.Models.Configuracion
+@using MonteCarlo.WEB.Models.UI
 @model HistorialCierresViewModel
 @{
     ViewData["Title"] = "Historial de cierres";
     ViewData["Subtitle"] = "Quien, cuando y por que se modifico la disponibilidad del restaurante.";
 }
+
+<partial name="_CierresTabs" model='"historial"' />
 
 <form asp-action="Index" method="get" class="card mb-4">
     <div class="card-body">
@@ -111,5 +114,21 @@ else
         </div>
     </div>
 
-    <p class="form-text mt-3">Se muestran los ultimos @Model.Items.Count cambios.</p>
+    <partial name="_Paginacion" model="@(new PaginacionViewModel
+             {
+                 Accion = "Index",
+                 Controlador = "HistorialCierres",
+                 Pagina = Model.Pagina,
+                 TotalPaginas = Model.TotalPaginas,
+                 Total = Model.Total,
+                 TamanoPagina = HistorialCierresViewModel.TamanoPagina,
+                 Sustantivo = "cambios",
+                 Parametros = new Dictionary<string, string?>
+                 {
+                     ["tipo"] = Model.Tipo,
+                     ["accion"] = Model.Accion,
+                     ["desde"] = Model.Desde?.ToString("yyyy-MM-dd"),
+                     ["hasta"] = Model.Hasta?.ToString("yyyy-MM-dd")
+                 }
+             })" />
 }
