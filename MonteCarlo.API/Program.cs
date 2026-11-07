@@ -134,12 +134,19 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
-// Configurar CORS para permitir requests desde el proyecto WEB
+// Configurar CORS para permitir requests desde el proyecto WEB.
+// En Azure se define con la App Setting Cors__AllowedOrigins__0 (, __1, ...).
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (corsOrigins is null || corsOrigins.Length == 0)
+{
+    corsOrigins = new[] { "https://localhost:7286", "http://localhost:5173" };
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWeb", policy =>
     {
-        policy.WithOrigins("https://localhost:7286", "http://localhost:5173")
+        policy.WithOrigins(corsOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
