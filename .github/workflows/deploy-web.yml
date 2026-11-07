@@ -1,0 +1,30 @@
+name: Deploy MonteCarlo.WEB
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish MonteCarlo.WEB/MonteCarlo.WEB.csproj -c Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: montecarlo-web
+          publish-profile: ${{ secrets.AZURE_WEB_PUBLISH_PROFILE }}
+          package: ./publish
