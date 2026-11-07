@@ -94,6 +94,7 @@ GO
    Limpieza (orden inverso a las dependencias) para permitir
    re-ejecutar el script cuantas veces sea necesario
    ------------------------------------------------------------ */
+IF OBJECT_ID('dbo.HistorialUsuario', 'U') IS NOT NULL DROP TABLE dbo.HistorialUsuario;
 IF OBJECT_ID('dbo.HistorialCatalogo', 'U') IS NOT NULL DROP TABLE dbo.HistorialCatalogo;
 IF OBJECT_ID('dbo.DetalleVenta', 'U') IS NOT NULL DROP TABLE dbo.DetalleVenta;
 IF OBJECT_ID('dbo.PedidoVenta', 'U') IS NOT NULL DROP TABLE dbo.PedidoVenta;
@@ -342,6 +343,38 @@ CREATE TABLE dbo.HistorialCatalogo (
     CONSTRAINT FK_HistorialCatalogo_Categoria
         FOREIGN KEY (IdCategoria) REFERENCES dbo.CategoriaProducto (IdCategoria) ON DELETE SET NULL,
     CONSTRAINT FK_HistorialCatalogo_Usuario
+        FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: HistorialUsuario (HU-AUT-007)
+   Auditoria de cuentas de administrador: quien creo, edito,
+   deshabilito o habilito una cuenta. Una fila por campo cambiado
+   en una edicion (Campo obligatorio) y una fila por alta,
+   deshabilitacion o habilitacion. Nunca guarda contrasenas.
+   IdUsuario = administrador responsable; IdUsuarioAfectado = la
+   cuenta que cambio. Las cuentas no se eliminan (FK sin cascada).
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.HistorialUsuario (
+    IdHistorialUsuario    INT IDENTITY(1,1) NOT NULL,
+    IdUsuarioAfectado     INT           NOT NULL,
+    NombreUsuarioAfectado NVARCHAR(120) NOT NULL, -- nombre completo al momento del cambio
+    Accion                NVARCHAR(20)  NOT NULL,
+    Campo                 NVARCHAR(30)  NULL,
+    ValorAnterior         NVARCHAR(200) NULL,
+    ValorNuevo            NVARCHAR(200) NULL,
+    Motivo                NVARCHAR(300) NULL,
+    IdUsuario             INT           NOT NULL, -- administrador responsable
+    Fecha                 DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_HistorialUsuario PRIMARY KEY (IdHistorialUsuario),
+    CONSTRAINT CK_HistorialUsuario_Accion CHECK (Accion IN ('Creada', 'Editada', 'Deshabilitada', 'Habilitada')),
+    CONSTRAINT CK_HistorialUsuario_Campo CHECK (
+        (Accion = 'Editada' AND Campo IS NOT NULL) OR (Accion <> 'Editada')
+    ),
+    CONSTRAINT FK_HistorialUsuario_Afectado
+        FOREIGN KEY (IdUsuarioAfectado) REFERENCES dbo.Usuario (IdUsuario),
+    CONSTRAINT FK_HistorialUsuario_Usuario
         FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
@@ -712,6 +745,9 @@ CREATE INDEX IX_HistorialCatalogo_Tipo ON dbo.HistorialCatalogo (TipoElemento, F
 CREATE INDEX IX_HistorialCatalogo_Usuario ON dbo.HistorialCatalogo (IdUsuario);
 CREATE INDEX IX_HistorialCatalogo_Producto ON dbo.HistorialCatalogo (IdProducto, Fecha DESC) WHERE IdProducto IS NOT NULL;
 CREATE INDEX IX_HistorialCatalogo_Categoria ON dbo.HistorialCatalogo (IdCategoria, Fecha DESC) WHERE IdCategoria IS NOT NULL;
+CREATE INDEX IX_HistorialUsuario_Fecha ON dbo.HistorialUsuario (Fecha DESC, IdHistorialUsuario DESC);
+CREATE INDEX IX_HistorialUsuario_Afectado ON dbo.HistorialUsuario (IdUsuarioAfectado);
+CREATE INDEX IX_HistorialUsuario_Usuario ON dbo.HistorialUsuario (IdUsuario);
 CREATE INDEX IX_HistorialHorarioOperacion_Fecha ON dbo.HistorialHorarioOperacion (Fecha DESC, IdHistorialHorarioOperacion DESC);
 CREATE INDEX IX_HistorialHorarioOperacion_Dia_Fecha ON dbo.HistorialHorarioOperacion (DiaSemana, Fecha DESC);
 CREATE INDEX IX_HistorialHorarioOperacion_Usuario_Fecha ON dbo.HistorialHorarioOperacion (IdUsuario, Fecha DESC);

@@ -3815,3 +3815,233 @@ a.mc-pager__btn:hover {
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------
+   Cuentas de administrador (HU-AUT-006 / HU-AUT-007)
+   ------------------------------------------------------------ */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Celda de cuenta: avatar con iniciales + nombre y usuario. */
+.mc-cuenta-celda {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+}
+
+.mc-avatar--lg {
+  width: 44px;
+  height: 44px;
+  font-size: var(--mc-text-base);
+}
+
+/* Cuenta desactivada: avatar apagado; el texto de estado sigue siendo la senal principal. */
+.mc-avatar--off {
+  background-color: var(--mc-border-strong);
+  color: var(--mc-ink-muted);
+}
+
+/* Validacion de jQuery Validation (unobtrusive): el campo con error se ve, no solo el texto. */
+.input-validation-error {
+  border-color: var(--mc-danger);
+}
+
+.input-validation-error:focus {
+  box-shadow: 0 0 0 0.2rem rgba(179, 38, 30, 0.15);
+}
+
+/* Modal de formulario: ancho comodo, encabezado con avatar y pie con resumen de cambios. */
+.mc-modal-form {
+  --bs-modal-width: 36rem;
+}
+
+/* El formulario envuelve encabezado, cuerpo y pie; para que el cuerpo haga scroll sin mover el pie
+   debe ser un contenedor flex que pueda encogerse. */
+.mc-modal-form__form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mc-modal-form .modal-content {
+  border: 0;
+  border-radius: var(--mc-radius-lg);
+  box-shadow: var(--mc-shadow-lg);
+}
+
+.mc-modal-form .modal-header {
+  align-items: center;
+  gap: var(--mc-space-3);
+  border-bottom: 1px solid var(--mc-border);
+}
+
+.mc-modal-form .modal-header .btn-close {
+  margin: 0;
+}
+
+.mc-modal-form .modal-body {
+  display: grid;
+  gap: var(--mc-space-5);
+}
+
+.mc-modal-form .modal-footer {
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+  background-color: var(--mc-surface);
+  border-top: 1px solid var(--mc-border);
+}
+
+.mc-form-seccion {
+  display: grid;
+  gap: var(--mc-space-3);
+}
+
+.mc-form-seccion__titulo {
+  margin: 0;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-xs);
+  font-weight: var(--mc-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Resumen de lo que cambia (pie del modal). */
+.mc-dirty-resumen {
+  margin: 0;
+  color: var(--mc-ink-muted);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-dirty-resumen.is-dirty {
+  color: var(--mc-green-600);
+  font-weight: var(--mc-weight-medium);
+}
+
+/* Rol como tarjetas seleccionables (radio nativo, accesible por teclado). */
+.mc-rol-grid {
+  display: grid;
+  gap: var(--mc-space-2);
+}
+
+.mc-rol-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border: 1px solid var(--mc-border-strong);
+  border-radius: var(--mc-radius);
+  background-color: var(--mc-elevated);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+
+.mc-rol-card:hover {
+  border-color: var(--mc-green-300);
+}
+
+.mc-rol-card__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mc-rol-card__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--mc-green-50);
+  color: var(--mc-green-500);
+  font-size: 1.1rem;
+}
+
+.mc-rol-card__texto {
+  display: grid;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.mc-rol-card__texto small {
+  color: var(--mc-ink-muted);
+}
+
+.mc-rol-card__check {
+  color: var(--mc-green-500);
+  font-size: 1.15rem;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.mc-rol-card:has(.mc-rol-card__input:checked) {
+  border-color: var(--mc-green-500);
+  background-color: var(--mc-green-50);
+  box-shadow: 0 0 0 1px var(--mc-green-500);
+}
+
+.mc-rol-card:has(.mc-rol-card__input:checked) .mc-rol-card__check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.mc-rol-card:has(.mc-rol-card__input:focus-visible) {
+  outline: 2px solid var(--mc-green-500);
+  outline-offset: 2px;
+}
+
+.mc-rol-card:has(.mc-rol-card__input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.mc-rol-card:has(.mc-rol-card__input:disabled):hover {
+  border-color: var(--mc-border-strong);
+}
+
+.mc-rol-card:has(.mc-rol-card__input:checked:disabled) {
+  border-color: var(--mc-border-strong);
+  box-shadow: none;
+}
+
+/* Aviso discreto con icono (por que algo esta bloqueado). */
+.mc-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mc-space-2);
+  margin: var(--mc-space-2) 0 0;
+  padding: var(--mc-space-2) var(--mc-space-3);
+  border-radius: var(--mc-radius);
+  background-color: var(--mc-warning-bg);
+  color: var(--mc-ink);
+  font-size: var(--mc-text-sm);
+}
+
+.mc-callout .bi {
+  margin-top: 0.1rem;
+  color: var(--mc-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-rol-card,
+  .mc-rol-card__check {
+    transition: none;
+  }
+}
+
+/* Pantallas angostas: el pie apila el resumen sobre los botones y los botones ocupan el ancho. */
+@media (max-width: 575.98px) {
+  .mc-modal-form .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mc-modal-form .modal-footer .d-flex {
+    justify-content: flex-end;
+  }
+}

@@ -8,13 +8,14 @@ namespace MonteCarlo.API.Data.Repositories.Interfaces
     public interface IUsuariosRepository
     {
         /// <summary>
-        /// Creates a new user.
+        /// Creates a new user and its audit row in a single SaveChanges (HU-AUT-007).
         /// </summary>
         /// <param name="usuario">The user to create.</param>
+        /// <param name="historial">Audit row (navigation to <paramref name="usuario"/>) saved with the account.</param>
         /// <returns>
         /// A tuple indicating success, an informational message, and the created user (or null on failure).
         /// </returns>
-        Task<(bool Success, string Message, Usuario? CreatedUser)> CrearUsuarioAsync(Usuario usuario);
+        Task<(bool Success, string Message, Usuario? CreatedUser)> CrearUsuarioAsync(Usuario usuario, HistorialUsuario historial);
 
         /// <summary>
         /// Gets all users, optionally filtered by search text and active status.
@@ -24,14 +25,20 @@ namespace MonteCarlo.API.Data.Repositories.Interfaces
         Task<List<Usuario>> ObtenerTodosAsync(string? busqueda, bool? soloActivos);
 
         /// <summary>
-        /// Gets a user by id.
+        /// Gets a user by id (tracked: the service modifies it and then calls <see cref="GuardarCambiosAsync"/>).
         /// </summary>
         Task<Usuario?> ObtenerPorIdAsync(int id);
 
         /// <summary>
-        /// Changes a user's active status.
+        /// Counts the active "General" accounts other than <paramref name="idExcluido"/>.
+        /// Used to never leave the system without an active General administrator.
         /// </summary>
-        /// <returns>A tuple indicating success and an informational message.</returns>
-        Task<(bool Success, string Message)> CambiarEstadoAsync(int id, bool activo);
+        Task<int> ContarOtrosGeneralesActivosAsync(int idExcluido);
+
+        /// <summary>
+        /// Saves the changes already applied to tracked users together with their audit rows (one transaction).
+        /// Translates unique index violations (username / email) into a friendly message.
+        /// </summary>
+        Task<(bool Success, string Message)> GuardarCambiosAsync(IEnumerable<HistorialUsuario> historial);
     }
 }

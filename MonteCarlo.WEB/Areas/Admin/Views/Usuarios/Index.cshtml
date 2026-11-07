@@ -5,51 +5,63 @@
     Escenario 2  desactivar, con confirmacion previa
     Escenario 3  reactivar
     Escenario 4  la cuenta propia se senala y no puede desactivarse
+
+    HU-AUT-007 — Editar cuenta en un modal centrado (nombre, usuario, correos y rol); desactivar y
+    reactivar piden un motivo opcional. Todo queda en la pestana Historial de cambios.
+
+    Filtros por GET (URL compartible): busqueda con Enter y estado como control segmentado con conteos.
+    Acciones de fila como botones de icono con tooltip y nombre accesible.
 *@
 @model CuentasIndexViewModel
 @{
     ViewData["Title"] = "Cuentas de administrador";
-    ViewData["Subtitle"] = "Controla quien tiene acceso al panel administrativo.";
+    ViewData["Icon"] = "bi-people";
+    ViewData["Subtitle"] = "Controla quién tiene acceso al panel administrativo.";
 }
 
 @section PageActions {
-    <a asp-action="Crear" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nueva cuenta
+    <a asp-action="Crear" class="btn btn-primary mc-btn-add">
+        <i class="bi bi-plus-lg mc-btn-add__icono" aria-hidden="true"></i> Nueva cuenta
     </a>
 }
 
-@* Filtros. Van por GET para que un listado filtrado sea una URL
-   compartible y el boton Atras se comporte como se espera. *@
-<form asp-action="Index" method="get" class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-6">
-                <label asp-for="Busqueda" class="form-label"></label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </span>
-                    <input asp-for="Busqueda" class="form-control"
-                           placeholder="Nombre, usuario o correo" />
-                </div>
-            </div>
+<partial name="_CuentasTabs" model='"cuentas"' />
 
-            <div class="col-md-3">
-                <label asp-for="Estado" class="form-label"></label>
-                <select asp-for="Estado" class="form-select"
-                        asp-items="Html.GetEnumSelectList<FiltroEstadoCuenta>()"></select>
-            </div>
+<div class="mc-toolbar">
+    <div class="mc-toolbar__fila">
+        <form asp-action="Index" method="get" role="search" class="mc-search">
+            <i class="bi bi-search mc-search__icono" aria-hidden="true"></i>
+            <label for="busqueda" class="visually-hidden">Buscar cuenta</label>
+            <input id="busqueda" name="Busqueda" type="search" class="mc-search__input" value="@Model.Busqueda"
+                   placeholder="Buscar por nombre, usuario o correo" maxlength="100" autocomplete="off" />
+            @if (Model.Estado != FiltroEstadoCuenta.Todas)
+            {
+                <input type="hidden" name="Estado" value="@Model.Estado" />
+            }
+        </form>
 
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-outline-primary flex-grow-1">Filtrar</button>
-                @if (Model.TieneFiltrosAplicados)
-                {
-                    <a asp-action="Index" class="btn btn-link">Limpiar</a>
-                }
-            </div>
-        </div>
+        <nav class="mc-segment" aria-label="Estado de la cuenta">
+            @foreach (var (valor, texto, conteo) in new[]
+            {
+                (FiltroEstadoCuenta.Todas, "Todas", Model.TotalCuentas),
+                (FiltroEstadoCuenta.Activas, "Activas", Model.TotalActivas),
+                (FiltroEstadoCuenta.Inactivas, "Inactivas", Model.TotalInactivas)
+            })
+            {
+                var activo = Model.Estado == valor;
+                <a class="mc-segment__op @(activo ? "is-active" : null)"
+                   asp-action="Index" asp-route-busqueda="@Model.Busqueda"
+                   asp-route-estado="@(valor == FiltroEstadoCuenta.Todas ? null : valor.ToString())"
+                   aria-current="@(activo ? "true" : null)">@texto<span class="mc-segment__conteo">@conteo</span></a>
+            }
+        </nav>
+
+        @if (Model.TieneFiltrosAplicados)
+        {
+            <a asp-action="Index" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar</a>
+        }
     </div>
-</form>
+</div>
 
 @if (Model.Cuentas.Count == 0)
 {
@@ -65,7 +77,7 @@
             <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
                      {
                          Icono = "bi-people",
-                         Titulo = "Aun no hay cuentas registradas",
+                         Titulo = "Aún no hay cuentas registradas",
                          Descripcion = "Crea la primera cuenta para dar acceso al panel administrativo.",
                          TextoAccion = "Nueva cuenta",
                          UrlAccion = Url.Action(nameof(UsuariosController.Crear))
@@ -83,8 +95,8 @@ else
                 </caption>
                 <thead>
                     <tr>
-                        <th scope="col">Nombre</th>
-                        <th scope="col">Correo</th>
+                        <th scope="col">Cuenta</th>
+                        <th scope="col" class="d-none d-md-table-cell">Correo</th>
                         <th scope="col">Rol</th>
                         <th scope="col">Estado</th>
                         <th scope="col" class="text-end">Acciones</th>
@@ -93,64 +105,94 @@ else
                 <tbody>
                     @foreach (var cuenta in Model.Cuentas)
                     {
-                        <tr class="@(cuenta.EsCuentaPropia ? "mc-row-self" : null)">
+                        <tr class="@(cuenta.Activa ? null : "mc-row-off") @(cuenta.EsCuentaPropia ? "mc-row-self" : null)">
                             <td>
-                                <span class="fw-medium">@cuenta.NombreCompleto</span>
-                                @if (cuenta.EsCuentaPropia)
-                                {
-                                    <span class="badge text-bg-light border ms-2">Tu cuenta</span>
-                                }
-                                <span class="d-block text-secondary small">@@@cuenta.NombreUsuario</span>
+                                <div class="mc-cuenta-celda">
+                                    <span class="mc-avatar @(cuenta.Activa ? null : "mc-avatar--off")" aria-hidden="true">@cuenta.Iniciales</span>
+                                    <div class="min-w-0">
+                                        <span class="fw-medium">@cuenta.NombreCompleto</span>
+                                        @if (cuenta.EsCuentaPropia)
+                                        {
+                                            <span class="badge text-bg-light border ms-1">Tú</span>
+                                        }
+                                        <span class="d-block text-secondary small">@@@cuenta.NombreUsuario</span>
+                                        @* En pantallas angostas el correo baja bajo el nombre. *@
+                                        <span class="d-block text-secondary small text-break d-md-none">@cuenta.CorreoElectronico</span>
+                                    </div>
+                                </div>
                             </td>
 
-                            <td class="text-break">@cuenta.CorreoElectronico</td>
+                            <td class="text-break d-none d-md-table-cell">@cuenta.CorreoElectronico</td>
 
-                            <td>@cuenta.RolLegible</td>
+                            <td>
+                                @if (cuenta.EsAdministradorGeneral)
+                                {
+                                    <span class="mc-badge mc-badge--info"><i class="bi bi-shield-check" aria-hidden="true"></i> General</span>
+                                }
+                                else
+                                {
+                                    <span class="mc-badge mc-badge--neutral"><i class="bi bi-person" aria-hidden="true"></i> Regular</span>
+                                }
+                            </td>
 
                             <td>
                                 <partial name="_BadgeEstado" model="BadgeEstadoViewModel.Cuenta(cuenta.Activa)" />
                             </td>
 
                             <td class="text-end">
-                                @if (cuenta.EsCuentaPropia)
-                                {
-                                    @* Escenario 4. El boton se deshabilita y se
-                                       explica por que: un control apagado sin
-                                       motivo se lee como un error del sistema.
-                                       Va envuelto en un span porque un boton
-                                       deshabilitado no dispara el tooltip. *@
-                                    <span class="d-inline-block" tabindex="0"
-                                          data-bs-toggle="tooltip"
-                                          title="No puedes desactivar la cuenta con la que iniciaste sesion.">
-                                        <button type="button" class="btn btn-sm btn-ghost-danger" disabled>
-                                            Desactivar
+                                <div class="mc-acciones">
+                                    <button type="button" class="mc-icon-btn" data-bs-toggle="tooltip" data-bs-title="@($"Editar la cuenta de {cuenta.NombreCompleto}")"
+                                            data-mc-modal
+                                            data-mc-modal-target="#mcCuentaModal"
+                                            data-mc-modal-url="@Url.Action(nameof(UsuariosController.Editar), new { id = cuenta.IdUsuario })"
+                                            aria-label="Editar la cuenta de @cuenta.NombreCompleto">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </button>
+
+                                    @if (cuenta.EsCuentaPropia)
+                                    {
+                                        @* Escenario 4. Se deshabilita y se explica por que: un control apagado
+                                           sin motivo se lee como un error. Va en un span porque un boton
+                                           deshabilitado no dispara el tooltip. *@
+                                        <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip"
+                                              data-bs-title="No puedes desactivar la cuenta con la que iniciaste sesión.">
+                                            <button type="button" class="mc-icon-btn mc-icon-btn--danger" disabled
+                                                    aria-label="Desactivar (no disponible en tu propia cuenta)">
+                                                <i class="bi bi-person-slash" aria-hidden="true"></i>
+                                            </button>
+                                        </span>
+                                    }
+                                    else if (cuenta.Activa)
+                                    {
+                                        <button type="button" class="mc-icon-btn mc-icon-btn--danger" data-bs-toggle="tooltip"
+                                                data-bs-title="@($"Desactivar la cuenta de {cuenta.NombreCompleto}")"
+                                                data-mc-confirm
+                                                data-mc-confirm-title="Desactivar cuenta"
+                                                data-mc-confirm-body="@($"{cuenta.NombreCompleto} dejará de poder iniciar sesión. La cuenta no se elimina y su historial se conserva.")"
+                                                data-mc-confirm-action="@Url.Action(nameof(UsuariosController.Desactivar), new { id = cuenta.IdUsuario })"
+                                                data-mc-confirm-label="Desactivar"
+                                                data-mc-confirm-motivo
+                                                data-mc-confirm-variant="danger"
+                                                aria-label="Desactivar la cuenta de @cuenta.NombreCompleto">
+                                            <i class="bi bi-person-slash" aria-hidden="true"></i>
                                         </button>
-                                    </span>
-                                }
-                                else if (cuenta.Activa)
-                                {
-                                    <button type="button" class="btn btn-sm btn-ghost-danger"
-                                            data-mc-confirm
-                                            data-mc-confirm-title="Desactivar cuenta"
-                                            data-mc-confirm-body="@($"{cuenta.NombreCompleto} dejara de poder iniciar sesion. La cuenta no se elimina y su historial se conserva.")"
-                                            data-mc-confirm-action="@Url.Action(nameof(UsuariosController.Desactivar), new { id = cuenta.IdUsuario })"
-                                            data-mc-confirm-label="Desactivar"
-                                            data-mc-confirm-variant="danger">
-                                        Desactivar
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                            data-mc-confirm
-                                            data-mc-confirm-title="Reactivar cuenta"
-                                            data-mc-confirm-body="@($"{cuenta.NombreCompleto} volvera a poder iniciar sesion en el panel administrativo.")"
-                                            data-mc-confirm-action="@Url.Action(nameof(UsuariosController.Reactivar), new { id = cuenta.IdUsuario })"
-                                            data-mc-confirm-label="Reactivar"
-                                            data-mc-confirm-variant="primary">
-                                        Reactivar
-                                    </button>
-                                }
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="mc-icon-btn mc-icon-btn--ok" data-bs-toggle="tooltip"
+                                                data-bs-title="@($"Reactivar la cuenta de {cuenta.NombreCompleto}")"
+                                                data-mc-confirm
+                                                data-mc-confirm-title="Reactivar cuenta"
+                                                data-mc-confirm-body="@($"{cuenta.NombreCompleto} volverá a poder iniciar sesión en el panel administrativo.")"
+                                                data-mc-confirm-action="@Url.Action(nameof(UsuariosController.Reactivar), new { id = cuenta.IdUsuario })"
+                                                data-mc-confirm-label="Reactivar"
+                                                data-mc-confirm-motivo
+                                                data-mc-confirm-variant="primary"
+                                                aria-label="Reactivar la cuenta de @cuenta.NombreCompleto">
+                                            <i class="bi bi-person-check" aria-hidden="true"></i>
+                                        </button>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -160,15 +202,21 @@ else
     </div>
 
     <p class="form-text mt-3">
-        Mostrando @Model.Cuentas.Count @(Model.Cuentas.Count == 1 ? "cuenta" : "cuentas").
-        Desactivar una cuenta no la elimina: su historial se conserva para auditoria.
+        Mostrando @Model.Cuentas.Count de @Model.TotalCuentas @(Model.TotalCuentas == 1 ? "cuenta" : "cuentas").
+        Desactivar una cuenta no la elimina: su historial se conserva para auditoría.
     </p>
 }
 
-@section Scripts {
-    <script>
-        // Tooltip del boton deshabilitado en la fila de la cuenta propia.
-        document.querySelectorAll('[data-bs-toggle="tooltip"]')
-            .forEach(function (el) { new bootstrap.Tooltip(el); });
-    </script>
-}
+@* Modal de edicion. Su contenido llega por fetch (data-mc-modal) o, si el POST falla, ya renderizado y abierto.
+   El fondo es estatico para no perder lo escrito con un clic fuera. *@
+<div class="modal fade mc-modal-form" id="mcCuentaModal" tabindex="-1" aria-labelledby="mcCuentaModalTitulo"
+     aria-hidden="true" data-bs-backdrop="static" @(Model.Formulario is not null ? "data-mc-modal-autoopen" : null)>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" data-mc-modal-contenido>
+            @if (Model.Formulario is not null)
+            {
+                <partial name="_CuentaFormulario" model="Model.Formulario" />
+            }
+        </div>
+    </div>
+</div>

@@ -24,6 +24,7 @@ public class MonteCarloDbContext : DbContext
     public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<HistorialCatalogo> HistorialCatalogo => Set<HistorialCatalogo>();
+    public DbSet<HistorialUsuario> HistorialUsuarios => Set<HistorialUsuario>();
     public DbSet<CierreFijo> CierresFijos => Set<CierreFijo>();
     public DbSet<CierreEventual> CierresEventuales => Set<CierreEventual>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
@@ -53,6 +54,7 @@ public class MonteCarloDbContext : DbContext
         ConfigurarCategoriaProducto(modelBuilder);
         ConfigurarProducto(modelBuilder);
         ConfigurarHistorialCatalogo(modelBuilder);
+        ConfigurarHistorialUsuario(modelBuilder);
         ConfigurarCierreFijo(modelBuilder);
         ConfigurarCierreEventual(modelBuilder);
         ConfigurarReserva(modelBuilder);
@@ -283,6 +285,43 @@ public class MonteCarloDbContext : DbContext
                 .HasForeignKey(e => e.IdUsuario)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_HistorialCatalogo_Usuario");
+        });
+    }
+
+    private static void ConfigurarHistorialUsuario(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<HistorialUsuario>(entity =>
+        {
+            entity.ToTable("HistorialUsuario", t =>
+            {
+                t.HasCheckConstraint("CK_HistorialUsuario_Accion", "Accion IN ('Creada', 'Editada', 'Deshabilitada', 'Habilitada')");
+                t.HasCheckConstraint("CK_HistorialUsuario_Campo",
+                    "(Accion = 'Editada' AND Campo IS NOT NULL) OR (Accion <> 'Editada')");
+            });
+            entity.HasKey(e => e.IdHistorialUsuario).HasName("PK_HistorialUsuario");
+            entity.HasIndex(e => e.Fecha).IsDescending().HasDatabaseName("IX_HistorialUsuario_Fecha");
+            entity.HasIndex(e => e.IdUsuarioAfectado).HasDatabaseName("IX_HistorialUsuario_Afectado");
+            entity.HasIndex(e => e.IdUsuario).HasDatabaseName("IX_HistorialUsuario_Usuario");
+
+            entity.Property(e => e.NombreUsuarioAfectado).HasMaxLength(120).IsRequired();
+            entity.Property(e => e.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Campo).HasMaxLength(30);
+            entity.Property(e => e.ValorAnterior).HasMaxLength(200);
+            entity.Property(e => e.ValorNuevo).HasMaxLength(200);
+            entity.Property(e => e.Motivo).HasMaxLength(300);
+            entity.Property(e => e.Fecha).HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(e => e.UsuarioAfectado)
+                .WithMany(u => u.HistorialUsuariosRecibidos)
+                .HasForeignKey(e => e.IdUsuarioAfectado)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialUsuario_Afectado");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany(u => u.HistorialUsuariosRealizados)
+                .HasForeignKey(e => e.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialUsuario_Usuario");
         });
     }
 

@@ -27,6 +27,10 @@ builder.Services.AddScoped<IUsuariosRepository, UsuariosRepository>();
 
 builder.Services.AddScoped<IUsuariosService, UsuariosService>();
 
+// HU-AUT-007: historial de cambios de cuentas de administrador
+builder.Services.AddScoped<IHistorialUsuarioRepository, HistorialUsuarioRepository>();
+builder.Services.AddScoped<IHistorialUsuarioService, HistorialUsuarioService>();
+
 // HU-RES-005: cancelación de reservas por el cliente
 builder.Services.AddScoped<IReservasRepository, ReservasRepository>();
 builder.Services.AddScoped<IReservasService, ReservasService>();

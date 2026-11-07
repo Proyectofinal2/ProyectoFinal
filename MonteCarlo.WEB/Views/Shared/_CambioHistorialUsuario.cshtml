@@ -1,0 +1,30 @@
+@*
+    Descripcion de un cambio del historial de cuentas (HU-AUT-007):
+    "Rol: Administrador Regular -> Administrador General", "Cuenta creada", "Cuenta deshabilitada · motivo".
+*@
+@using MonteCarlo.WEB.Models.Autenticacion
+@model HistorialUsuarioApiResponse
+
+@if (Model.Accion == "Editada")
+{
+    <strong>@Model.CampoLegible:</strong>
+    <span>@Model.FormatearValor(Model.ValorAnterior)</span>
+    <i class="bi bi-arrow-right mx-1" aria-label="cambió a"></i>
+    <span>@Model.FormatearValor(Model.ValorNuevo)</span>
+}
+else
+{
+    var (texto, clase) = Model.Accion switch
+    {
+        "Creada" => ("Cuenta creada", "mc-badge mc-badge--info"),
+        "Habilitada" => ("Cuenta habilitada", "mc-badge mc-badge--success"),
+        "Deshabilitada" => ("Cuenta deshabilitada", "mc-badge mc-badge--neutral"),
+        _ => (Model.Accion, "mc-badge mc-badge--neutral")
+    };
+    <span class="@clase">@texto</span>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Motivo))
+{
+    <span class="text-secondary">&middot; @Model.Motivo</span>
+}

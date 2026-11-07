@@ -54,6 +54,7 @@ Reglas para escribir pruebas nuevas:
 | #35 | HU-CON-002 cuenta de mesa y cobro | **Cubierto** (tabla siguiente) |
 | #36 | HU-CON-003 venta para llevar | **Cubierto** (tabla «Venta para llevar») |
 | #35 | HU-CON-002 esc. 13 (cuenta antigua) y 14 (mesa con cuenta abierta no se ofrece) y HU-RES-003 (sin mesa no hay reserva) | **Cubierto** (tablas «Cuentas abiertas y disponibilidad» y «Cuenta antigua») |
+| — | HU-AUT-007 editar cuentas e historial | **Cubierto** (tabla «Editar cuentas») |
 | — | HU-CON-001 catálogo | Sin pruebas propias (CRUD); solo se cubre lo que usa la venta (producto disponible + categoría activa) |
 | — | HU-CON-004 / HU-REP-003 | Pendiente: cuando existan, probar que solo `Estado = 'Cobrada'` cuenta como ingreso |
 
@@ -126,6 +127,22 @@ El esc. 3 (listado de Ventas con totales, filtro por estado y el botón «Venta 
 `alter_database-7.sql` (estado `Abandonada`) se verificó a mano en bases desechables: sobre una base creada con el `database.sql` anterior, dos corridas dejan los ocho CHECK de `Venta` idénticos a los de una base creada con el `database.sql` nuevo; aborta con mensaje si falta el alter 5.
 
 `alter_database-6.sql` (clave `ToleranciaCobroMinutos`) se verificó a mano en una base desechable: aborta con mensaje sin `ConfiguracionSistema` y es idempotente (dos corridas, una fila).
+
+### Editar cuentas e historial (HU-AUT-007)
+
+La interfaz (modal de edición, pestaña Historial, motivo en el diálogo de confirmación) es de revisión manual.
+
+| Criterio | Pruebas (`Usuarios/EdicionDeCuentasTests`) |
+|---|---|
+| Esc. 1: una fila de historial por campo cambiado, con anterior, nuevo y responsable | `Actualizar_variosCampos_registraUnaFilaPorCampoConElResponsable` |
+| Esc. 2: sin cambios no hay historial | `Actualizar_sinCambios_noRegistraHistorial` |
+| Esc. 3: correo duplicado (409), sin guardar la cuenta ni el historial (misma transacción) | `Actualizar_correoDeOtraCuenta_devuelve409YNoGuardaNadaNiHistorial` |
+| Esc. 4: el propio rol no se cambia | `Actualizar_elPropioRol_devuelve400YNoCambiaNada` |
+| Esc. 5: la última General activa no pierde el rol ni se desactiva | `Actualizar_quitarElRolALaUltimaGeneralActiva_devuelve409`, `Desactivar_laUltimaGeneralActiva_devuelve409` (dejan una sola General activa en la base compartida y la restauran) |
+| Esc. 6: desactivar y reactivar registran responsable y motivo; repetir el estado no registra | `CambiarEstado_desactivarYReactivar_registraResponsableYMotivo`, `CambiarEstado_cuentaQueYaEstabaEnEseEstado_noRegistraHistorial` |
+| Alta: cuenta e historial en el mismo guardado; duplicado no deja historial | `Crear_registraLaCuentaYQuienLaCreoEnElMismoGuardado`, `Crear_conUsuarioDuplicado_devuelve409YNoDejaHistorial` |
+
+`alter_database-8.sql` (tabla `HistorialUsuario`) se verificó a mano en bases desechables: sobre una base creada con el `database.sql` anterior, dos corridas dejan columnas, CHECK, FK e índices idénticos a los de una base creada con el `database.sql` nuevo; aborta con mensaje si falta `dbo.Usuario`. Ojo: el script empieza con BOM, así que al reemplazar su `USE MonteCarlo;` con `sed` hay que quitar el BOM antes (si no, corre contra la base real).
 
 ### Huecos conocidos (fijan el comportamiento actual)
 

@@ -1,0 +1,123 @@
+@*
+    Contenido del modal de edicion (HU-AUT-007): encabezado, cuerpo y pie. Lo devuelve UsuariosController.Editar
+    para el fetch del modal, y la vista Index lo incluye (modal abierto) cuando el POST fallo por validacion.
+
+    - «Guardar cambios» se habilita solo si algo difiere de lo guardado (data-mc-original) y el pie dice que cambia.
+    - El rol se elige en tarjetas. Se bloquea en la cuenta propia y en la unica cuenta General activa (la API
+      aplica las mismas reglas). Un grupo deshabilitado no viaja en el POST: el rol actual va en un campo oculto.
+    - No incluye contrasena ni estado (Desactivar / Reactivar viven en el listado).
+*@
+@using MonteCarlo.WEB.Models.Autenticacion
+@model EditarCuentaViewModel
+@{
+    var original = Model.Original;
+}
+
+<form method="post" novalidate data-mc-guard-submit data-mc-dirty-form class="mc-modal-form__form"
+      asp-area="Admin" asp-controller="Usuarios" asp-action="Actualizar" asp-route-id="@Model.IdUsuario">
+
+    <div class="modal-header">
+        <span class="mc-avatar mc-avatar--lg" aria-hidden="true">@CuentaUi.Iniciales(Model.NombreMostrado)</span>
+        <div class="flex-grow-1 min-w-0">
+            <h2 class="modal-title fs-5" id="mcCuentaModalTitulo">Editar cuenta</h2>
+            <p class="text-secondary small mb-0 text-truncate">@Model.NombreMostrado &middot; @@@Model.UsuarioMostrado</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="modal-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+
+        <section class="mc-form-seccion" aria-labelledby="sec-personal">
+            <h3 class="mc-form-seccion__titulo" id="sec-personal">Datos personales</h3>
+            <div>
+                <label asp-for="NombreCompleto" class="form-label mc-required"></label>
+                <input asp-for="NombreCompleto" class="form-control" maxlength="120" autocomplete="off"
+                       data-mc-campo="Nombre completo" data-mc-original="@original?.NombreCompleto" />
+                <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+            </div>
+        </section>
+
+        <section class="mc-form-seccion" aria-labelledby="sec-acceso">
+            <h3 class="mc-form-seccion__titulo" id="sec-acceso">Acceso y contacto</h3>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="NombreUsuario" class="form-label mc-required"></label>
+                    <input asp-for="NombreUsuario" class="form-control" maxlength="50" autocomplete="off"
+                           data-mc-campo="Nombre de usuario" data-mc-original="@original?.NombreUsuario" />
+                    <span asp-validation-for="NombreUsuario" class="text-danger small"></span>
+                    <div class="form-text">Con este inicia sesión.</div>
+                </div>
+
+                <div class="col-sm-6">
+                    <label asp-for="CorreoElectronico" class="form-label mc-required"></label>
+                    <input asp-for="CorreoElectronico" type="email" class="form-control" maxlength="120" autocomplete="off"
+                           data-mc-campo="Correo corporativo" data-mc-original="@original?.CorreoElectronico" />
+                    <span asp-validation-for="CorreoElectronico" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="CorreoPersonal" class="form-label"></label>
+                    <input asp-for="CorreoPersonal" type="email" class="form-control" maxlength="120" autocomplete="off"
+                           data-mc-campo="Correo personal" data-mc-original="@(original?.CorreoPersonal ?? "")" />
+                    <span asp-validation-for="CorreoPersonal" class="text-danger small"></span>
+                    <div class="form-text">Respaldo para recuperar la contraseña.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mc-form-seccion" aria-labelledby="sec-permisos">
+            <h3 class="mc-form-seccion__titulo" id="sec-permisos">Permisos</h3>
+
+            <fieldset @(Model.RolBloqueado ? "disabled" : null)
+                      data-mc-campo="Rol" data-mc-radio="Rol" data-mc-original="@original?.Rol">
+                <legend class="form-label mc-required fs-6">Rol</legend>
+
+                <div class="mc-rol-grid">
+                    <label class="mc-rol-card">
+                        <input type="radio" name="Rol" value="@Roles.Regular" class="mc-rol-card__input"
+                               checked="@(Model.Rol == Roles.Regular)" />
+                        <span class="mc-rol-card__icono" aria-hidden="true"><i class="bi bi-person"></i></span>
+                        <span class="mc-rol-card__texto">
+                            <strong>Administrador Regular</strong>
+                            <small>Reservas, mesas y ventas. No administra cuentas.</small>
+                        </span>
+                        <i class="bi bi-check-circle-fill mc-rol-card__check" aria-hidden="true"></i>
+                    </label>
+
+                    <label class="mc-rol-card">
+                        <input type="radio" name="Rol" value="@Roles.General" class="mc-rol-card__input"
+                               checked="@(Model.Rol == Roles.General)" />
+                        <span class="mc-rol-card__icono" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+                        <span class="mc-rol-card__texto">
+                            <strong>Administrador General</strong>
+                            <small>Además, administra cuentas y consulta los historiales.</small>
+                        </span>
+                        <i class="bi bi-check-circle-fill mc-rol-card__check" aria-hidden="true"></i>
+                    </label>
+                </div>
+            </fieldset>
+
+            @if (Model.RolBloqueado)
+            {
+                @* El grupo deshabilitado no envia sus radios: se conserva el rol actual. *@
+                <input type="hidden" name="Rol" value="@Model.Rol" />
+                <p class="mc-callout" role="note"><i class="bi bi-lock" aria-hidden="true"></i> @Model.MotivoRolBloqueado</p>
+            }
+            <span asp-validation-for="Rol" class="text-danger small d-block"></span>
+        </section>
+
+        <p class="form-text mb-0">
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+            Cada cambio queda en el historial con tu nombre y la fecha. El cambio de rol rige en el próximo inicio de sesión o cuando venza la sesión actual (hasta 1 hora).
+        </p>
+    </div>
+
+    <div class="modal-footer">
+        <p class="mc-dirty-resumen" data-mc-dirty-resumen aria-live="polite">Sin cambios todavía</p>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-mc-dirty-submit>Guardar cambios</button>
+        </div>
+    </div>
+</form>
