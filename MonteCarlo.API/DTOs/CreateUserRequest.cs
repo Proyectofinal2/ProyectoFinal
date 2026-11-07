@@ -6,16 +6,16 @@ namespace MonteCarlo.API.DTOs;
 public class CreateUserRequest
 {
     [Required(ErrorMessage = "El nombre completo es requerido.")]
-    [StringLength(100, ErrorMessage = "Máximo 100 caracteres.")]
+    [StringLength(120, ErrorMessage = "Máximo 120 caracteres.")]
     public string NombreCompleto { get; set; } = null!;
 
     [Required(ErrorMessage = "El correo corporativo es requerido.")]
     [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
-    [StringLength(150)]
+    [StringLength(120, ErrorMessage = "Máximo 120 caracteres.")]
     public string CorreoElectronico { get; set; } = null!;
 
     [EmailAddress(ErrorMessage = "Formato de correo inválido.")]
-    [StringLength(150)]
+    [StringLength(120, ErrorMessage = "Máximo 120 caracteres.")]
     public string? CorreoPersonal { get; set; }
 
     [Required(ErrorMessage = "El nombre de usuario es requerido.")]
@@ -33,6 +33,6 @@ public class CreateUserRequest
     public string ContrasenaInicial { get; set; } = null!;
 
     [Required(ErrorMessage = "El rol es requerido.")]
-    [RegularExpression(@"^(General|Regular)$", ErrorMessage = "Rol inválido.")]
+    [RegularExpression(@"^(General|Regular)\z", ErrorMessage = "Rol inválido.")]
     public string Rol { get; set; } = "Regular";
 }

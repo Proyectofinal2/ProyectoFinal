@@ -28,12 +28,21 @@
 
             <div class="modal-body">
                 <p class="mb-0" data-mc-confirm-body-target></p>
+
+                @* Motivo opcional: solo se muestra cuando el disparador declara data-mc-confirm-motivo.
+                   Viaja con el formulario de abajo gracias al atributo form. *@
+                <div class="mt-3" data-mc-confirm-motivo-wrap hidden>
+                    <label for="mcConfirmMotivo" class="form-label">Motivo (opcional)</label>
+                    <textarea id="mcConfirmMotivo" name="motivo" form="mcConfirmForm" class="form-control"
+                              rows="2" maxlength="300" disabled data-mc-confirm-motivo-target></textarea>
+                    <div class="form-text">Queda en el historial junto con tu nombre.</div>
+                </div>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
 
-                <form method="post" data-mc-confirm-form>
+                <form method="post" id="mcConfirmForm" data-mc-confirm-form>
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-primary" data-mc-confirm-submit>Confirmar</button>
                 </form>

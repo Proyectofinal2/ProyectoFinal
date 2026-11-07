@@ -6,17 +6,20 @@ namespace MonteCarlo.API.Data.Repositories;
 
 /// <summary>
 /// Repositorio para la gestión de cuentas de administrador.
-/// HU-AUT-006: consultar, desactivar y reactivar cuentas.
+/// HU-AUT-006: consultar, desactivar y reactivar cuentas. HU-AUT-007: editar cuentas con historial.
 /// </summary>
 public class UsuariosRepository(MonteCarloDbContext context) : IUsuariosRepository
 {
+    private const string MensajeUsuarioDuplicado = "Ya existe una cuenta con este nombre de usuario.";
+    private const string MensajeCorreoDuplicado = "Ya existe una cuenta con este correo corporativo.";
+
     /// <summary>
-    /// Crea un nuevo usuario en la base de datos.
+    /// Crea un nuevo usuario en la base de datos junto con su fila de historial.
     /// Valida que el nombre de usuario y correo corporativo sean únicos.
     /// HU-AUT-005: crear cuenta de administrador.
     /// </summary>
     public async Task<(bool Success, string Message, Usuario? CreatedUser)>
-        CrearUsuarioAsync(Usuario usuario)
+        CrearUsuarioAsync(Usuario usuario, HistorialUsuario historial)
     {
         // Validar que el nombre de usuario sea único
         var usuarioExistente = await context.Usuarios
@@ -24,7 +27,7 @@ public class UsuariosRepository(MonteCarloDbContext context) : IUsuariosReposito
 
         if (usuarioExistente != null)
         {
-            return (false, "Ya existe una cuenta con este nombre de usuario.", null);
+            return (false, MensajeUsuarioDuplicado, null);
         }
 
         // Validar que el correo corporativo sea único
@@ -33,36 +36,16 @@ public class UsuariosRepository(MonteCarloDbContext context) : IUsuariosReposito
 
         if (correoExistente != null)
         {
-            return (false, "Ya existe una cuenta con este correo corporativo.", null);
+            return (false, MensajeCorreoDuplicado, null);
         }
 
-        try
-        {
-            usuario.FechaCreacion = DateTime.UtcNow;
-            context.Usuarios.Add(usuario);
-            await context.SaveChangesAsync();
-            return (true, "Cuenta creada exitosamente.", usuario);
-        }
-        catch (DbUpdateException ex)
-        {
-            // Carrera entre la validación previa y el INSERT: otra solicitud pudo
-            // haber creado un usuario con el mismo dato entre el SELECT y este punto.
-            // Los índices únicos de la tabla (UQ_Usuario_NombreUsuario / UQ_Usuario_Correo)
-            // son la última línea de defensa; no exponemos el mensaje crudo de SQL Server.
-            var detalle = ex.InnerException?.Message ?? ex.Message;
+        usuario.FechaCreacion = DateTime.UtcNow;
+        context.Usuarios.Add(usuario);
+        var (success, message) = await GuardarCambiosAsync([historial]);
 
-            if (detalle.Contains("UQ_Usuario_NombreUsuario"))
-            {
-                return (false, "Ya existe una cuenta con este nombre de usuario.", null);
-            }
-
-            if (detalle.Contains("UQ_Usuario_Correo"))
-            {
-                return (false, "Ya existe una cuenta con este correo corporativo.", null);
-            }
-
-            return (false, "No se pudo crear la cuenta. Intenta nuevamente.", null);
-        }
+        return success
+            ? (true, "Cuenta creada exitosamente.", usuario)
+            : (false, message, null);
     }
 
     /// <summary>
@@ -96,22 +79,37 @@ public class UsuariosRepository(MonteCarloDbContext context) : IUsuariosReposito
         return await context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == id);
     }
 
+    public Task<int> ContarOtrosGeneralesActivosAsync(int idExcluido) =>
+        context.Usuarios.CountAsync(u => u.Rol == "General" && u.Activo && u.IdUsuario != idExcluido);
+
     /// <summary>
-    /// Cambia el estado activo/inactivo de un usuario.
-    /// HU-AUT-006, escenarios 2 y 3: desactivar y reactivar cuentas.
+    /// Guarda los cambios pendientes de las cuentas rastreadas junto con sus filas de historial.
+    /// Los índices únicos (UQ_Usuario_NombreUsuario / UQ_Usuario_Correo) son la última línea de defensa
+    /// ante una carrera entre la validación y el guardado; no se expone el mensaje crudo de SQL Server.
     /// </summary>
-    public async Task<(bool Success, string Message)> CambiarEstadoAsync(int id, bool activo)
+    public async Task<(bool Success, string Message)> GuardarCambiosAsync(IEnumerable<HistorialUsuario> historial)
     {
-        var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.IdUsuario == id);
-
-        if (usuario == null)
+        try
         {
-            return (false, "No se encontró la cuenta.");
+            context.HistorialUsuarios.AddRange(historial);
+            await context.SaveChangesAsync();
+            return (true, string.Empty);
         }
+        catch (DbUpdateException ex)
+        {
+            var detalle = ex.InnerException?.Message ?? ex.Message;
 
-        usuario.Activo = activo;
-        await context.SaveChangesAsync();
+            if (detalle.Contains("UQ_Usuario_NombreUsuario"))
+            {
+                return (false, MensajeUsuarioDuplicado);
+            }
 
-        return (true, activo ? "La cuenta fue reactivada." : "La cuenta fue desactivada.");
+            if (detalle.Contains("UQ_Usuario_Correo"))
+            {
+                return (false, MensajeCorreoDuplicado);
+            }
+
+            return (false, "No se pudo guardar la cuenta. Intenta nuevamente.");
+        }
     }
 }

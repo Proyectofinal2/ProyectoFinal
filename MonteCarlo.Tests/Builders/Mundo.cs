@@ -20,6 +20,7 @@ public sealed class Sesion : IDisposable
     public VentasService Ventas { get; }
     public MesasService Mesas { get; }
     public ReservasService Reservas { get; }
+    public UsuariosService Usuarios { get; }
 
     public Sesion(SqlServerFixture fixture)
     {
@@ -32,6 +33,7 @@ public sealed class Sesion : IDisposable
         Ventas = new VentasService(ventasRepo, reservasRepo, new ProductosRepository(Db), new MetodosPagoRepository(Db),
             configuracion, NullLogger<VentasService>.Instance);
         Mesas = new MesasService(mesasRepo, reservasRepo, ventasRepo, configuracion);
+        Usuarios = new UsuariosService(new UsuariosRepository(Db));
         Reservas = new ReservasService(reservasRepo, mesasRepo, new ClientesRepository(Db), configuracion, ventasRepo,
             Substitute.For<INotificacionesService>());
     }
@@ -68,6 +70,22 @@ public sealed class Mundo : IDisposable
     public MonteCarloDbContext NuevoContexto() => _fixture.NuevoContexto();
 
     private static int Siguiente() => Interlocked.Increment(ref _siguiente);
+
+    // ---------- Cuentas de administrador ----------
+
+    public Usuario CrearUsuario(string rol = "Regular", bool activo = true)
+    {
+        using var db = NuevoContexto();
+        var n = Siguiente();
+        var usuario = new Usuario
+        {
+            NombreCompleto = $"Cuenta {n}", NombreUsuario = $"cuenta.{n}", CorreoElectronico = $"cuenta{n}@prueba.test",
+            Rol = rol, Activo = activo, ContrasenaHash = "no-se-usa", FechaCreacion = DateTime.Now
+        };
+        db.Usuarios.Add(usuario);
+        db.SaveChanges();
+        return usuario;
+    }
 
     // ---------- Catalogo ----------
 

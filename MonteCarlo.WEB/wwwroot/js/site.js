@@ -159,6 +159,8 @@
     var titleEl = modalElement.querySelector("[data-mc-confirm-title-target]");
     var bodyEl = modalElement.querySelector("[data-mc-confirm-body-target]");
     var submitEl = modalElement.querySelector("[data-mc-confirm-submit]");
+    var motivoWrap = modalElement.querySelector("[data-mc-confirm-motivo-wrap]");
+    var motivoEl = modalElement.querySelector("[data-mc-confirm-motivo-target]");
 
     document.querySelectorAll("[data-mc-confirm]").forEach(function (trigger) {
       trigger.addEventListener("click", function () {
@@ -170,6 +172,14 @@
         submitEl.textContent = data.mcConfirmLabel || "Confirmar";
         submitEl.className = "btn btn-" + (data.mcConfirmVariant || "primary");
         form.setAttribute("action", data.mcConfirmAction);
+
+        // Motivo opcional (data-mc-confirm-motivo): deshabilitado no viaja en el POST.
+        if (motivoWrap && motivoEl) {
+          var pideMotivo = data.mcConfirmMotivo !== undefined;
+          motivoWrap.hidden = !pideMotivo;
+          motivoEl.disabled = !pideMotivo;
+          motivoEl.value = "";
+        }
 
         modal.show();
       });
@@ -240,6 +250,155 @@
           el.form.submit();
         }
       });
+    });
+  }
+
+  /* --------------------------------------------------------
+       Modal centrado con contenido por fetch (HU-AUT-007)
+       ------------------------------------------------------------
+       Mismo contrato que el panel lateral, pero en un modal:
+         <button data-mc-modal
+                 data-mc-modal-target="#mcCuentaModal"
+                 data-mc-modal-url="/admin/usuarios/5/editar">
+       El modal debe tener [data-mc-modal-contenido] (se reemplaza
+       todo el .modal-content con el HTML recibido: encabezado, cuerpo
+       y pie). Con [data-mc-modal-autoopen] se abre solo al cargar
+       (formulario con errores de validacion).
+
+       Seguimiento de cambios dentro del formulario:
+         form[data-mc-dirty-form] con campos [data-mc-campo="Etiqueta"]
+         y [data-mc-original="valor guardado"]; un grupo de radios usa
+         data-mc-radio="NombreDelGrupo". [data-mc-dirty-submit] se
+         habilita solo si algo difiere de lo guardado y
+         [data-mc-dirty-resumen] dice que cambia.
+       -------------------------------------------------------- */
+  function initCambios(form) {
+    var campos = Array.prototype.slice.call(form.querySelectorAll("[data-mc-campo]"));
+    var enviar = form.querySelector("[data-mc-dirty-submit]");
+    var resumen = form.querySelector("[data-mc-dirty-resumen]");
+    if (!campos.length || !enviar) {
+      return;
+    }
+
+    function valorDe(campo) {
+      if (campo.dataset.mcRadio) {
+        var marcado = form.querySelector('input[name="' + campo.dataset.mcRadio + '"]:checked');
+        return marcado ? marcado.value : "";
+      }
+      return (campo.value || "").trim();
+    }
+
+    function evaluar() {
+      var cambios = campos
+        .filter(function (campo) {
+          return valorDe(campo) !== (campo.dataset.mcOriginal || "");
+        })
+        .map(function (campo) {
+          return campo.dataset.mcCampo;
+        });
+
+      enviar.disabled = cambios.length === 0;
+      if (resumen) {
+        resumen.textContent = cambios.length
+          ? "Se modificará: " + cambios.join(", ")
+          : "Sin cambios todavía";
+        resumen.classList.toggle("is-dirty", cambios.length > 0);
+      }
+    }
+
+    form.addEventListener("input", evaluar);
+    form.addEventListener("change", evaluar);
+    evaluar();
+  }
+
+  function activarContenidoDelModal(modalEl, contenido) {
+    if (
+      typeof jQuery !== "undefined" &&
+      jQuery.validator &&
+      jQuery.validator.unobtrusive
+    ) {
+      jQuery.validator.unobtrusive.parse(contenido);
+    }
+
+    initSubmitGuard(contenido);
+    contenido.querySelectorAll("form[data-mc-dirty-form]").forEach(initCambios);
+
+    // El foco va al primer campo editable (si el modal ya termino de abrirse, de inmediato).
+    var primerCampo = contenido.querySelector(
+      "input:not([type=hidden]):not([type=radio]):not(:disabled), select:not(:disabled), textarea:not(:disabled)",
+    );
+    if (primerCampo) {
+      if (modalEl.classList.contains("show")) {
+        primerCampo.focus();
+      }
+      modalEl.addEventListener(
+        "shown.bs.modal",
+        function () {
+          primerCampo.focus();
+        },
+        { once: true },
+      );
+    }
+  }
+
+  function initModales() {
+    if (typeof bootstrap === "undefined") {
+      return;
+    }
+
+    document.querySelectorAll("[data-mc-modal]").forEach(function (trigger) {
+      trigger.addEventListener("click", function () {
+        var modalEl = document.querySelector(trigger.dataset.mcModalTarget);
+        var contenido = modalEl && modalEl.querySelector("[data-mc-modal-contenido]");
+        if (!modalEl || !contenido) {
+          return;
+        }
+
+        var instancia = bootstrap.Modal.getOrCreateInstance(modalEl);
+        contenido.innerHTML =
+          '<div class="modal-body text-center py-5" role="status">' +
+          '<span class="spinner-border text-secondary" aria-hidden="true"></span>' +
+          '<span class="visually-hidden">Cargando...</span></div>';
+        instancia.show();
+
+        fetch(trigger.dataset.mcModalUrl, {
+          credentials: "same-origin",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(function (response) {
+            // Sesion vencida: se sigue la redireccion al inicio de sesion en la pagina completa.
+            if (response.redirected) {
+              window.location.href = response.url;
+              return null;
+            }
+            if (!response.ok) {
+              throw new Error("No se pudo cargar el formulario.");
+            }
+            return response.text();
+          })
+          .then(function (html) {
+            if (html === null) {
+              return;
+            }
+            contenido.innerHTML = html;
+            activarContenidoDelModal(modalEl, contenido);
+          })
+          .catch(function () {
+            contenido.innerHTML =
+              '<div class="modal-body"><div class="alert alert-danger mb-0" role="alert">' +
+              "No se pudo cargar el formulario. Cierra esta ventana e intenta de nuevo.</div></div>" +
+              '<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button></div>';
+          });
+      });
+    });
+
+    document.querySelectorAll("[data-mc-modal-autoopen]").forEach(function (modalEl) {
+      var contenido = modalEl.querySelector("[data-mc-modal-contenido]");
+      if (!contenido) {
+        return;
+      }
+      activarContenidoDelModal(modalEl, contenido);
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
     });
   }
 
@@ -454,8 +613,8 @@
     return !form.checkValidity || form.checkValidity();
   }
 
-  function initSubmitGuard() {
-    document
+  function initSubmitGuard(raiz) {
+    (raiz || document)
       .querySelectorAll("form[data-mc-guard-submit]")
       .forEach(function (form) {
         form.addEventListener("submit", function () {
@@ -1997,6 +2156,7 @@
     initSidebar();
     initConfirmDialog();
     initDrawers();
+    initModales();
     initTooltips();
     initAutoSubmit();
     initCountdowns();
