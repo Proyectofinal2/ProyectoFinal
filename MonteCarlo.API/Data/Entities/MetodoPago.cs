@@ -7,4 +7,5 @@ public class MetodoPago
     public bool Activo { get; set; } = true;
 
     public ICollection<Venta> Ventas { get; set; } = new List<Venta>();
+    public ICollection<HistorialMetodoPago> Historial { get; set; } = new List<HistorialMetodoPago>();
 }

@@ -79,6 +79,10 @@ builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>(
 builder.Services.AddScoped<IHistorialHorarioOperacionRepository, HistorialHorarioOperacionRepository>();
 builder.Services.AddScoped<IHistorialHorarioOperacionService, HistorialHorarioOperacionService>();
 
+// Historial de métodos de pago
+builder.Services.AddScoped<IHistorialMetodoPagoRepository, HistorialMetodoPagoRepository>();
+builder.Services.AddScoped<IHistorialMetodoPagoService, HistorialMetodoPagoService>();
+
 // Información institucional pública de solo lectura.
 builder.Services.AddScoped<IInformacionPublicaService, InformacionPublicaService>();
 

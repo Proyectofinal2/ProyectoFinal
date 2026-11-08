@@ -27,6 +27,7 @@ public class Usuario
     public ICollection<HistorialUsuario> HistorialUsuariosRealizados { get; set; } = new List<HistorialUsuario>();
     public ICollection<HistorialUsuario> HistorialUsuariosRecibidos { get; set; } = new List<HistorialUsuario>();
     public ICollection<HistorialHorarioOperacion> HistorialHorariosOperacion { get; set; } = new List<HistorialHorarioOperacion>();
+    public ICollection<HistorialMetodoPago> HistorialMetodosPago { get; set; } = new List<HistorialMetodoPago>();
     public ICollection<ConfiguracionSistema> ConfiguracionesModificadas { get; set; } = new List<ConfiguracionSistema>();
     public ICollection<TokenRecuperacionContrasena> TokensRecuperacion { get; set; } = new List<TokenRecuperacionContrasena>();
     public ICollection<Venta> VentasRegistradas { get; set; } = new List<Venta>();

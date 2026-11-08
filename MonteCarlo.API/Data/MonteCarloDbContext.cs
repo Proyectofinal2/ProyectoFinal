@@ -21,6 +21,7 @@ public class MonteCarloDbContext : DbContext
     public DbSet<HorarioOperacion> HorariosOperacion => Set<HorarioOperacion>();
     public DbSet<HistorialHorarioOperacion> HistorialHorariosOperacion => Set<HistorialHorarioOperacion>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
+    public DbSet<HistorialMetodoPago> HistorialMetodosPago => Set<HistorialMetodoPago>();
     public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<HistorialCatalogo> HistorialCatalogo => Set<HistorialCatalogo>();
@@ -51,6 +52,7 @@ public class MonteCarloDbContext : DbContext
         ConfigurarHorarioOperacion(modelBuilder);
         ConfigurarHistorialHorarioOperacion(modelBuilder);
         ConfigurarMetodoPago(modelBuilder);
+        ConfigurarHistorialMetodoPago(modelBuilder);
         ConfigurarCategoriaProducto(modelBuilder);
         ConfigurarProducto(modelBuilder);
         ConfigurarHistorialCatalogo(modelBuilder);
@@ -201,6 +203,48 @@ public class MonteCarloDbContext : DbContext
 
             entity.Property(e => e.Nombre).HasMaxLength(30).IsRequired();
             entity.Property(e => e.Activo).HasDefaultValue(true);
+        });
+    }
+
+    private static void ConfigurarHistorialMetodoPago(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<HistorialMetodoPago>(entity =>
+        {
+            entity.ToTable("HistorialMetodoPago", t =>
+            {
+                t.HasCheckConstraint("CK_HistorialMetodoPago_Accion", "Accion IN ('Creado', 'Modificado')");
+                t.HasCheckConstraint("CK_HistorialMetodoPago_ValoresAnteriores",
+                    "(Accion = 'Creado' AND NombreAnterior IS NULL AND ActivoAnterior IS NULL) OR " +
+                    "(Accion = 'Modificado' AND NombreAnterior IS NOT NULL AND ActivoAnterior IS NOT NULL)");
+                t.HasCheckConstraint("CK_HistorialMetodoPago_CambioEfectivo",
+                    "Accion = 'Creado' OR NombreAnterior <> NombreNuevo OR ActivoAnterior <> ActivoNuevo");
+            });
+            entity.HasKey(e => e.IdHistorialMetodoPago).HasName("PK_HistorialMetodoPago");
+            entity.HasIndex(e => new { e.Fecha, e.IdHistorialMetodoPago })
+                .IsDescending().HasDatabaseName("IX_HistorialMetodoPago_Fecha");
+            entity.HasIndex(e => new { e.IdMetodoPago, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialMetodoPago_Metodo_Fecha");
+            entity.HasIndex(e => new { e.IdUsuario, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialMetodoPago_Usuario_Fecha");
+            entity.HasIndex(e => new { e.Accion, e.Fecha })
+                .IsDescending(false, true).HasDatabaseName("IX_HistorialMetodoPago_Accion_Fecha");
+
+            entity.Property(e => e.Accion).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.NombreAnterior).HasMaxLength(30);
+            entity.Property(e => e.NombreNuevo).HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Fecha).HasColumnType("datetime2").HasDefaultValueSql("SYSDATETIME()");
+
+            entity.HasOne(e => e.MetodoPago)
+                .WithMany(m => m.Historial)
+                .HasForeignKey(e => e.IdMetodoPago)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialMetodoPago_Metodo");
+
+            entity.HasOne(e => e.Usuario)
+                .WithMany(u => u.HistorialMetodosPago)
+                .HasForeignKey(e => e.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_HistorialMetodoPago_Usuario");
         });
     }
 

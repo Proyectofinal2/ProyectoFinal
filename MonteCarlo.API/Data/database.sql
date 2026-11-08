@@ -96,6 +96,7 @@ GO
    ------------------------------------------------------------ */
 IF OBJECT_ID('dbo.HistorialUsuario', 'U') IS NOT NULL DROP TABLE dbo.HistorialUsuario;
 IF OBJECT_ID('dbo.HistorialCatalogo', 'U') IS NOT NULL DROP TABLE dbo.HistorialCatalogo;
+IF OBJECT_ID('dbo.HistorialMetodoPago', 'U') IS NOT NULL DROP TABLE dbo.HistorialMetodoPago;
 IF OBJECT_ID('dbo.DetalleVenta', 'U') IS NOT NULL DROP TABLE dbo.DetalleVenta;
 IF OBJECT_ID('dbo.PedidoVenta', 'U') IS NOT NULL DROP TABLE dbo.PedidoVenta;
 IF OBJECT_ID('dbo.Venta', 'U') IS NOT NULL DROP TABLE dbo.Venta;
@@ -254,6 +255,37 @@ CREATE TABLE dbo.MetodoPago (
     Activo       BIT NOT NULL DEFAULT 1,
     CONSTRAINT PK_MetodoPago PRIMARY KEY (IdMetodoPago),
     CONSTRAINT UQ_MetodoPago_Nombre UNIQUE (Nombre)
+);
+GO
+
+/* ------------------------------------------------------------
+   Entidad: HistorialMetodoPago
+   Auditoría de creación y cambios efectivos de métodos de pago.
+   ------------------------------------------------------------ */
+CREATE TABLE dbo.HistorialMetodoPago (
+    IdHistorialMetodoPago INT IDENTITY(1,1) NOT NULL,
+    IdOperacion           UNIQUEIDENTIFIER NOT NULL,
+    IdMetodoPago          INT              NOT NULL,
+    Accion                NVARCHAR(20)     NOT NULL, -- 'Creado' / 'Modificado'
+    NombreAnterior        NVARCHAR(30)     NULL,
+    NombreNuevo           NVARCHAR(30)     NOT NULL,
+    ActivoAnterior        BIT              NULL,
+    ActivoNuevo           BIT              NOT NULL,
+    IdUsuario             INT              NOT NULL, -- administrador responsable
+    Fecha                 DATETIME2        NOT NULL CONSTRAINT DF_HistorialMetodoPago_Fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_HistorialMetodoPago PRIMARY KEY (IdHistorialMetodoPago),
+    CONSTRAINT CK_HistorialMetodoPago_Accion CHECK (Accion IN ('Creado', 'Modificado')),
+    CONSTRAINT CK_HistorialMetodoPago_ValoresAnteriores CHECK (
+        (Accion = 'Creado' AND NombreAnterior IS NULL AND ActivoAnterior IS NULL) OR
+        (Accion = 'Modificado' AND NombreAnterior IS NOT NULL AND ActivoAnterior IS NOT NULL)
+    ),
+    CONSTRAINT CK_HistorialMetodoPago_CambioEfectivo CHECK (
+        Accion = 'Creado' OR NombreAnterior <> NombreNuevo OR ActivoAnterior <> ActivoNuevo
+    ),
+    CONSTRAINT FK_HistorialMetodoPago_Metodo
+        FOREIGN KEY (IdMetodoPago) REFERENCES dbo.MetodoPago (IdMetodoPago),
+    CONSTRAINT FK_HistorialMetodoPago_Usuario
+        FOREIGN KEY (IdUsuario) REFERENCES dbo.Usuario (IdUsuario)
 );
 GO
 
@@ -752,6 +784,10 @@ CREATE INDEX IX_HistorialHorarioOperacion_Fecha ON dbo.HistorialHorarioOperacion
 CREATE INDEX IX_HistorialHorarioOperacion_Dia_Fecha ON dbo.HistorialHorarioOperacion (DiaSemana, Fecha DESC);
 CREATE INDEX IX_HistorialHorarioOperacion_Usuario_Fecha ON dbo.HistorialHorarioOperacion (IdUsuario, Fecha DESC);
 CREATE INDEX IX_HistorialHorarioOperacion_Operacion ON dbo.HistorialHorarioOperacion (IdOperacion, Fecha DESC);
+CREATE INDEX IX_HistorialMetodoPago_Fecha ON dbo.HistorialMetodoPago (Fecha DESC, IdHistorialMetodoPago DESC);
+CREATE INDEX IX_HistorialMetodoPago_Metodo_Fecha ON dbo.HistorialMetodoPago (IdMetodoPago, Fecha DESC);
+CREATE INDEX IX_HistorialMetodoPago_Usuario_Fecha ON dbo.HistorialMetodoPago (IdUsuario, Fecha DESC);
+CREATE INDEX IX_HistorialMetodoPago_Accion_Fecha ON dbo.HistorialMetodoPago (Accion, Fecha DESC);
 GO
 
 /* ------------------------------------------------------------

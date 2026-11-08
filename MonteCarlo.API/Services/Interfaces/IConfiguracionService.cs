@@ -33,6 +33,6 @@ public interface IConfiguracionService
         ActualizarConfiguracionGeneralRequest request, int idUsuario);
 
     Task<Result<List<MetodoPagoAdminResponse>>> ObtenerMetodosPagoAdminAsync();
-    Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request);
-    Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo);
+    Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request, int idUsuario);
+    Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo, int idUsuario);
 }

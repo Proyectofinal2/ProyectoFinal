@@ -9,7 +9,8 @@ namespace MonteCarlo.API.Services;
 // CAMBIO: Se agregó IMetodosPagoRepository al constructor
 public class ConfiguracionService(
     IConfiguracionRepository configuracionRepository,
-    IMetodosPagoRepository metodosPagoRepository) : IConfiguracionService
+    IMetodosPagoRepository metodosPagoRepository,
+    IHistorialMetodoPagoRepository historialMetodoPagoRepository) : IConfiguracionService
 {
     // ============================================================
     // Claves de ConfiguracionSistema y sus valores por defecto.
@@ -192,13 +193,14 @@ public class ConfiguracionService(
         }).ToList(), "Métodos obtenidos.");
     }
 
-    public async Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request)
+    public async Task<Result<MetodoPagoAdminResponse>> CrearMetodoPagoAsync(CrearMetodoPagoRequest request, int idUsuario)
     {
         if (await metodosPagoRepository.ExisteNombreAsync(request.Nombre))
             return Result<MetodoPagoAdminResponse>.BadRequest("Ya existe un método de pago con ese nombre.");
 
         var nuevo = new MetodoPago { Nombre = request.Nombre, Activo = true };
         metodosPagoRepository.Agregar(nuevo);
+        historialMetodoPagoRepository.Agregar(CrearHistorialCreado(nuevo, idUsuario));
         await metodosPagoRepository.GuardarCambiosAsync();
 
         return Result<MetodoPagoAdminResponse>.Ok(new MetodoPagoAdminResponse
@@ -209,13 +211,41 @@ public class ConfiguracionService(
         }, "Método de pago creado.");
     }
 
-    public async Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo)
+    public async Task<Result> CambiarEstadoMetodoPagoAsync(int id, bool activo, int idUsuario)
     {
         var metodo = await metodosPagoRepository.ObtenerPorIdAsync(id);
         if (metodo is null) return Result.BadRequest("Método de pago no encontrado.");
 
+        if (metodo.Activo == activo)
+            return Result.Ok("No hay cambios que guardar.");
+
+        var activoAnterior = metodo.Activo;
         metodo.Activo = activo;
+        historialMetodoPagoRepository.Agregar(CrearHistorialModificado(metodo, idUsuario, activoAnterior));
         await metodosPagoRepository.GuardarCambiosAsync();
         return Result.Ok(activo ? "Método habilitado." : "Método deshabilitado.");
     }
+
+    private static HistorialMetodoPago CrearHistorialCreado(MetodoPago metodo, int idUsuario) => new()
+    {
+        IdOperacion = Guid.NewGuid(),
+        MetodoPago = metodo,
+        Accion = HistorialMetodoPagoAcciones.Creado,
+        NombreNuevo = metodo.Nombre,
+        ActivoNuevo = metodo.Activo,
+        IdUsuario = idUsuario
+    };
+
+    private static HistorialMetodoPago CrearHistorialModificado(
+        MetodoPago metodo, int idUsuario, bool activoAnterior) => new()
+    {
+        IdOperacion = Guid.NewGuid(),
+        IdMetodoPago = metodo.IdMetodoPago,
+        Accion = HistorialMetodoPagoAcciones.Modificado,
+        NombreAnterior = metodo.Nombre,
+        NombreNuevo = metodo.Nombre,
+        ActivoAnterior = activoAnterior,
+        ActivoNuevo = metodo.Activo,
+        IdUsuario = idUsuario
+    };
 }
