@@ -1,0 +1,171 @@
+@using System.Globalization
+@using MonteCarlo.WEB.Models.Configuracion
+@using MonteCarlo.WEB.Models.UI
+@model HistorialMetodosPagoViewModel
+@{
+    ViewData["Title"] = "Métodos de Pago";
+    ViewData["Subtitle"] = "Consulta quién modificó los métodos de pago.";
+    var pagina = Model.Pagina;
+}
+
+@functions {
+    private static string ValorAnterior(string? nombre, bool? activo) =>
+        nombre is null || !activo.HasValue ? "Sin valores anteriores" : $"{nombre} · {(activo.Value ? "Disponible" : "No disponible")}";
+
+    private static string ValorNuevo(string nombre, bool activo) =>
+        $"{nombre} · {(activo ? "Disponible" : "No disponible")}";
+}
+
+<partial name="_MetodosPagoTabs" model='"historial"' />
+
+<div class="mc-table-card mb-3" hidden data-mc-historial-cargando role="status" aria-live="polite">
+    <p class="text-secondary m-3"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando historial...</p>
+</div>
+
+<form asp-action="Historial" method="get" role="search" class="mc-toolbar" data-mc-historial-filtros>
+    <div class="mc-toolbar__fila">
+        <div class="mc-search">
+            <i class="bi bi-search mc-search__icono" aria-hidden="true"></i>
+            <label for="busqueda" class="visually-hidden">Buscar por método</label>
+            <input id="busqueda" name="busqueda" type="search" class="mc-search__input" value="@Model.Busqueda"
+                   placeholder="Buscar método" maxlength="30" autocomplete="off" />
+        </div>
+
+        <label for="idMetodoPago" class="visually-hidden">Método de pago</label>
+        <select id="idMetodoPago" name="idMetodoPago" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los métodos</option>
+            @foreach (var metodo in Model.Metodos)
+            {
+                <option value="@metodo.IdMetodoPago" selected="@(Model.IdMetodoPago == metodo.IdMetodoPago)">@metodo.Nombre</option>
+            }
+        </select>
+
+        <label for="idUsuario" class="visually-hidden">Usuario</label>
+        <select id="idUsuario" name="idUsuario" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todos los usuarios</option>
+            @foreach (var usuario in Model.Usuarios)
+            {
+                <option value="@usuario.IdUsuario" selected="@(Model.IdUsuario == usuario.IdUsuario)">@usuario.NombreCompleto</option>
+            }
+        </select>
+
+        <label for="accion" class="visually-hidden">Acción</label>
+        <select id="accion" name="accion" class="form-select mc-select" data-mc-autosubmit>
+            <option value="">Todas las acciones</option>
+            <option value="Creado" selected="@(Model.Accion == "Creado")">Creado</option>
+            <option value="Modificado" selected="@(Model.Accion == "Modificado")">Modificado</option>
+        </select>
+
+        <label for="desde" class="visually-hidden">Desde</label>
+        <input id="desde" name="desde" type="date" class="form-control mc-select" value="@(Model.Desde?.ToString("yyyy-MM-dd"))" data-mc-autosubmit />
+
+        <label for="hasta" class="visually-hidden">Hasta</label>
+        <input id="hasta" name="hasta" type="date" class="form-control mc-select" value="@(Model.Hasta?.ToString("yyyy-MM-dd"))" data-mc-autosubmit />
+
+        @if (Model.TieneFiltros)
+        {
+            <a asp-action="Historial" class="mc-toolbar__limpiar"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar</a>
+        }
+    </div>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="mc-table-card">
+        <div class="alert alert-danger m-3" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>@Model.Error
+            <a asp-action="Historial" class="alert-link ms-2">Intentar de nuevo</a>
+        </div>
+    </div>
+}
+else if (pagina.Items.Count == 0)
+{
+    <div class="mc-table-card">
+        @if (Model.TieneFiltros)
+        {
+            <partial name="_EstadoVacio" model="EstadoVacioViewModel.SinResultados(Url.Action(nameof(MetodosPagoController.Historial)))" />
+        }
+        else
+        {
+            <partial name="_EstadoVacio" model="@(new EstadoVacioViewModel
+                     {
+                         Icono = "bi-credit-card-2-front",
+                         Titulo = "Aún no hay cambios registrados",
+                         Descripcion = "Cuando se cree o modifique un método de pago, aparecerá aquí con el usuario responsable."
+                     })" />
+        }
+    </div>
+}
+else
+{
+    <div class="mc-table-card">
+        <div class="table-responsive">
+            <table class="table mc-table align-middle">
+                <caption class="visually-hidden">Cambios en métodos de pago, del más reciente al más antiguo</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Método</th>
+                        <th scope="col">Acción</th>
+                        <th scope="col">Valores anteriores</th>
+                        <th scope="col">Valores nuevos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cambio in pagina.Items)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@cambio.Fecha.ToString("dd MMM yyyy, HH:mm", CultureInfo.GetCultureInfo("es-CR"))</td>
+                            <td>
+                                <span class="fw-medium d-block">@cambio.Usuario</span>
+                                @if (!string.IsNullOrWhiteSpace(cambio.RolUsuario))
+                                {
+                                    <span class="small text-secondary">Administrador @cambio.RolUsuario</span>
+                                }
+                            </td>
+                            <td>@cambio.NombreNuevo</td>
+                            <td><span class="badge @(cambio.Accion == "Creado" ? "text-bg-success" : "text-bg-primary")">@cambio.Accion</span></td>
+                            <td>@ValorAnterior(cambio.NombreAnterior, cambio.ActivoAnterior)</td>
+                            <td>@ValorNuevo(cambio.NombreNuevo, cambio.ActivoNuevo)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <partial name="_Paginacion" model="@(new PaginacionViewModel
+             {
+                 Accion = nameof(MetodosPagoController.Historial),
+                 Controlador = "MetodosPago",
+                 Pagina = pagina.Pagina,
+                 TotalPaginas = pagina.TotalPaginas,
+                 Total = pagina.Total,
+                 TamanoPagina = pagina.TamanoPagina,
+                 Sustantivo = "cambios",
+                 Parametros = new Dictionary<string, string?>
+                 {
+                     ["busqueda"] = Model.Busqueda,
+                     ["idMetodoPago"] = Model.IdMetodoPago?.ToString(),
+                     ["idUsuario"] = Model.IdUsuario?.ToString(),
+                     ["accion"] = Model.Accion,
+                     ["desde"] = Model.Desde?.ToString("yyyy-MM-dd"),
+                     ["hasta"] = Model.Hasta?.ToString("yyyy-MM-dd")
+                 }
+             })" />
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var filtros = document.querySelector("[data-mc-historial-filtros]");
+            var cargando = document.querySelector("[data-mc-historial-cargando]");
+            if (!filtros || !cargando) return;
+
+            function mostrarCarga() { cargando.hidden = false; }
+            filtros.addEventListener("submit", mostrarCarga);
+            filtros.addEventListener("mc:autosubmit", mostrarCarga);
+        })();
+    </script>
+}

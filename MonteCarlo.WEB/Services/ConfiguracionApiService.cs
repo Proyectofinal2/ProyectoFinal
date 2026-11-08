@@ -172,4 +172,25 @@ public class ConfiguracionApiService(HttpClient httpClient, ILogger<Configuracio
 
         return (resultado.Success, resultado.Message);
     }
+
+    public Task<(bool Success, string Message, PaginaHistorialMetodoPagoApiResponse? Data)> ObtenerHistorialMetodosPagoAsync(
+        string? busqueda, int? idMetodoPago, int? idUsuario, string? accion, DateOnly? desde, DateOnly? hasta, int pagina)
+    {
+        var filtros = new List<string> { $"pagina={pagina.ToString(CultureInfo.InvariantCulture)}" };
+        if (!string.IsNullOrWhiteSpace(busqueda)) filtros.Add($"busqueda={Uri.EscapeDataString(busqueda.Trim())}");
+        if (idMetodoPago.HasValue) filtros.Add($"idMetodoPago={idMetodoPago.Value}");
+        if (idUsuario.HasValue) filtros.Add($"idUsuario={idUsuario.Value}");
+        if (!string.IsNullOrWhiteSpace(accion)) filtros.Add($"accion={Uri.EscapeDataString(accion)}");
+        if (desde.HasValue) filtros.Add($"desde={desde.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+        if (hasta.HasValue) filtros.Add($"hasta={hasta.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
+
+        return EjecutarAsync<PaginaHistorialMetodoPagoApiResponse>(
+            () => httpClient.GetAsync("historial-metodos-pago?" + string.Join("&", filtros)),
+            "Historial obtenido.", "No se pudo obtener el historial de métodos de pago. Intenta de nuevo.");
+    }
+
+    public Task<(bool Success, string Message, List<UsuarioHistorialMetodoPagoApiResponse>? Data)> ObtenerUsuariosHistorialMetodosPagoAsync() =>
+        EjecutarAsync<List<UsuarioHistorialMetodoPagoApiResponse>>(
+            () => httpClient.GetAsync("historial-metodos-pago/usuarios"),
+            "Usuarios obtenidos.", "No se pudieron obtener los usuarios del historial.");
 }

@@ -51,7 +51,7 @@ public class ConfiguracionController(IConfiguracionService configuracionService)
     [HttpPost("metodos-pago")]
     public async Task<IActionResult> CrearMetodoPago([FromBody] CrearMetodoPagoRequest request)
     {
-        var result = await configuracionService.CrearMetodoPagoAsync(request);
+        var result = await configuracionService.CrearMetodoPagoAsync(request, IdUsuarioAutenticado);
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message, result.Data)
             : ApiResponse.ErrorResponse(result.Message));
@@ -60,7 +60,7 @@ public class ConfiguracionController(IConfiguracionService configuracionService)
     [HttpPut("metodos-pago/{id:int}/estado")]
     public async Task<IActionResult> CambiarEstadoMetodoPago(int id, [FromBody] CambiarEstadoMetodoPagoRequest request)
     {
-        var result = await configuracionService.CambiarEstadoMetodoPagoAsync(id, request.Activo);
+        var result = await configuracionService.CambiarEstadoMetodoPagoAsync(id, request.Activo, IdUsuarioAutenticado);
         return StatusCode(result.StatusCode, result.Success
             ? ApiResponse.SuccessResponse(result.Message)
             : ApiResponse.ErrorResponse(result.Message));

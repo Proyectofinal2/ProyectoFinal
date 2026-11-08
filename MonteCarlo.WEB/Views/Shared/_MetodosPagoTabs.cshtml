@@ -1,0 +1,11 @@
+@* Pestañas del módulo de métodos de pago. *@
+@model string
+
+<nav class="mc-tabs" aria-label="Secciones de métodos de pago">
+    <a class="mc-tab @(Model == "administrar" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="MetodosPago" asp-action="Index"
+       aria-current="@(Model == "administrar" ? "page" : null)">Administrar métodos</a>
+    <a class="mc-tab @(Model == "historial" ? "is-active" : null)"
+       asp-area="Admin" asp-controller="MetodosPago" asp-action="Historial"
+       aria-current="@(Model == "historial" ? "page" : null)">Historial de cambios</a>
+</nav>
