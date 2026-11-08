@@ -52,6 +52,9 @@ public class MesasRepository(MonteCarloDbContext context) : IMesasRepository
     public Task<Mesa?> ObtenerPorIdAsync(int idMesa) =>
         context.Mesas.FirstOrDefaultAsync(m => m.IdMesa == idMesa);
 
+    public Task<bool> TieneReservasAsociadasAsync(int idMesa) =>
+        context.ReservasMesa.AnyAsync(reservaMesa => reservaMesa.IdMesa == idMesa);
+
     public void Agregar(Mesa mesa) => context.Mesas.Add(mesa);
 
     public void Eliminar(Mesa mesa) => context.Mesas.Remove(mesa);

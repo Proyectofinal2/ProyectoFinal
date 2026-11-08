@@ -22,6 +22,8 @@ public interface IMesasRepository
 
     Task<Mesa?> ObtenerPorIdAsync(int idMesa);
 
+    Task<bool> TieneReservasAsociadasAsync(int idMesa);
+
     void Agregar(Mesa mesa);
 
     void Eliminar(Mesa mesa);
