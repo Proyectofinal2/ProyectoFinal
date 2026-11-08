@@ -632,6 +632,16 @@
 
     // ---------- Agregar mesa ----------
     let nuevaCapacidad = 2;
+
+    function obtenerPrimerNumeroMesaDisponible() {
+        const numerosOcupados = new Set(mesas
+            .map(mesa => mesa.numeroMesa)
+            .filter(numeroMesa => Number.isInteger(numeroMesa) && numeroMesa > 0));
+        let numeroMesa = 1;
+        while (numerosOcupados.has(numeroMesa)) numeroMesa++;
+        return numeroMesa;
+    }
+
     document.getElementById("btn-fab-agregar")?.addEventListener("click", () => {
         document.getElementById("mc-add-popover").classList.toggle("is-open");
     });
@@ -647,7 +657,7 @@
         document.getElementById("mc-nueva-capacidad").textContent = nuevaCapacidad;
     });
     document.getElementById("btn-confirmar-nueva-mesa")?.addEventListener("click", async () => {
-        const numeroMesa = Math.max(0, ...mesas.map(m => m.numeroMesa)) + 1;
+        const numeroMesa = obtenerPrimerNumeroMesaDisponible();
         const r = await llamar("/admin/mesas", "POST", { numeroMesa, capacidad: nuevaCapacidad, posX: 950, posY: 420 });
         if (!r.success) toast(r.message);
         document.getElementById("mc-add-popover").classList.remove("is-open");
