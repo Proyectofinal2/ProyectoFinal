@@ -1,3 +1,5 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using MonteCarlo.API.Data.Entities;
 using MonteCarlo.API.Data.Repositories.Interfaces;
 using MonteCarlo.API.DTOs;
@@ -12,6 +14,8 @@ public class MesasService(
     IConfiguracionService configuracionService) : IMesasService
 {
     private const string Deshabilitada = "Deshabilitada";
+    private const string MesaConReservas = "No se puede eliminar esta mesa porque tiene reservas asociadas.";
+    private const string RestriccionReservaMesa = "FK_ReservaMesa_Mesa";
 
     // ============================================================
     // HU-MES-002 / HU-OPE-004: listado en vivo del canvas.
@@ -308,8 +312,23 @@ public class MesasService(
             return Result.BadRequest("No se encontro la mesa.");
         }
 
+        if (await mesasRepository.TieneReservasAsociadasAsync(idMesa))
+        {
+            return Result.Conflict(MesaConReservas);
+        }
+
         mesasRepository.Eliminar(mesa);
-        await mesasRepository.GuardarCambiosAsync();
+        try
+        {
+            await mesasRepository.GuardarCambiosAsync();
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is SqlException { Number: 547 } sqlException &&
+            sqlException.Message.Contains(RestriccionReservaMesa))
+        {
+            // Una reserva pudo asociarse despues de la comprobacion anterior.
+            return Result.Conflict(MesaConReservas);
+        }
 
         return Result.Ok("Mesa eliminada.");
     }
