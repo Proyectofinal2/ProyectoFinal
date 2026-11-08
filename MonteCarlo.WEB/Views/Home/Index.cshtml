@@ -1,4 +1,6 @@
-﻿@{
+@using MonteCarlo.WEB.Models.Home
+@model HomeIndexViewModel
+@{
     ViewData["Title"] = "Inicio";
     ViewData["Description"] = "Mirador Monte Carlo Bar Restaurante en Aserrí, San José. " +
                               "Reserva tu mesa sin crear cuenta: bocas, cerveza fría y la mejor vista de la ciudad.";
@@ -34,25 +36,25 @@
                 <div class="mc-hero-card">
                     <div class="mc-hero-card__header">
                         <span class="mc-hero-card__dot"></span>
-                        <span class="mc-hero-card__label">Abierto hoy</span>
+                        <span class="mc-hero-card__label">Horarios de atención</span>
                     </div>
 
-                    <div class="mc-hero-card__row">
-                        <span class="mc-hero-card__day">Martes – Viernes</span>
-                        <span class="mc-hero-card__time">12:00 – 22:00</span>
-                    </div>
-                    <div class="mc-hero-card__row">
-                        <span class="mc-hero-card__day">Sábado</span>
-                        <span class="mc-hero-card__time">11:30 – 22:30</span>
-                    </div>
-                    <div class="mc-hero-card__row">
-                        <span class="mc-hero-card__day">Domingo</span>
-                        <span class="mc-hero-card__time">11:30 – 20:00</span>
-                    </div>
-                    <div class="mc-hero-card__row mc-hero-card__row--muted">
-                        <span class="mc-hero-card__day">Lunes</span>
-                        <span class="mc-hero-card__time">Cerrado</span>
-                    </div>
+                    @if (!Model.HorariosDisponibles)
+                    {
+                        <div class="mc-hero-card__row mc-hero-card__row--muted">
+                            <span class="mc-hero-card__day">Horarios temporalmente no disponibles</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var horario in Model.Horarios)
+                        {
+                            <div class="mc-hero-card__row @(!horario.EsAbierto ? "mc-hero-card__row--muted" : null)">
+                                <span class="mc-hero-card__day">@horario.Dias</span>
+                                <span class="mc-hero-card__time">@horario.TextoHorario</span>
+                            </div>
+                        }
+                    }
                 </div>
             </div>
         </div>

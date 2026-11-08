@@ -79,6 +79,9 @@ builder.Services.AddScoped<IHorariosOperacionService, HorariosOperacionService>(
 builder.Services.AddScoped<IHistorialHorarioOperacionRepository, HistorialHorarioOperacionRepository>();
 builder.Services.AddScoped<IHistorialHorarioOperacionService, HistorialHorarioOperacionService>();
 
+// Información institucional pública de solo lectura.
+builder.Services.AddScoped<IInformacionPublicaService, InformacionPublicaService>();
+
 // Configurar JWT
 var jwtSecret = builder.Configuration["Jwt:Secret"];
 if (string.IsNullOrWhiteSpace(jwtSecret))

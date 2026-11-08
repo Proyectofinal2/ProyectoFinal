@@ -94,6 +94,15 @@ builder.Services
     })
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+// Información institucional pública; el handler no agrega token si no hay sesión.
+builder.Services
+    .AddHttpClient<IInformacionPublicaApiService, InformacionPublicaApiService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["ApiSettings:BaseUrl"]!);
+    })
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
