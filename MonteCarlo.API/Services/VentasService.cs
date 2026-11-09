@@ -678,6 +678,29 @@ public class VentasService(
         return Result<List<VentaListadoResponse>>.Ok(respuesta, $"{respuesta.Count} venta(s) encontrada(s).");
     }
 
+    public async Task<Result<ResumenVentasDashboardResponse>> ObtenerResumenDashboardAsync(
+        DateTime fechaInicio, DateTime fechaFinExclusiva)
+    {
+        if (fechaFinExclusiva <= fechaInicio)
+            return Result<ResumenVentasDashboardResponse>.BadRequest("El periodo de ventas no es valido.");
+
+        var datos = await ventasRepository.ObtenerResumenDashboardAsync(fechaInicio, fechaFinExclusiva);
+        var porcentaje = datos.IngresosCobrados > 0m && datos.IngresosMetodoPagoPredominante is decimal ingresosMetodo
+            ? Math.Round(ingresosMetodo * 100m / datos.IngresosCobrados, 1)
+            : (decimal?)null;
+
+        return Result<ResumenVentasDashboardResponse>.Ok(new ResumenVentasDashboardResponse
+        {
+            IngresosCobrados = datos.IngresosCobrados,
+            VentasCobradas = datos.VentasCobradas,
+            TicketPromedio = datos.VentasCobradas == 0
+                ? 0m
+                : Math.Round(datos.IngresosCobrados / datos.VentasCobradas, 2),
+            MetodoPagoPredominante = porcentaje is null ? null : datos.MetodoPagoPredominante,
+            PorcentajeMetodoPagoPredominante = porcentaje
+        }, "Resumen de ventas obtenido exitosamente.");
+    }
+
     public async Task<Result<VentaDetalleResponse>> ObtenerDetalleAsync(int idVenta)
     {
         var venta = await ventasRepository.ObtenerDetallePorIdAsync(idVenta);

@@ -132,6 +132,39 @@ public class VentasRepository(MonteCarloDbContext context) : IVentasRepository
 
         return await query.OrderBy(v => v.FechaVenta).ToListAsync();
     }
+
+    public async Task<ResumenVentasDashboardDatos> ObtenerResumenDashboardAsync(DateTime inicio, DateTime finExclusivo)
+    {
+        var cobradas = context.Ventas
+            .AsNoTracking()
+            .Where(v => v.Estado == VentaEstados.Cobrada
+                        && v.FechaCobro.HasValue
+                        && v.FechaCobro.Value >= inicio
+                        && v.FechaCobro.Value < finExclusivo);
+
+        var resumen = await cobradas
+            .GroupBy(_ => 1)
+            .Select(g => new { Ingresos = g.Sum(v => v.Total), Cantidad = g.Count() })
+            .FirstOrDefaultAsync();
+
+        // Las ventas cobradas con importe positivo tienen metodo por restriccion de BD. Se conserva
+        // tambien un metodo hoy inactivo, porque la relacion historica sigue existiendo.
+        var metodoPredominante = await cobradas
+            .Where(v => v.IdMetodoPago.HasValue)
+            .GroupBy(v => new { v.IdMetodoPago, Nombre = v.MetodoPago!.Nombre })
+            .Select(g => new { g.Key.Nombre, IdMetodoPago = g.Key.IdMetodoPago!.Value, Ingresos = g.Sum(v => v.Total) })
+            .OrderByDescending(x => x.Ingresos)
+            .ThenBy(x => x.Nombre)
+            .ThenBy(x => x.IdMetodoPago)
+            .FirstOrDefaultAsync();
+
+        return new ResumenVentasDashboardDatos(
+            resumen?.Ingresos ?? 0m,
+            resumen?.Cantidad ?? 0,
+            metodoPredominante?.Nombre,
+            metodoPredominante?.Ingresos);
+    }
+
     public Task<Venta?> ObtenerDetallePorIdAsync(int idVenta) =>
     context.Ventas
         .Include(v => v.MetodoPago)

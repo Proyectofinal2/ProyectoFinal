@@ -252,3 +252,16 @@ public class LineaDetalleResponse
     public decimal PrecioUnitario { get; set; }
     public decimal Subtotal { get; set; }
 }
+
+/// <summary>Cuatro indicadores historicos de ventas cobradas para el dashboard administrativo.</summary>
+public class ResumenVentasDashboardResponse
+{
+    /// <summary>Suma de ventas cobradas en el intervalo, por FechaCobro.</summary>
+    public decimal IngresosCobrados { get; set; }
+    public int VentasCobradas { get; set; }
+    public decimal TicketPromedio { get; set; }
+
+    /// <summary>Nulo cuando no existe ingreso cobrado con metodo de pago.</summary>
+    public string? MetodoPagoPredominante { get; set; }
+    public decimal? PorcentajeMetodoPagoPredominante { get; set; }
+}

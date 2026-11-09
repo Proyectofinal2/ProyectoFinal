@@ -9,6 +9,9 @@ public record CuentaAbiertaResumen(int IdReserva, int IdVenta, decimal Total, in
 /// <summary>Venta (en cualquier estado) de una reserva, sin sus lineas, para mostrar el consumo en Reservas del dia.</summary>
 public record VentaReservaResumen(int IdReserva, int IdVenta, string Estado, decimal Total, int Productos);
 
+/// <summary>Datos agregados en SQL para los indicadores de ventas cobradas.</summary>
+public record ResumenVentasDashboardDatos(decimal IngresosCobrados, int VentasCobradas, string? MetodoPagoPredominante, decimal? IngresosMetodoPagoPredominante);
+
 public interface IVentasRepository
 {
     /// <summary>
@@ -48,6 +51,9 @@ public interface IVentasRepository
     void MarcarModificada(Venta venta);
 
     Task<List<Venta>> ObtenerConFiltrosAsync(FiltroVentasRequest filtro);
+
+    /// <summary>Agrega solo ventas cobradas en [inicio, finExclusivo), sin materializar ventas.</summary>
+    Task<ResumenVentasDashboardDatos> ObtenerResumenDashboardAsync(DateTime inicio, DateTime finExclusivo);
 
 
     Task<Venta?> ObtenerDetallePorIdAsync(int idVenta);

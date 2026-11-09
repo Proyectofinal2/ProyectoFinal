@@ -239,6 +239,16 @@ public class VentaDetalleApiResponse
     public List<LineaDetalleApiResponse> Lineas { get; set; } = [];
 }
 
+/// <summary>Tal como lo devuelve GET api/ventas/resumen-dashboard.</summary>
+public class ResumenVentasDashboardApiResponse
+{
+    public decimal IngresosCobrados { get; set; }
+    public int VentasCobradas { get; set; }
+    public decimal TicketPromedio { get; set; }
+    public string? MetodoPagoPredominante { get; set; }
+    public decimal? PorcentajeMetodoPagoPredominante { get; set; }
+}
+
 public class LineaDetalleApiResponse
 {
     public string Producto { get; set; } = "";

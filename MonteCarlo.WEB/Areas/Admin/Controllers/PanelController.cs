@@ -14,22 +14,26 @@ namespace MonteCarlo.WEB.Areas.Admin.Controllers;
 [Authorize(Roles = "General,Regular")]
 public class PanelController(
     IMesasApiService mesasApiService,
-    IReservasApiService reservasApiService) : Controller
+    IReservasApiService reservasApiService,
+    IVentasApiService ventasApiService) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(FiltrosDashboardViewModel filtros)
+    public async Task<IActionResult> Index(FiltrosDashboardViewModel filtros, FiltrosVentasDashboardViewModel filtrosVentas)
     {
-        var (fechaInicio, fechaFin) = filtros.ResolverRango(DateOnly.FromDateTime(DateTime.Now));
+        var ahora = DateTime.Now;
+        var (fechaInicio, fechaFin) = filtros.ResolverRango(DateOnly.FromDateTime(ahora));
+        var (fechaInicioVentas, fechaFinVentasExclusiva) = filtrosVentas.ResolverRango(ahora);
         var resumenMesasTask = mesasApiService.ObtenerResumenAsync();
         var estadosTask = reservasApiService.ObtenerEstadosReporteAsync();
-
         var reporteTask = reservasApiService.ObtenerReporteAsync(
             fechaInicio, fechaFin, filtros.EstadoReserva);
+        var resumenVentasTask = ventasApiService.ObtenerResumenDashboardAsync(fechaInicioVentas, fechaFinVentasExclusiva);
 
-        await Task.WhenAll(resumenMesasTask, estadosTask, reporteTask);
+        await Task.WhenAll(resumenMesasTask, estadosTask, reporteTask, resumenVentasTask);
         var (successMesasReporte, messageMesasReporte, dataMesasReporte) = await resumenMesasTask;
         var (successEstadosReporte, messageEstadosReporte, dataEstadosReporte) = await estadosTask;
         var (successReporte, messageReporte, dataReporte) = await reporteTask;
+        var (successResumenVentas, messageResumenVentas, dataResumenVentas) = await resumenVentasTask;
 
         return View(new PanelIndexViewModel
         {
@@ -39,7 +43,10 @@ public class PanelController(
             ErrorResumen = successMesasReporte ? null : messageMesasReporte,
             EstadosReserva = successEstadosReporte ? dataEstadosReporte ?? [] : [],
             ReporteReservas = successReporte ? dataReporte : null,
-            ErrorReporte = successReporte ? null : messageReporte
+            ErrorReporte = successReporte ? null : messageReporte,
+            FiltrosVentas = filtrosVentas,
+            ResumenVentas = successResumenVentas ? dataResumenVentas : null,
+            ErrorResumenVentas = successResumenVentas ? null : messageResumenVentas
         });
     }
 }

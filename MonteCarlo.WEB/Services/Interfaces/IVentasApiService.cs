@@ -33,5 +33,8 @@ public interface IVentasApiService
 
     Task<(bool Success, string Message, List<VentaListadoApiResponse>? Data)> ObtenerListadoAsync(FiltroVentasViewModel filtro);
 
+    Task<(bool Success, string Message, ResumenVentasDashboardApiResponse? Data)> ObtenerResumenDashboardAsync(
+        DateTime fechaInicio, DateTime fechaFinExclusiva);
+
     Task<(bool Success, string Message, VentaDetalleApiResponse? Data)> ObtenerDetalleAsync(int idVenta);
 }
