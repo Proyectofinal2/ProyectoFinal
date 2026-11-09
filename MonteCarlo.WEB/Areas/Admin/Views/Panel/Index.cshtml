@@ -102,6 +102,7 @@
         </div>
 
         <form id="filtros-reporte" asp-action="Index" method="get" class="mc-dashboard-report-filters">
+            <input asp-for="FiltrosVentas.Periodo" type="hidden" />
             <div class="mc-dashboard-report-filters__field">
                 <label asp-for="Filtros.Periodo" class="form-label"></label>
                 <select asp-for="Filtros.Periodo" class="form-select"
@@ -203,5 +204,71 @@
                 </table></div>
             </div>
         }
+    }
+</section>
+
+<section class="mc-dashboard-section" aria-labelledby="resumen-ventas">
+    <div class="mc-dashboard__section-header">
+        <div>
+            <h2 id="resumen-ventas" class="h4 mb-1">Resumen de ventas</h2>
+            <p class="mc-dashboard__section-copy mb-0">Resultados de ventas efectivamente cobradas durante el período seleccionado.</p>
+        </div>
+
+        <form id="filtros-ventas" asp-action="Index" method="get" class="mc-dashboard-report-filters">
+            <input asp-for="Filtros.Periodo" type="hidden" />
+            <input asp-for="Filtros.EstadoReserva" type="hidden" />
+            <div class="mc-dashboard-report-filters__field">
+                <label asp-for="FiltrosVentas.Periodo" class="form-label"></label>
+                <select asp-for="FiltrosVentas.Periodo" class="form-select"
+                        asp-items="Html.GetEnumSelectList<PeriodoVentasDashboard>()"></select>
+            </div>
+            <div class="mc-dashboard-report-filters__action">
+                <button type="submit" class="btn btn-outline-primary">Aplicar</button>
+            </div>
+        </form>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorResumenVentas))
+    {
+        <div class="alert alert-danger mt-4 mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>@Model.ErrorResumenVentas
+        </div>
+    }
+    else if (Model.ResumenVentas is not null)
+    {
+        <div class="row g-3 mt-1">
+            <div class="col-sm-6 col-xl-3"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--success"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
+                <p class="mc-dashboard-scorecard__label">Ingresos cobrados</p>
+                <p class="mc-dashboard-scorecard__value">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(Model.ResumenVentas.IngresosCobrados)</p>
+                <p class="mc-dashboard-scorecard__help">Solo ventas efectivamente cobradas.</p>
+            </div></article></div>
+            <div class="col-sm-6 col-xl-3"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--info"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+                <p class="mc-dashboard-scorecard__label">Ventas cobradas</p>
+                <p class="mc-dashboard-scorecard__value">@Model.ResumenVentas.VentasCobradas</p>
+                <p class="mc-dashboard-scorecard__help">Transacciones de mesa y para llevar.</p>
+            </div></article></div>
+            <div class="col-sm-6 col-xl-3"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--accent"><i class="bi bi-calculator" aria-hidden="true"></i></span>
+                <p class="mc-dashboard-scorecard__label">Ticket promedio</p>
+                <p class="mc-dashboard-scorecard__value">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(Model.ResumenVentas.TicketPromedio)</p>
+                <p class="mc-dashboard-scorecard__help">Ingresos cobrados / ventas cobradas.</p>
+            </div></article></div>
+            <div class="col-sm-6 col-xl-3"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
+                <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--neutral"><i class="bi bi-credit-card" aria-hidden="true"></i></span>
+                <p class="mc-dashboard-scorecard__label">Método de pago predominante</p>
+                @if (Model.ResumenVentas.MetodoPagoPredominante is { } metodoPago)
+                {
+                    <p class="mc-dashboard-scorecard__value mc-dashboard-scorecard__value--message">@metodoPago</p>
+                    <p class="mc-dashboard-scorecard__help">@Model.ResumenVentas.PorcentajeMetodoPagoPredominante?.ToString("0.#") % de los ingresos cobrados.</p>
+                }
+                else
+                {
+                    <p class="mc-dashboard-scorecard__value mc-dashboard-scorecard__value--message">Sin cobros</p>
+                    <p class="mc-dashboard-scorecard__help">No hay ingresos con método de pago.</p>
+                }
+            </div></article></div>
+        </div>
     }
 </section>

@@ -41,5 +41,7 @@ public interface IVentasService
 
     Task<Result<List<VentaListadoResponse>>> ObtenerListadoAsync(FiltroVentasRequest filtro);
 
+    Task<Result<ResumenVentasDashboardResponse>> ObtenerResumenDashboardAsync(DateTime fechaInicio, DateTime fechaFinExclusiva);
+
     Task<Result<VentaDetalleResponse>> ObtenerDetalleAsync(int idVenta);
 }

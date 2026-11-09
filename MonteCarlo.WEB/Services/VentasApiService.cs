@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using MonteCarlo.WEB.Models.Ventas;
 using MonteCarlo.WEB.Services.Interfaces;
 
@@ -123,6 +124,17 @@ public class VentasApiService(HttpClient httpClient, ILogger<VentasApiService> l
             () => httpClient.GetAsync(url),
             "Ventas obtenidas.", "No se pudieron obtener las ventas.");
 
+        return (success, message, data);
+    }
+
+    public async Task<(bool Success, string Message, ResumenVentasDashboardApiResponse? Data)> ObtenerResumenDashboardAsync(
+        DateTime fechaInicio, DateTime fechaFinExclusiva)
+    {
+        var inicio = Uri.EscapeDataString(fechaInicio.ToString("O", CultureInfo.InvariantCulture));
+        var fin = Uri.EscapeDataString(fechaFinExclusiva.ToString("O", CultureInfo.InvariantCulture));
+        var (success, message, data, _) = await EjecutarAsync<ResumenVentasDashboardApiResponse>(
+            () => httpClient.GetAsync($"ventas/resumen-dashboard?fechaInicio={inicio}&fechaFinExclusiva={fin}"),
+            "Resumen de ventas obtenido.", "No se pudo obtener el resumen de ventas. Intenta de nuevo.");
         return (success, message, data);
     }
 

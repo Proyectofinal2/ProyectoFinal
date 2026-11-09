@@ -104,6 +104,14 @@ public class VentasController(IVentasService ventasService) : ControllerBase
     public async Task<IActionResult> ObtenerVentas([FromQuery] FiltroVentasRequest filtro) =>
         this.Responder(await ventasService.ObtenerListadoAsync(filtro));
 
+    /// <summary>Indicadores de ventas efectivamente cobradas por FechaCobro, para el dashboard.</summary>
+    [HttpGet("ventas/resumen-dashboard")]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ObtenerResumenDashboard(
+        [FromQuery] DateTime fechaInicio, [FromQuery] DateTime fechaFinExclusiva) =>
+        this.Responder(await ventasService.ObtenerResumenDashboardAsync(fechaInicio, fechaFinExclusiva));
+
     /// <summary>HU-CON-005: Obtiene el detalle de una venta.</summary>
     [HttpGet("ventas/{idVenta:int}")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
