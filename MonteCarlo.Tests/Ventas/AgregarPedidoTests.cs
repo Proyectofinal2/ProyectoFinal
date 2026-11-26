@@ -22,7 +22,7 @@ public class AgregarPedidoTests(SqlServerFixture fixture) : PruebaSql(fixture)
         Assert.True(r.Success, r.Message);
         Assert.Equal("Abierta", r.Data!.Estado);
         Assert.Equal($"V-{r.Data.IdVenta:D6}", r.Data.Folio);
-        Assert.Equal(5000m, r.Data.Total);
+        Assert.Equal(5650m, r.Data.Total);
         var pedido = Assert.Single(r.Data.Pedidos);
         Assert.Equal(1, pedido.Numero);
         Assert.True(pedido.Fecha >= antes);
@@ -48,7 +48,7 @@ public class AgregarPedidoTests(SqlServerFixture fixture) : PruebaSql(fixture)
 
         Assert.Equal(primero.Data!.IdVenta, segundo.Data!.IdVenta);
         Assert.Equal([1, 2], segundo.Data.Pedidos.Select(p => p.Numero));
-        Assert.Equal(7000m, segundo.Data.Total);
+        Assert.Equal(7910m, segundo.Data.Total);
         Assert.Equal(1, Mundo.CantidadVentas(reserva.IdReserva));
     }
 
@@ -86,7 +86,7 @@ public class AgregarPedidoTests(SqlServerFixture fixture) : PruebaSql(fixture)
         Assert.True(primero.Success);
         Assert.True(repetido.Success);
         Assert.Contains("ya estaba registrado", repetido.Message);
-        Assert.Equal(1000m, repetido.Data!.Total);
+        Assert.Equal(1130m, repetido.Data!.Total);
         Assert.Single(Mundo.VentaDe(reserva.IdReserva)!.Pedidos);
     }
 

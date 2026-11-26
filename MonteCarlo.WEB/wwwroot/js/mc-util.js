@@ -82,7 +82,21 @@
     }
   }
 
+  // Los precios y las tasas del contrato tienen como máximo dos decimales.
+  function centesimas(valor) {
+    return Math.round(Number(valor) * 100);
+  }
+
+  function estimarVenta(subtotalCentavos, tasa) {
+    const iva = tasa === null ? null :
+      Number((BigInt(subtotalCentavos) * BigInt(centesimas(tasa)) + 5000n) / 10000n);
+    return { subtotal: subtotalCentavos / 100, iva: iva === null ? null : iva / 100,
+      total: (subtotalCentavos + (iva || 0)) / 100 };
+  }
+
   window.mc = {
+    centesimas: centesimas,
+    estimarVenta: estimarVenta,
     colones: colones,
     duracion: duracion,
     avisar: avisar,

@@ -26,6 +26,9 @@ public class VentasService(
     private const string MotivoQuitadoPorDefecto = "Quitado de la cuenta";
     private const string ReservaNoEncontrada = "No se encontro la reserva.";
     private const string MotivoCuentaCerradaSinCobro = "Cuenta cerrada sin cobro";
+    private const decimal MaxImporte = 99999999.99m;
+
+    public Task<Result<decimal>> ObtenerTasaIvaVigenteAsync() => configuracionService.ObtenerTasaIvaAsync();
 
     // ============================================================
     // Consulta
@@ -132,6 +135,24 @@ public class VentasService(
             return ConflictoConCuenta<CuentaResponse>(
                 "Uno de los productos ya no esta disponible. Actualiza el menu e intenta de nuevo.", cuentaActual);
 
+        var tasa = venta?.TasaIvaAplicada;
+        if (venta is null)
+        {
+            var tasaResult = await configuracionService.ObtenerTasaIvaAsync();
+            if (!tasaResult.Success)
+                return Result<CuentaResponse>.BadRequest(tasaResult.Message);
+            tasa = tasaResult.Data;
+        }
+
+        var subtotalNuevo = (venta?.Detalles.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0m)
+            + lineas.Sum(l => l.Cantidad * catalogo[l.IdProducto].Precio);
+        if (!ImportesValidos(subtotalNuevo, tasa))
+            return Result<CuentaResponse>.BadRequest("El importe de la cuenta supera el límite permitido.");
+
+        if (request.TotalEsperado is { } esperado && esperado !=
+            (tasa is { } porcentaje ? CalculoIva.Calcular(subtotalNuevo, porcentaje).Total : subtotalNuevo))
+            return ConflictoConCuenta<CuentaResponse>("Cambió el importe del pedido. Revisa la cuenta y vuelve a seleccionar los productos.", cuentaActual);
+
         var ahora = DateTime.Now;
         var esNueva = venta is null;
         if (venta is null)
@@ -139,6 +160,7 @@ public class VentasService(
             venta = new Venta
             {
                 TipoVenta = VentaTipos.Consumo,
+                TasaIvaAplicada = tasa,
                 Estado = VentaEstados.Abierta,
                 IdReserva = idReserva,
                 IdUsuarioRegistro = idUsuario,
@@ -205,14 +227,22 @@ public class VentasService(
         if (lineas.Any(l => !catalogo.ContainsKey(l.IdProducto)))
             return Result<CobroResponse>.Conflict("Uno de los productos ya no esta disponible. Actualiza el menu e intenta de nuevo.");
 
-        var total = lineas.Sum(l => l.Cantidad * catalogo[l.IdProducto].Precio);
+        var tasaResult = await configuracionService.ObtenerTasaIvaAsync();
+        if (!tasaResult.Success)
+            return Result<CobroResponse>.BadRequest(tasaResult.Message);
+        var tasa = tasaResult.Data;
+        var subtotal = lineas.Sum(l => l.Cantidad * catalogo[l.IdProducto].Precio);
+        if (!ImportesValidos(subtotal, tasa))
+            return Result<CobroResponse>.BadRequest("El importe de la venta supera el límite permitido.");
+        var total = CalculoIva.Calcular(subtotal, tasa).Total;
         if (request.TotalEsperado != total)
-            return Result<CobroResponse>.Conflict($"Los precios cambiaron: el total ahora es ₡{total:N0}. Actualiza el menu e intenta de nuevo.");
+            return Result<CobroResponse>.Conflict($"Los precios o la tasa cambiaron: el total ahora es ₡{total:N2}. Actualiza el menu e intenta de nuevo.");
 
         var ahora = DateTime.Now;
         var venta = new Venta
         {
             TipoVenta = VentaTipos.Takeout,
+            TasaIvaAplicada = tasa,
             Estado = VentaEstados.Cobrada,
             IdUsuarioRegistro = idUsuario,
             FechaVenta = ahora,
@@ -457,7 +487,7 @@ public class VentasService(
         catch (FormatException) { return Result<T>.BadRequest("La version de la cuenta no es valida."); }
 
         if ((totalEsperado is not null && totalEsperado != venta.Total) || !versionVista.AsSpan().SequenceEqual(venta.RowVersion))
-            return ConflictoConCuenta<T>($"La cuenta cambio: el total ahora es ₡{venta.Total:N0}. Revisala antes de continuar.", cuenta);
+            return ConflictoConCuenta<T>($"La cuenta cambio: el total ahora es ₡{venta.Total:N2}. Revisala antes de continuar.", cuenta);
 
         return null;
     }
@@ -549,8 +579,23 @@ public class VentasService(
     }
 
     /// <summary>El total siempre se recalcula desde las lineas activas, nunca se incrementa.</summary>
-    private static void RecalcularTotal(Venta venta) =>
-        venta.Total = venta.Detalles.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario);
+    private static bool ImportesValidos(decimal subtotal, decimal? tasa) =>
+        subtotal >= 0m && subtotal <= MaxImporte &&
+        (tasa is null || CalculoIva.Calcular(subtotal, tasa.Value).Total <= MaxImporte);
+
+    private static void RecalcularTotal(Venta venta)
+    {
+        var subtotal = venta.Detalles.Where(d => !d.Anulado).Sum(d => d.Cantidad * d.PrecioUnitario);
+        if (venta.TasaIvaAplicada is not { } tasa)
+        {
+            venta.Total = subtotal;
+            return;
+        }
+        var (impuesto, total) = CalculoIva.Calcular(subtotal, tasa);
+        venta.Subtotal = subtotal;
+        venta.ImporteIva = impuesto;
+        venta.Total = total;
+    }
 
     /// <summary>Folio legible de una venta (V-000123); unico formato en listados, cuentas y Reservas.</summary>
     internal static string Folio(int idVenta) => $"V-{idVenta:D6}";
@@ -565,6 +610,9 @@ public class VentasService(
         Folio = venta is null ? null : Folio(venta.IdVenta),
         IdReserva = reserva?.IdReserva,
         NumerosMesa = reserva is null ? [] : NumerosMesa(reserva),
+        Subtotal = venta?.Subtotal,
+        TasaIvaAplicada = venta?.TasaIvaAplicada,
+        ImporteIva = venta?.ImporteIva,
         Total = venta?.Total ?? 0,
         MetodoPago = metodoPago
     };
@@ -587,6 +635,9 @@ public class VentasService(
             Personas = reserva.CantidadPersonas,
             NumerosMesa = NumerosMesa(reserva),
             FechaAtencion = reserva.FechaAtencion,
+            Subtotal = venta?.Subtotal,
+            TasaIvaAplicada = venta?.TasaIvaAplicada,
+            ImporteIva = venta?.ImporteIva,
             Total = venta?.Total ?? 0,
             TotalProductos = activas.Sum(d => d.Cantidad),
             Version = venta?.Estado == VentaEstados.Abierta ? Convert.ToBase64String(venta.RowVersion) : null,
@@ -714,6 +765,9 @@ public class VentasService(
             TipoVenta = venta.TipoVenta,
             Estado = venta.Estado,
             Motivo = venta.MotivoAnulacion,
+            Subtotal = venta.Subtotal,
+            TasaIvaAplicada = venta.TasaIvaAplicada,
+            ImporteIva = venta.ImporteIva,
             Total = venta.Total,
             MetodoPago = venta.MetodoPago?.Nombre,
             MetodoPagoActivo = venta.MetodoPago?.Activo,

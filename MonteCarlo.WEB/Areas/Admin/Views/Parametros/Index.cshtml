@@ -40,7 +40,7 @@
 
                         <div class="mb-4">
                             <label asp-for="Parametros[i].Valor" class="form-label mc-required">@parametro.Etiqueta</label>
-                            <input asp-for="Parametros[i].Valor" type="text" inputmode="numeric" class="form-control"
+                            <input asp-for="Parametros[i].Valor" type="text" inputmode="@(parametro.Clave == "TasaIva" ? "decimal" : "numeric")" class="form-control"
                                    data-mc-original="@parametro.ValorOriginal" data-mc-clave="@parametro.Clave" />
                             @if (!string.IsNullOrWhiteSpace(parametro.Descripcion))
                             {

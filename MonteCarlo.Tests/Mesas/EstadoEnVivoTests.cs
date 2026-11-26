@@ -62,12 +62,12 @@ public class EstadoEnVivoTests(SqlServerFixture fixture) : PruebaSql(fixture)
 
         var viva = await VivaAsync(mesa.IdMesa);
 
-        Assert.Equal(3600m, viva.Cuenta!.Total);
+        Assert.Equal(4068m, viva.Cuenta!.Total);
         Assert.Equal(3, viva.Cuenta.Productos);
         Assert.Equal(abierta.Data!.Version, viva.Cuenta.Version);
 
         await S.Ventas.CobrarAsync(reserva.IdReserva,
-            new CobrarRequest { IdMetodoPago = Mundo.IdMetodoPago, TotalEsperado = 3600m, Version = abierta.Data.Version }, Mundo.IdUsuario);
+            new CobrarRequest { IdMetodoPago = Mundo.IdMetodoPago, TotalEsperado = 4068m, Version = abierta.Data.Version }, Mundo.IdUsuario);
         var libre = await VivaAsync(mesa.IdMesa);
         Assert.Equal("Disponible", libre.Estado);
         Assert.Null(libre.Cuenta);

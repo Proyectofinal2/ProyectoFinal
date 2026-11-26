@@ -31,7 +31,7 @@ public class QuitarProductoTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var r = await S.Ventas.AnularLineaAsync(IdLinea(cuenta), new AnularLineaRequest(), Mundo.IdUsuario);
 
         Assert.True(r.Success, r.Message);
-        Assert.Equal(500m, r.Data!.Total);
+        Assert.Equal(565m, r.Data!.Total);
         var lineas = r.Data.Pedidos.SelectMany(p => p.Lineas).ToList();
         Assert.Equal(2, lineas.Count);                       // la anulada sigue en el detalle
         Assert.Single(lineas, l => l.Anulado);
@@ -50,7 +50,7 @@ public class QuitarProductoTests(SqlServerFixture fixture) : PruebaSql(fixture)
 
         var r = await S.Ventas.AnularLineaAsync(IdLinea(cuenta), new AnularLineaRequest { Cantidad = 1 }, Mundo.IdUsuario);
 
-        Assert.Equal(2000m, r.Data!.Total);
+        Assert.Equal(2260m, r.Data!.Total);
         Assert.Equal(2, r.Data.TotalProductos);
         var venta = Mundo.VentaDe(idReserva)!;
         Assert.Equal(2, venta.Detalles.Count);

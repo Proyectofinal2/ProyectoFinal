@@ -8,6 +8,9 @@ namespace MonteCarlo.API.DTOs;
 /// </summary>
 public class CuentaResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     public int IdReserva { get; set; }
 
     /// <summary>Nulo mientras la cuenta esta vacia (la venta se abre con el primer pedido).</summary>
@@ -89,6 +92,9 @@ public class LineaCuentaResponse
 /// <summary>Una ronda de pedido. El cliente solo envia producto y cantidad: precio y total los decide el servidor.</summary>
 public class AgregarPedidoRequest
 {
+    /// <summary>Total acumulado previsto tras agregar el pedido, antes de anulaciones separadas.</summary>
+    public decimal? TotalEsperado { get; set; }
+
     /// <summary>GUID generado por la pantalla; un reintento con la misma clave no duplica el pedido.</summary>
     [Required(ErrorMessage = "Falta la clave del pedido.")]
     public Guid ClaveIdempotencia { get; set; }
@@ -152,6 +158,9 @@ public class CobrarRequest
 /// <summary>Resultado de cobrar, de liberar una mesa sin consumo, de cerrar una cuenta sin cobro o de una venta para llevar.</summary>
 public class CobroResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     /// <summary>Nulo en un cierre sin consumo: no se registra una venta.</summary>
     public int? IdVenta { get; set; }
     public string? Folio { get; set; }
@@ -229,6 +238,9 @@ public class FiltroVentasRequest
 /// HU-CON-005: Detalle de una venta registrada.
 public class VentaDetalleResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     public int IdVenta { get; set; }
     public string Folio { get; set; } = null!;
     public DateTime FechaVenta { get; set; }

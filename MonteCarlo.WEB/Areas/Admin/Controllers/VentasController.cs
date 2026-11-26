@@ -45,7 +45,14 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         if (!okMenu)
             return ErrorParcial(mensajeMenu);
 
-        return PartialView("_CajaPedido", new CajaViewModel { Cuenta = cuenta, Categorias = categorias ?? [] });
+        var tasa = cuenta.TasaIvaAplicada;
+        if (cuenta.IdVenta is null)
+        {
+            var vigente = await ventasApiService.ObtenerTasaIvaAsync();
+            if (!vigente.Success) return ErrorParcial(vigente.Message);
+            tasa = vigente.Data;
+        }
+        return PartialView("_CajaPedido", new CajaViewModel { TasaEstimada = tasa, Cuenta = cuenta, Categorias = categorias ?? [] });
     }
 
     [HttpPost("cuenta/{idReserva:int}/pedidos")]
@@ -53,32 +60,32 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public async Task<IActionResult> AgregarPedido(int idReserva, [FromBody] PedidoBody body)
     {
         var lineas = (body.Lineas ?? []).Select(l => (l.IdProducto, l.Cantidad)).ToList();
-        var (success, message, data, cuenta) = await ventasApiService.AgregarPedidoAsync(idReserva, body.ClaveIdempotencia, lineas);
-        return Json(new { success, message, data, cuenta });
+        var (success, message, data, cuenta, conflicto) = await ventasApiService.AgregarPedidoAsync(idReserva, body.ClaveIdempotencia, lineas, body.TotalEsperado);
+        return Json(new { success, message, data, cuenta, conflicto });
     }
 
     [HttpPost("cuenta/lineas/{idDetalle:int}/anular")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AnularLinea(int idDetalle, [FromBody] AnularLineaBody body)
     {
-        var (success, message, data, cuenta) = await ventasApiService.AnularLineaAsync(idDetalle, body.Cantidad, body.Motivo);
-        return Json(new { success, message, data, cuenta });
+        var (success, message, data, cuenta, conflicto) = await ventasApiService.AnularLineaAsync(idDetalle, body.Cantidad, body.Motivo);
+        return Json(new { success, message, data, cuenta, conflicto });
     }
 
     [HttpPost("cuenta/{idReserva:int}/cobrar")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cobrar(int idReserva, [FromBody] CobrarBody body)
     {
-        var (success, message, data, cuenta) = await ventasApiService.CobrarAsync(idReserva, body.IdMetodoPago, body.TotalEsperado, body.Version);
-        return Json(new { success, message, data, cuenta });
+        var (success, message, data, cuenta, conflicto) = await ventasApiService.CobrarAsync(idReserva, body.IdMetodoPago, body.TotalEsperado, body.Version);
+        return Json(new { success, message, data, cuenta, conflicto });
     }
 
     [HttpPost("cuenta/{idReserva:int}/liberar-sin-consumo")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> LiberarSinConsumo(int idReserva)
     {
-        var (success, message, data, cuenta) = await ventasApiService.LiberarSinConsumoAsync(idReserva);
-        return Json(new { success, message, data, cuenta });
+        var (success, message, data, cuenta, conflicto) = await ventasApiService.LiberarSinConsumoAsync(idReserva);
+        return Json(new { success, message, data, cuenta, conflicto });
     }
 
     /// <summary>Venta para llevar (HU-CON-003): la caja como pagina, con metodo de pago y cobro.</summary>
@@ -90,7 +97,9 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
         if (!okMenu)
             TempData[Alerta.Error] = mensajeMenu;
 
-        return View(new CajaViewModel { ParaLlevar = true, Categorias = categorias ?? [], MetodosPago = metodos ?? [] });
+        var vigente = await ventasApiService.ObtenerTasaIvaAsync();
+        if (!vigente.Success) TempData[Alerta.Error] = vigente.Message;
+        return View(new CajaViewModel { TasaEstimada = vigente.Data, ParaLlevar = true, Categorias = categorias ?? [], MetodosPago = metodos ?? [] });
     }
 
     /// <summary>
@@ -102,24 +111,27 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     public async Task<IActionResult> RegistrarParaLlevar([FromBody] ParaLlevarBody body)
     {
         var lineas = (body.Lineas ?? []).Select(l => (l.IdProducto, l.Cantidad));
-        var (success, message, data, _) = await ventasApiService.RegistrarParaLlevarAsync(
+        var (success, message, data, _, conflicto) = await ventasApiService.RegistrarParaLlevarAsync(
             body.ClaveIdempotencia, body.IdMetodoPago, body.TotalEsperado, lineas);
 
         string? redirect = null;
         if (success && data is not null)
         {
-            TempData[Alerta.Exito] = $"Venta para llevar {data.Folio} registrada · {Colones.Formato(data.Total)} con {data.MetodoPago}";
+            var resumen = data.TasaIvaAplicada is { } tasa && data.Subtotal is { } subtotal && data.ImporteIva is { } iva
+                ? $"Subtotal {CuentaViewModel.Dinero(subtotal)} · IVA ({tasa.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CR"))}%) {CuentaViewModel.Dinero(iva)} · Total con IVA"
+                : "Sin desglose de IVA registrado. Total";
+            TempData[Alerta.Exito] = $"Venta para llevar {data.Folio} · {resumen} {CuentaViewModel.Dinero(data.Total)} con {data.MetodoPago}";
             redirect = Url.Action("Index", "VentasListado");
         }
-        return Json(new { success, message, data, redirect });
+        return Json(new { success, message, data, redirect, conflicto });
     }
 
     [HttpPost("cuenta/{idReserva:int}/cerrar-sin-cobro")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CerrarSinCobro(int idReserva, [FromBody] CerrarSinCobroBody body)
     {
-        var (success, message, data, cuenta) = await ventasApiService.CerrarSinCobroAsync(idReserva, body.Motivo, body.Version);
-        return Json(new { success, message, data, cuenta });
+        var (success, message, data, cuenta, conflicto) = await ventasApiService.CerrarSinCobroAsync(idReserva, body.Motivo, body.Version);
+        return Json(new { success, message, data, cuenta, conflicto });
     }
 
     private ContentResult ErrorParcial(string mensaje)
@@ -131,7 +143,7 @@ public class VentasController(IVentasApiService ventasApiService) : Controller
     }
 
     public record LineaBody(int IdProducto, int Cantidad);
-    public record PedidoBody(Guid ClaveIdempotencia, List<LineaBody>? Lineas);
+    public record PedidoBody(Guid ClaveIdempotencia, List<LineaBody>? Lineas, decimal? TotalEsperado);
     public record AnularLineaBody(int? Cantidad, string? Motivo);
     public record CobrarBody(int IdMetodoPago, decimal TotalEsperado, string? Version);
     public record CerrarSinCobroBody(string? Motivo, string? Version);

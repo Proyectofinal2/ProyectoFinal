@@ -37,7 +37,7 @@ public class CobrarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var r = await S.Ventas.CobrarAsync(idReserva, Cobro(vista), Mundo.IdUsuario);
 
         Assert.True(r.Success, r.Message);
-        Assert.Equal(6000m, r.Data!.Total);
+        Assert.Equal(6780m, r.Data!.Total);
         Assert.Equal($"V-{r.Data.IdVenta:D6}", r.Data.Folio);
         var venta = Mundo.VentaDe(idReserva)!;
         Assert.Equal(VentaEstados.Cobrada, venta.Estado);
@@ -60,8 +60,8 @@ public class CobrarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var cuentaMismoPrecio = await S.Ventas.ObtenerCuentaAsync(reserva.IdReserva);
         var conPedidoNuevo = await S.Ventas.AgregarPedidoAsync(reserva.IdReserva, Pedido((producto.IdProducto, 1)), Mundo.IdUsuario);
 
-        Assert.Equal(1000m, cuentaMismoPrecio.Data!.Total);
-        Assert.Equal(2800m, conPedidoNuevo.Data!.Total);
+        Assert.Equal(1130m, cuentaMismoPrecio.Data!.Total);
+        Assert.Equal(3164m, conPedidoNuevo.Data!.Total);
         Assert.Equal([1000m, 1800m], conPedidoNuevo.Data.Pedidos.SelectMany(p => p.Lineas).Select(l => l.PrecioUnitario));
     }
 
@@ -76,7 +76,7 @@ public class CobrarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var abierta = await S.Ventas.AgregarPedidoAsync(reserva.IdReserva, Pedido((producto.IdProducto, 1)), Mundo.IdUsuario);
 
         var vivas = (await S.Mesas.ListarAsync(false)).Data!.Where(m => m.IdMesa == mesaA.IdMesa || m.IdMesa == mesaB.IdMesa).ToList();
-        Assert.All(vivas, m => Assert.Equal(1000m, m.Cuenta!.Total));
+        Assert.All(vivas, m => Assert.Equal(1130m, m.Cuenta!.Total));
         Assert.Equal(abierta.Data!.Version, vivas[0].Cuenta!.Version);
 
         await S.Ventas.CobrarAsync(reserva.IdReserva, Cobro(abierta.Data), Mundo.IdUsuario);
@@ -99,7 +99,7 @@ public class CobrarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var r = await S.Ventas.CobrarAsync(idReserva, Cobro(vista), Mundo.IdUsuario);
 
         Assert.Equal(409, r.StatusCode);
-        Assert.Equal(2500m, CuentaDelError(r)!.Total);
+        Assert.Equal(2825m, CuentaDelError(r)!.Total);
         Assert.Contains("el total ahora es", r.Message);
         var venta = Mundo.VentaDe(idReserva)!;
         Assert.Equal(VentaEstados.Abierta, venta.Estado);
@@ -116,7 +116,7 @@ public class CobrarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var igual = Mundo.CrearProducto(1000m);
         await S.Ventas.AnularLineaAsync(vista.Pedidos[0].Lineas[0].IdDetalle, new AnularLineaRequest(), Mundo.IdUsuario);
         await S.Ventas.AgregarPedidoAsync(idReserva, Pedido((igual.IdProducto, 1)), Mundo.IdUsuario);
-        Assert.Equal(1000m, (await S.Ventas.ObtenerCuentaAsync(idReserva)).Data!.Total);
+        Assert.Equal(1130m, (await S.Ventas.ObtenerCuentaAsync(idReserva)).Data!.Total);
 
         var r = await S.Ventas.CobrarAsync(idReserva, Cobro(vista), Mundo.IdUsuario);
 

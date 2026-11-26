@@ -39,6 +39,7 @@
     </div>
     </div>
 
+    <p class="form-text">Precios unitarios sin IVA.</p>
     <div class="mc-caja__mosaico" data-mc-caja-mosaico>
         @foreach (var cat in Model.Categorias)
         {
@@ -87,20 +88,21 @@
     </div>
     <div class="mc-ticket__pie">
         <dl class="mc-ticket__totales">
-            @if (Model.ParaLlevar)
+            @if (c.TotalProductos > 0)
             {
-                <div class="mc-ticket__quedara"><dt>Total a cobrar</dt><dd data-mc-caja-total-pedido>₡0</dd></div>
+                <div><dt>Pedido nuevo (sin IVA)</dt><dd data-mc-caja-total-pedido></dd></div>
+                <div class="mc-ticket__quitado" data-mc-caja-quitado-fila hidden><dt>Se quitará (sin IVA)</dt><dd data-mc-caja-total-quitado></dd></div>
+            }
+            @if (Model.TasaEstimada is { } tasa)
+            {
+                <div><dt>@(c.TotalProductos > 0 ? "Subtotal acumulado" : "Subtotal")</dt><dd data-caja-subtotal></dd></div>
+                <div><dt>IVA (@(tasa.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CR")))%)</dt><dd data-caja-iva data-tasa="@tasa.ToString(invariante)"></dd></div>
             }
             else
             {
-                <div><dt>Este pedido</dt><dd data-mc-caja-total-pedido>₡0</dd></div>
-                @if (c.TotalProductos > 0)
-                {
-                    <div class="mc-ticket__quitado" data-mc-caja-quitado-fila hidden><dt>Se quitará</dt><dd data-mc-caja-total-quitado>₡0</dd></div>
-                    <div class="mc-ticket__ya"><dt>Ya en la cuenta: @c.TotalProductos @(c.TotalProductos == 1 ? "producto" : "productos")</dt><dd>@CuentaViewModel.Dinero(c.Total)</dd></div>
-                }
-                <div class="mc-ticket__quedara"><dt>Quedará en</dt><dd data-mc-caja-total-quedara>@CuentaViewModel.Dinero(c.Total)</dd></div>
+                <div><dt>Sin desglose de IVA registrado.</dt></div>
             }
+            <div class="mc-ticket__quedara"><dt>@(Model.TasaEstimada.HasValue ? "Total con IVA" : "Total")</dt><dd data-mc-caja-total-quedara></dd></div>
         </dl>
         <p class="mc-ticket__aviso" data-mc-caja-aviso-quitar hidden>Quitar productos de la cuenta queda registrado: quién y cuándo.</p>
         <div class="alert alert-danger mb-0" role="alert" data-mc-caja-error hidden></div>

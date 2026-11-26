@@ -52,7 +52,7 @@ public class MetodosPagoVentasTests(SqlServerFixture fixture) : PruebaSql(fixtur
         {
             ClaveIdempotencia = Guid.NewGuid(),
             IdMetodoPago = idMetodo,
-            TotalEsperado = 1000m,
+            TotalEsperado = 1130m,
             Lineas = [new LineaPedidoRequest { IdProducto = producto.IdProducto, Cantidad = 1 }]
         }, Mundo.IdUsuario)).Data!;
 

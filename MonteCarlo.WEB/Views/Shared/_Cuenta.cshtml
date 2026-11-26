@@ -18,6 +18,8 @@
      data-mc-cuenta
      data-id-reserva="@c.IdReserva"
      data-total="@c.Total.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+     data-subtotal="@((c.Subtotal ?? c.Total).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+     data-tasa="@c.TasaIvaAplicada?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
      data-version="@c.Version"
      data-mesa="@Model.EtiquetaMesa">
 
@@ -103,7 +105,7 @@
                     <section class="mc-pedido" aria-label="Pedido @pedido.Numero">
                         <header class="mc-pedido__cabecera">
                             <span>Pedido @pedido.Numero · @pedido.Fecha.ToString("HH:mm")</span>
-                            <span class="mc-pedido__subtotal">@CuentaViewModel.Dinero(pedido.Subtotal)</span>
+                            <span class="mc-pedido__subtotal">Subtotal: @CuentaViewModel.Dinero(pedido.Subtotal)</span>
                         </header>
                         <ul class="mc-pedido__lineas">
                             @foreach (var linea in pedido.Lineas)
@@ -133,6 +135,7 @@
         {
         <div class="mc-confirmar" data-mc-cuenta-confirm-quitar hidden role="alertdialog" aria-labelledby="mcQuitarTitulo-@c.IdReserva">
             <p class="mc-confirmar__texto" id="mcQuitarTitulo-@c.IdReserva" data-mc-cuenta-quitar-texto></p>
+            <p class="small mb-1" data-quitar-importes></p>
             <div class="mc-confirmar__acciones">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-mc-cuenta-quitar-no>No</button>
                 <button type="button" class="btn btn-sm btn-outline-primary" data-mc-cuenta-quitar-uno hidden>Quitar 1</button>
@@ -147,8 +150,17 @@
         <footer class="mc-cuenta__pie">
             @if (c.Pedidos.Count > 0)
             {
+                @if (c.TasaIvaAplicada is { } tasa && c.Subtotal is { } subtotal && c.ImporteIva is { } impuesto)
+                {
+                    <div class="d-flex justify-content-between text-secondary"><span>Subtotal</span><span>@CuentaViewModel.Dinero(subtotal)</span></div>
+                    <div class="d-flex justify-content-between text-secondary"><span>IVA (@(tasa.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CR")))%)</span><span>@CuentaViewModel.Dinero(impuesto)</span></div>
+                }
+                else
+                {
+                    <small class="text-secondary">Sin desglose de IVA registrado.</small>
+                }
                 <div class="mc-cuenta__total">
-                    <span>@c.TotalProductos @(c.TotalProductos == 1 ? "producto" : "productos")</span>
+                    <span>@(c.TasaIvaAplicada.HasValue ? "Total con IVA" : "Total")</span>
                     <strong data-mc-cuenta-total>@CuentaViewModel.Dinero(c.Total)</strong>
                 </div>
             }

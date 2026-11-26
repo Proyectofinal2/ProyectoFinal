@@ -4,6 +4,7 @@ namespace MonteCarlo.API.Services.Interfaces;
 
 public interface IVentasService
 {
+    Task<Result<decimal>> ObtenerTasaIvaVigenteAsync();
     /// <summary>La cuenta de la reserva (vacia si todavia no hay pedidos), con lo que se puede hacer con ella.</summary>
     Task<Result<CuentaResponse>> ObtenerCuentaAsync(int idReserva);
 

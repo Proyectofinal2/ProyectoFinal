@@ -4,6 +4,7 @@ namespace MonteCarlo.API.Services.Interfaces;
 
 public interface IConfiguracionService
 {
+    Task<Result<decimal>> ObtenerTasaIvaAsync();
     /// Minutos de gracia después de terminar el tiempo de uso de la mesa antes de que una
     /// cuenta abierta se considere antigua, es decir, por cobrar (HU-CON-002).
     Task<int> ObtenerValorToleranciaCobroAsync();

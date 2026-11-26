@@ -1279,7 +1279,8 @@
          mc:cuenta-cambio  detail: { tipo, mensaje, idReserva, data }
            tipo = "pedido" | "quitar" | "cobro" | "sin-consumo" | "sin-cobro" | "desactualizada"
        -------------------------------------------------------- */
-  var colones = window.mc.colones;
+  var formatoVenta = new Intl.NumberFormat("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function colones(monto) { return "₡" + formatoVenta.format(monto); }
   var enviarJson = window.mc.enviarJson;
 
   function emitirCambio(origen, detalle) {
@@ -1331,7 +1332,7 @@
 
     mostrarErrorCuenta(raiz, respuesta.message);
     // La cuenta cambio mientras tanto (otro administrador, otra pantalla): hay que volver a pedirla.
-    if (respuesta.cuenta) {
+    if (respuesta.conflicto || respuesta.cuenta) {
       emitirCambio(raiz, {
         tipo: "desactualizada",
         mensaje: respuesta.message,
@@ -1357,6 +1358,14 @@
       : "Cobrar " + total;
   }
 
+  function resumenVenta(cuenta) {
+    if (cuenta.tasaIvaAplicada == null)
+      return colones(cuenta.total) + " · Sin desglose de IVA registrado.";
+    return "Subtotal " + colones(cuenta.subtotal) + " · IVA (" +
+      Number(cuenta.tasaIvaAplicada).toLocaleString("es-CR") + "%) " + colones(cuenta.importeIva) +
+      " · Total con IVA " + colones(cuenta.total);
+  }
+
   function cuentaDe(elemento) {
     return elemento.closest("[data-mc-cuenta]");
   }
@@ -1374,6 +1383,15 @@
     bloque.querySelector("[data-mc-cuenta-quitar-uno]").hidden = cantidad <= 1;
     bloque.querySelector("[data-mc-cuenta-quitar-todo]").textContent =
       cantidad > 1 ? "Quitar todo" : "Quitar";
+    function despuesDeQuitar(n) {
+      var quitar = repartirQuitar(raiz._quitar.lineas, n).reduce((suma, op) => suma + op.valor, 0);
+      var tasa = raiz.dataset.tasa || null;
+      var saldo = window.mc.estimarVenta(window.mc.centesimas(raiz.dataset.subtotal) - quitar, tasa);
+      return resumenVenta({ subtotal: saldo.subtotal, total: saldo.total, importeIva: saldo.iva, tasaIvaAplicada: tasa });
+    }
+    bloque.querySelector("[data-quitar-importes]").textContent =
+      (cantidad > 1 ? "Al quitar uno: " + despuesDeQuitar(1) + ". " : "") +
+      "Al quitar todo: " + despuesDeQuitar(cantidad);
     bloque.hidden = false;
     bloque.querySelector("button:not([hidden])").focus();
   }
@@ -1386,7 +1404,7 @@
     lineas.forEach(function (l) {
       var tomar = Math.min(resto, l.cantidad);
       if (tomar > 0) {
-        operaciones.push({ idDetalle: l.idDetalle, cantidad: tomar, valor: tomar * (l.precio || 0) });
+        operaciones.push({ idDetalle: l.idDetalle, cantidad: tomar, valor: tomar * window.mc.centesimas(l.precio || 0) });
         resto -= tomar;
       }
     });
@@ -1473,7 +1491,7 @@
           etiquetaMesa +
           (esPlural(etiquetaMesa) ? " cobradas y liberadas" : " cobrada y liberada") +
           " · " + respuesta.data.folio +
-          " · " + colones(respuesta.data.total) +
+          " · " + resumenVenta(respuesta.data) +
           " con " + nombreMetodo;
       }
       resolverAccion(raiz, "cobro", respuesta, mensaje);
@@ -1572,14 +1590,18 @@
      iniciarCaja es el nucleo de la caja (menu, busqueda, categorias, carrito y ticket) y no sabe que hacer al confirmar:
      lo comparten el modal de agregar pedidos a una mesa (montarCaja) y la pagina de venta para llevar
      (initCajaParaLlevar). opciones:
-       textoConfirmar(nuevas, quitadas, totalNuevo) -> texto del boton de confirmar
+       textoConfirmar(nuevas, quitadas, estimacion.total) -> texto del boton de confirmar
        puedeConfirmar(nuevas, quitadas)             -> si se habilita
      Devuelve lo que necesita quien confirma. */
   function iniciarCaja(modalEl, opciones) {
     var carrito = []; // pedido nuevo: [{ id, nombre, precio, cantidad }]
     var clave = crypto.randomUUID(); // un reintento del mismo pedido no lo duplica
     var enviando = false;
-    var totalCuenta = Number(modalEl.dataset.cuentaTotal);
+    var subtotalCuenta = window.mc.centesimas(modalEl.dataset.cuentaTotal);
+    var ivaEl = modalEl.querySelector("[data-caja-iva]");
+    var tasa = ivaEl ? ivaEl.dataset.tasa : null;
+    var estimacion;
+    var totalTrasAgregar;
     var categoriaActiva = 0;
 
     // Lo que ya esta en la cuenta, por producto (lineas activas, la mas reciente primero), y las unidades que
@@ -1593,7 +1615,7 @@
       }
       p.lineas.push(l);
       p.cantidad += l.cantidad;
-      p.valor += l.cantidad * l.precio;
+      p.valor += l.cantidad * window.mc.centesimas(l.precio);
     });
     var quitar = {}; // idProducto -> unidades de la cuenta que se quitaran
 
@@ -1670,7 +1692,7 @@
         var cNueva = nueva ? nueva.cantidad : 0;
         var cQuitar = cantidadQuitar(id);
         var cantidad = cantidadYa(id) - cQuitar + cNueva;
-        var subtotalNuevo = nueva ? nueva.cantidad * nueva.precio : 0;
+        var subtotalNuevo = nueva ? nueva.cantidad * window.mc.centesimas(nueva.precio) : 0;
         var quitado = valorQuitado(id);
         totalNuevo += subtotalNuevo;
         totalQuitado += quitado;
@@ -1704,7 +1726,7 @@
         li.querySelector(".mc-ticket__marca").hidden = marcas.length === 0;
         li.querySelector(".mc-ticket__num").textContent = cantidad;
         li.querySelector(".mc-ticket__sub").textContent = colones(
-          (ya ? ya.valor : 0) - quitado + subtotalNuevo,
+          ((ya ? ya.valor : 0) - quitado + subtotalNuevo) / 100,
         );
         li.querySelector("[data-mc-caja-menos]").disabled = cantidad <= 0;
         li.querySelector("[data-mc-caja-mas]").disabled = !puedeSumar || cNueva >= 99;
@@ -1712,13 +1734,17 @@
       });
 
       vacioEl.hidden = ids.length > 0;
-      totalPedidoEl.textContent = colones(totalNuevo);
-      if (quedaraEl) {
-        quedaraEl.textContent = colones(totalCuenta - totalQuitado + totalNuevo);
+      totalTrasAgregar = window.mc.estimarVenta(subtotalCuenta + totalNuevo, tasa).total;
+      estimacion = window.mc.estimarVenta(subtotalCuenta - totalQuitado + totalNuevo, tasa);
+      if (totalPedidoEl) totalPedidoEl.textContent = colones(totalNuevo / 100);
+      if (ivaEl) {
+        modalEl.querySelector("[data-caja-subtotal]").textContent = colones(estimacion.subtotal);
+        ivaEl.textContent = colones(estimacion.iva);
       }
+      quedaraEl.textContent = colones(estimacion.total);
       if (quitadoFilaEl) {
         quitadoFilaEl.hidden = quitadas === 0;
-        quitadoEl.textContent = "\u2212" + colones(totalQuitado);
+        quitadoEl.textContent = "\u2212" + colones(totalQuitado / 100);
       }
       avisoQuitarEl.hidden = quitadas === 0;
 
@@ -1732,7 +1758,7 @@
       if (resumenEl) {
         resumenEl.textContent = partes.join(" · ");
       }
-      confirmarEl.textContent = opciones.textoConfirmar(nuevas, quitadas, totalNuevo);
+      confirmarEl.textContent = opciones.textoConfirmar(nuevas, quitadas, estimacion.total);
       confirmarEl.disabled = !opciones.puedeConfirmar(nuevas, quitadas) || enviando;
 
       // Menu: la cantidad de cada producto es lo que quedara en la cuenta (lo que ya tenia, mas lo nuevo, menos lo quitado).
@@ -1787,6 +1813,7 @@
     // "+" suma al pedido nuevo (o deshace una unidad quitada); "-" resta del pedido nuevo y, si no queda nada
     // nuevo, marca una unidad de la cuenta para quitar.
     function cambiar(id, delta) {
+      if (enviando) return;
       if (delta > 0) {
         if (cantidadQuitar(id) > 0) {
           quitar[id] -= 1;
@@ -1881,6 +1908,8 @@
       errorEl: errorEl,
       buscarEl: buscarEl,
       pintar: pintar,
+      totalTrasAgregar: function () { return totalTrasAgregar; },
+      totalEstimado: function () { return estimacion.total; },
       operacionesQuitar: operacionesQuitar,
       estaEnviando: function () {
         return enviando;
@@ -1935,6 +1964,7 @@
       if (hayNuevo) {
         var r = await enviarJson("/admin/ventas/cuenta/" + idReserva + "/pedidos", {
           claveIdempotencia: caja.clave,
+          totalEsperado: caja.totalTrasAgregar(),
           lineas: caja.carrito.map(function (l) {
             return { idProducto: l.id, cantidad: l.cantidad };
           }),
@@ -1969,16 +1999,16 @@
 
       if (!fallo) {
         var de = esPlural(etiquetaMesa) ? "las " : "la ";
-        var total = colones((cuenta && cuenta.total) || 0);
+        var total = resumenVenta(cuenta);
         var quitadas = unidadesQuitadas + (unidadesQuitadas === 1 ? " producto quitado" : " productos quitados");
         var mensaje;
         if (hayNuevo) {
           mensaje =
             "Pedido " + (cuenta && cuenta.pedidos ? cuenta.pedidos.length : "") + " agregado" +
             (unidadesQuitadas > 0 ? " y " + quitadas : "") +
-            " en la cuenta de " + de + etiquetaMesa + ": " + total + " en total.";
+            " en la cuenta de " + de + etiquetaMesa + ": " + total;
         } else {
-          mensaje = "Cuenta de " + de + etiquetaMesa + " actualizada (" + quitadas + "): " + total + " en total.";
+          mensaje = "Cuenta de " + de + etiquetaMesa + " actualizada (" + quitadas + "): " + total;
         }
         cerrarYAvisar({ tipo: hayNuevo ? "pedido" : "quitar", mensaje: mensaje, idReserva: idReserva, data: cuenta });
         return;
@@ -1988,8 +2018,8 @@
         caja.errorEl.textContent = fallo.message;
         caja.errorEl.hidden = false;
         caja.pintar();
-        if (fallo.cuenta) {
-          emitirCambio(document, {
+        if (fallo.conflicto || fallo.cuenta) {
+          cerrarYAvisar({
             tipo: "desactualizada",
             mensaje: fallo.message,
             idReserva: idReserva,
@@ -2020,7 +2050,7 @@
 
 
   /* Venta para llevar (HU-CON-003): la misma caja como pagina. Confirmar = elegir metodo de pago y cobrar al momento. */
-  function initCajaParaLlevar() {
+  function initCajaParaLlevar(seleccion, aviso) {
     var raiz = document.querySelector("[data-mc-caja-pagina]");
     if (!raiz) {
       return;
@@ -2033,17 +2063,28 @@
     }
 
     var caja = iniciarCaja(raiz, {
-      textoConfirmar: function (nuevas, quitadas, totalNuevo) {
+      textoConfirmar: function (nuevas, quitadas, totalEnColones) {
         if (nuevas === 0) {
           return "Cobrar";
         }
         var m = metodo();
-        return "Cobrar " + colones(totalNuevo) + (m ? " con " + m.dataset.nombre : "");
+        return "Cobrar " + colones(totalEnColones) + (m ? " con " + m.dataset.nombre : "");
       },
       puedeConfirmar: function (nuevas) {
         return nuevas > 0;
       },
     });
+
+    if (Array.isArray(seleccion)) {
+      seleccion.forEach(function (l) {
+        var tile = raiz.querySelector('[data-mc-caja-tile][data-id-producto="' + l.id + '"]');
+        if (tile) caja.carrito.push({ id: l.id, nombre: tile.dataset.nombre,
+          precio: Number(tile.dataset.precio), cantidad: l.cantidad });
+      });
+      caja.pintar();
+      caja.errorEl.textContent = aviso;
+      caja.errorEl.hidden = false;
+    }
 
     pagosEl.addEventListener("change", function () {
       pagosEl.classList.remove("is-invalid");
@@ -2065,9 +2106,7 @@
       caja.setEnviando(true);
       caja.confirmarEl.disabled = true;
       caja.errorEl.hidden = true;
-      var total = caja.carrito.reduce(function (suma, l) {
-        return suma + l.cantidad * l.precio;
-      }, 0);
+      var total = caja.totalEstimado();
       var respuesta = await enviarJson("/admin/ventas/para-llevar", {
         claveIdempotencia: caja.clave,
         idMetodoPago: Number(elegido.value),
@@ -2080,6 +2119,20 @@
       if (respuesta.success && respuesta.redirect) {
         // El aviso lo muestra el listado de ventas (viaja en TempData); no se vuelve a habilitar para no duplicar la venta.
         window.location.href = respuesta.redirect;
+        return;
+      }
+      if (respuesta.conflicto) {
+        try {
+          var pagina = await fetch(location.href, { cache: "no-store" });
+          var html = new DOMParser().parseFromString(await pagina.text(), "text/html");
+          var actual = html.querySelector("[data-mc-caja-pagina]");
+          if (!pagina.ok || !actual) throw new Error();
+          raiz.replaceWith(actual);
+          initCajaParaLlevar(caja.carrito, respuesta.message + " Revisa los productos disponibles y confirma el nuevo importe.");
+        } catch {
+          caja.errorEl.textContent = "No se pudo actualizar la venta. Vuelve a abrir la caja antes de cobrar.";
+          caja.errorEl.hidden = false;
+        }
         return;
       }
       caja.errorEl.textContent = respuesta.message || "No se pudo registrar la venta. Intenta de nuevo.";
