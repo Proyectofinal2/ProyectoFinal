@@ -718,7 +718,7 @@ public class VentasService(
             MetodoPago = venta.MetodoPago?.Nombre,
             MetodoPagoActivo = venta.MetodoPago?.Activo,
             UsuarioRegistro = venta.UsuarioRegistro.NombreCompleto,
-            Lineas = venta.Detalles.Select(d => new LineaDetalleResponse
+            Lineas = venta.Detalles.Where(d => !d.Anulado).Select(d => new LineaDetalleResponse
             {
                 Producto = d.Producto.Nombre,
                 Cantidad = d.Cantidad,
