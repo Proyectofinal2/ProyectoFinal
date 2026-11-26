@@ -15,7 +15,7 @@
      data-mc-caja
      data-id-reserva="@c.IdReserva"
      data-mesa="@Model.EtiquetaMesa"
-     data-cuenta-total="@c.Total.ToString(invariante)"
+     data-cuenta-total="@((c.Subtotal ?? c.Total).ToString(invariante))"
      data-lineas="@lineasJson">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

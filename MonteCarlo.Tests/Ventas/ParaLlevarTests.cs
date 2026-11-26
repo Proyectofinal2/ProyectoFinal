@@ -29,17 +29,17 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var cafe = Mundo.CrearProducto(precio: 1500m);
         var pan = Mundo.CrearProducto(precio: 800m);
 
-        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(3 * 1500m + 800m, (cafe.IdProducto, 3), (pan.IdProducto, 1)), Mundo.IdUsuario);
+        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(5989m, (cafe.IdProducto, 3), (pan.IdProducto, 1)), Mundo.IdUsuario);
 
         Assert.True(r.Success, r.Message);
-        Assert.Equal(5300m, r.Data!.Total);
+        Assert.Equal(5989m, r.Data!.Total);
         Assert.Null(r.Data.IdReserva);
         Assert.Empty(r.Data.NumerosMesa);
         var venta = VentaGuardada(r.Data.IdVenta!.Value);
         Assert.Equal(VentaTipos.Takeout, venta.TipoVenta);
         Assert.Equal(VentaEstados.Cobrada, venta.Estado);
         Assert.Null(venta.IdReserva);
-        Assert.Equal(5300m, venta.Total);
+        Assert.Equal(5989m, venta.Total);
         Assert.Equal(Mundo.IdMetodoPago, venta.IdMetodoPago);
         Assert.Equal(Mundo.IdUsuario, venta.IdUsuarioCobro);
         Assert.NotNull(venta.FechaCobro);
@@ -52,12 +52,12 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
     public async Task ParaLlevar_laVentaApareceEnElListadoDeVentasComoTakeoutCobrada()
     {
         var producto = Mundo.CrearProducto(precio: 1200m);
-        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(1200m, (producto.IdProducto, 1)), Mundo.IdUsuario);
+        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(1356m, (producto.IdProducto, 1)), Mundo.IdUsuario);
 
         var listado = (await S.Ventas.ObtenerListadoAsync(new FiltroVentasRequest { TipoVenta = VentaTipos.Takeout, Estado = VentaEstados.Cobrada })).Data!;
 
         var fila = Assert.Single(listado, v => v.IdVenta == r.Data!.IdVenta);
-        Assert.Equal(1200m, fila.Total);
+        Assert.Equal(1356m, fila.Total);
     }
 
     [SqlFact]
@@ -65,7 +65,7 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
     public async Task ParaLlevar_mismaClave_registraUnaSolaVenta()
     {
         var producto = Mundo.CrearProducto(precio: 1000m);
-        var solicitud = Solicitud(2000m, (producto.IdProducto, 2));
+        var solicitud = Solicitud(2260m, (producto.IdProducto, 2));
 
         var primera = await S.Ventas.RegistrarParaLlevarAsync(solicitud, Mundo.IdUsuario);
         var reintento = await S.Ventas.RegistrarParaLlevarAsync(solicitud, Mundo.IdUsuario);
@@ -94,13 +94,13 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
     public async Task ParaLlevar_totalQueNoCoincide_devuelve409YNoRegistraNada()
     {
         var producto = Mundo.CrearProducto(precio: 1000m);
-        var solicitud = Solicitud(1000m, (producto.IdProducto, 1));
+        var solicitud = Solicitud(1130m, (producto.IdProducto, 1));
         Mundo.CambiarPrecio(producto.IdProducto, 1200m);   // el precio cambio despues de armar el pedido
 
         var r = await S.Ventas.RegistrarParaLlevarAsync(solicitud, Mundo.IdUsuario);
 
         Assert.Equal(409, r.StatusCode);
-        Assert.Contains("precios cambiaron", r.Message);
+        Assert.Contains("el total ahora es", r.Message);
         using var db = Mundo.NuevoContexto();
         Assert.Equal(0, db.PedidosVenta.Count(p => p.ClaveIdempotencia == solicitud.ClaveIdempotencia));
     }
@@ -111,7 +111,7 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
     {
         var producto = Mundo.CrearProducto(precio: 1000m, disponible: false);
 
-        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(1000m, (producto.IdProducto, 1)), Mundo.IdUsuario);
+        var r = await S.Ventas.RegistrarParaLlevarAsync(Solicitud(1130m, (producto.IdProducto, 1)), Mundo.IdUsuario);
 
         Assert.Equal(409, r.StatusCode);
         Assert.Contains("ya no esta disponible", r.Message);
@@ -131,9 +131,9 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
             idInactivo = metodo.IdMetodoPago;
         }
 
-        var inactivo = Solicitud(1000m, (producto.IdProducto, 1));
+        var inactivo = Solicitud(1130m, (producto.IdProducto, 1));
         inactivo.IdMetodoPago = idInactivo;
-        var inexistente = Solicitud(1000m, (producto.IdProducto, 1));
+        var inexistente = Solicitud(1130m, (producto.IdProducto, 1));
         inexistente.IdMetodoPago = int.MaxValue;
 
         Assert.Equal(400, (await S.Ventas.RegistrarParaLlevarAsync(inactivo, Mundo.IdUsuario)).StatusCode);
@@ -148,7 +148,7 @@ public class ParaLlevarTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var producto = Mundo.CrearProducto(precio: 1000m);
         var clave = Guid.NewGuid();
         await S.Ventas.AgregarPedidoAsync(reserva.IdReserva, Atajos.PedidoConClave(clave, (producto.IdProducto, 1)), Mundo.IdUsuario);
-        var solicitud = Solicitud(1000m, (producto.IdProducto, 1));
+        var solicitud = Solicitud(1130m, (producto.IdProducto, 1));
         solicitud.ClaveIdempotencia = clave;
 
         var r = await S.Ventas.RegistrarParaLlevarAsync(solicitud, Mundo.IdUsuario);

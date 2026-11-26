@@ -46,6 +46,50 @@ public class DetalleVentaEstadosTests
 public class DetalleVentaTests(SqlServerFixture fixture) : PruebaSql(fixture)
 {
     [SqlTheory]
+    [InlineData("13", 4500, 1170, 10170)]
+    [InlineData("7.25", 100.25, 14.54, 215.04)]
+    [InlineData("0", 100.25, 0, 200.50)]
+    public async Task Detalle_conservaImportesTrasCambiarTasaYPrecio(
+        string tasa, decimal precio, decimal iva, decimal total)
+    {
+        var producto = Mundo.CrearProducto(precio);
+        using var db = Mundo.NuevoContexto();
+        var parametro = db.ConfiguracionesSistema.Single(c => c.Clave == "TasaIva");
+        var tasaAnterior = parametro.Valor;
+        try
+        {
+            parametro.Valor = tasa;
+            await db.SaveChangesAsync();
+            var cobro = await S.Ventas.RegistrarParaLlevarAsync(new ParaLlevarRequest
+            {
+                ClaveIdempotencia = Guid.NewGuid(), IdMetodoPago = Mundo.IdMetodoPago, TotalEsperado = total,
+                Lineas = [new LineaPedidoRequest { IdProducto = producto.IdProducto, Cantidad = 2 }]
+            }, Mundo.IdUsuario);
+            Assert.True(cobro.Success, cobro.Message);
+            parametro.Valor = "20";
+            db.Productos.Single(p => p.IdProducto == producto.IdProducto).Precio = 9999m;
+            await db.SaveChangesAsync();
+
+            using var consulta = Mundo.NuevaSesion();
+            var resultado = await consulta.Ventas.ObtenerDetalleAsync(cobro.Data!.IdVenta!.Value);
+            Assert.True(resultado.Success, resultado.Message);
+            var detalle = resultado.Data!;
+            Assert.Equal(decimal.Parse(tasa, System.Globalization.CultureInfo.InvariantCulture), detalle.TasaIvaAplicada);
+            Assert.Equal(iva, detalle.ImporteIva);
+            Assert.Equal(total, detalle.Total);
+            Assert.Equal(2 * precio, detalle.Subtotal);
+            var linea = Assert.Single(detalle.Lineas);
+            Assert.Equal(precio, linea.PrecioUnitario);
+            Assert.Equal(detalle.Subtotal, linea.Subtotal);
+        }
+        finally
+        {
+            parametro.Valor = tasaAnterior;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    [SqlTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Detalle_trasAnularCompletaEnMultiplesPedidos_conservaAuditoriaYTotal(bool walkIn)
@@ -81,8 +125,9 @@ public class DetalleVentaTests(SqlServerFixture fixture) : PruebaSql(fixture)
         Assert.True(detalle.Success, detalle.Message);
         var visible = Assert.Single(detalle.Data!.Lineas);
         Assert.Equal(activo.Nombre, visible.Producto);
-        Assert.Equal(1000m, detalle.Data.Total);
-        Assert.Equal(detalle.Data.Total, detalle.Data.Lineas.Sum(l => l.Subtotal));
+        Assert.Equal(1130m, detalle.Data.Total);
+        Assert.Equal(detalle.Data.Subtotal, detalle.Data.Lineas.Sum(l => l.Subtotal));
+        Assert.Equal(130m, detalle.Data.ImporteIva);
         var registrada = Mundo.VentaDe(idReserva)!;
         var auditada = Assert.Single(registrada.Detalles, d => d.Anulado);
         Assert.Equal("Correccion", auditada.MotivoAnulacion);
@@ -113,7 +158,8 @@ public class DetalleVentaTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var visible = Assert.Single(detalle.Data!.Lineas);
         Assert.Equal(2, visible.Cantidad);
         Assert.Equal(2000m, visible.Subtotal);
-        Assert.Equal(detalle.Data.Total, visible.Subtotal);
+        Assert.Equal(detalle.Data.Subtotal, visible.Subtotal);
+        Assert.Equal(2260m, detalle.Data.Total);
         var guardada = Mundo.VentaDe(reserva.IdReserva)!;
         Assert.Equal(3, Assert.Single(guardada.Detalles, d => d.Anulado).Cantidad);
         Assert.Equal(2, Assert.Single(guardada.Detalles, d => !d.Anulado).Cantidad);
@@ -125,7 +171,7 @@ public class DetalleVentaTests(SqlServerFixture fixture) : PruebaSql(fixture)
         var producto = Mundo.CrearProducto(750m);
         var cobro = await S.Ventas.RegistrarParaLlevarAsync(new ParaLlevarRequest
         {
-            ClaveIdempotencia = Guid.NewGuid(), IdMetodoPago = Mundo.IdMetodoPago, TotalEsperado = 1500m,
+            ClaveIdempotencia = Guid.NewGuid(), IdMetodoPago = Mundo.IdMetodoPago, TotalEsperado = 1695m,
             Lineas = [new LineaPedidoRequest { IdProducto = producto.IdProducto, Cantidad = 2 }]
         }, Mundo.IdUsuario);
         Assert.True(cobro.Success, cobro.Message);
@@ -134,6 +180,7 @@ public class DetalleVentaTests(SqlServerFixture fixture) : PruebaSql(fixture)
         Assert.True(detalle.Success, detalle.Message);
         Assert.Equal(VentaTipos.Takeout, detalle.Data!.TipoVenta);
         Assert.Equal(producto.Nombre, Assert.Single(detalle.Data.Lineas).Producto);
-        Assert.Equal(detalle.Data.Total, detalle.Data.Lineas.Sum(l => l.Subtotal));
+        Assert.Equal(detalle.Data.Subtotal, detalle.Data.Lineas.Sum(l => l.Subtotal));
+        Assert.Equal(1695m, detalle.Data.Total);
     }
 }

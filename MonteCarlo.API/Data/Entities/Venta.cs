@@ -22,7 +22,12 @@ public class Venta
     /// <summary>Obligatorio al cobrar con Total mayor que cero; nulo mientras la cuenta esta abierta.</summary>
     public int? IdMetodoPago { get; set; }
 
-    /// <summary>Suma de las lineas activas; la recalcula el servicio, nunca se incrementa.</summary>
+    /// <summary>Importes tributarios; nulos cuando no existe desglose registrado.</summary>
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
+
+    /// <summary>Importe final de la venta.</summary>
     public decimal Total { get; set; }
 
     /// <summary>Quien abrio la cuenta o registro la venta.</summary>

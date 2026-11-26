@@ -17,6 +17,9 @@
     </a>
 }
 
+@if (Model.TasaEstimada.HasValue)
+{
 <div class="mc-caja mc-caja--pagina mc-caja__cuerpo" data-mc-caja data-mc-caja-pagina data-cuenta-total="0" data-lineas="[]">
     <partial name="_Caja" model="Model" />
 </div>
+}

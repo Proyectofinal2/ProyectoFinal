@@ -89,6 +89,9 @@ public class LiberarSinConsumoTests(SqlServerFixture fixture) : PruebaSql(fixtur
         Assert.True(r.Success, r.Message);
         var venta = Mundo.VentaDe(reserva.IdReserva)!;
         Assert.Equal(VentaEstados.Cobrada, venta.Estado);
+        Assert.Equal(0m, venta.Subtotal);
+        Assert.Equal(13m, venta.TasaIvaAplicada);
+        Assert.Equal(0m, venta.ImporteIva);
         Assert.Equal(0m, venta.Total);
         Assert.Null(venta.IdMetodoPago);
     }

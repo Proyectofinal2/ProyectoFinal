@@ -12,6 +12,25 @@ public class ConfiguracionService(
     IMetodosPagoRepository metodosPagoRepository,
     IHistorialMetodoPagoRepository historialMetodoPagoRepository) : IConfiguracionService
 {
+    public const string ClaveTasaIva = "TasaIva";
+
+    public async Task<Result<decimal>> ObtenerTasaIvaAsync()
+    {
+        var config = await configuracionRepository.ObtenerAsync(ClaveTasaIva);
+        if (config is null || !IntentarLeerTasaIva(config.Valor, out var tasa))
+            return Result<decimal>.BadRequest("La tasa de IVA no está configurada o es inválida. Revísala en Parámetros.");
+        return Result<decimal>.Ok(tasa, "Tasa de IVA obtenida exitosamente.");
+    }
+
+    private static bool IntentarLeerTasaIva(string? texto, out decimal tasa)
+    {
+        tasa = 0;
+        var valor = texto?.Trim();
+        if (string.IsNullOrEmpty(valor) || !System.Text.RegularExpressions.Regex.IsMatch(valor, @"^\d{1,3}([.,]\d{1,2})?$"))
+            return false;
+        return decimal.TryParse(valor.Replace(',', '.'), System.Globalization.NumberStyles.AllowDecimalPoint,
+            System.Globalization.CultureInfo.InvariantCulture, out tasa) && tasa >= 0m && tasa <= 100m;
+    }
     // ============================================================
     // Claves de ConfiguracionSistema y sus valores por defecto.
     // ============================================================
@@ -129,6 +148,13 @@ public class ConfiguracionService(
             if (string.IsNullOrWhiteSpace(item.Valor))
             {
                 return $"'{item.Clave}' no puede quedar vacío.";
+            }
+
+            if (item.Clave == ClaveTasaIva)
+            {
+                if (!IntentarLeerTasaIva(item.Valor, out _))
+                    return "La tasa de IVA debe ser un número entre 0 y 100, con hasta dos decimales.";
+                continue;
             }
 
             if (!RangosParametros.TryGetValue(item.Clave, out var rango))

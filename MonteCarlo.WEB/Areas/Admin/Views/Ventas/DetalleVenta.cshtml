@@ -2,6 +2,9 @@
 @using MonteCarlo.WEB.Models.UI
 @using MonteCarlo.WEB.Models.Ventas
 @model VentaDetalleApiResponse
+@{
+    var tieneDesglose = Model.Subtotal.HasValue && Model.TasaIvaAplicada.HasValue && Model.ImporteIva.HasValue;
+}
 
 <div class="row mb-4">
     <div class="col-sm-6">
@@ -41,7 +44,7 @@
         <tr>
             <th>Producto</th>
             <th class="text-center">Cant.</th>
-            <th class="text-end">Precio Unit.</th>
+            <th class="text-end">Precio Unit.@(tieneDesglose ? " sin IVA" : "")</th>
             <th class="text-end">Subtotal</th>
         </tr>
     </thead>
@@ -57,6 +60,21 @@
         }
     </tbody>
     <tfoot>
+        @if (tieneDesglose)
+        {
+            <tr>
+                <td colspan="3" class="text-end border-0">Subtotal</td>
+                <td class="text-end border-0">@Colones.Formato(Model.Subtotal!.Value)</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="text-end border-0">IVA (@Colones.ParaCampo(Model.TasaIvaAplicada!.Value)%)</td>
+                <td class="text-end border-0">@Colones.Formato(Model.ImporteIva!.Value)</td>
+            </tr>
+        }
+        else
+        {
+            <tr><td colspan="4" class="text-end text-muted small border-0">Sin desglose de IVA registrado</td></tr>
+        }
         <tr>
             <td colspan="3" class="text-end fw-bold border-0">Total:</td>
             <td class="text-end fw-bold fs-5 border-0">@Colones.Formato(Model.Total)</td>

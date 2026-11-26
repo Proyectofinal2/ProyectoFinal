@@ -626,6 +626,9 @@ public class MonteCarloDbContext : DbContext
             entity.Property(e => e.TipoVenta).HasMaxLength(20).IsRequired();
             entity.Property(e => e.Estado).HasMaxLength(10).IsRequired();
             entity.Property(e => e.Total).HasColumnType("decimal(10,2)").HasDefaultValue(0m);
+            entity.Property(e => e.Subtotal).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.TasaIvaAplicada).HasColumnType("decimal(5,2)");
+            entity.Property(e => e.ImporteIva).HasColumnType("decimal(10,2)");
             entity.Property(e => e.FechaVenta).HasDefaultValueSql("SYSDATETIME()");
             entity.Property(e => e.MotivoAnulacion).HasMaxLength(300);
 

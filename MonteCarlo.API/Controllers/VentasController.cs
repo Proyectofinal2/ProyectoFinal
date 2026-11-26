@@ -14,6 +14,10 @@ namespace MonteCarlo.API.Controllers;
 [Authorize(Roles = "General,Regular")]
 public class VentasController(IVentasService ventasService) : ControllerBase
 {
+    /// <summary>Tasa vigente para estimar ventas que todavía no se han creado.</summary>
+    [HttpGet("ventas/tasa-iva")]
+    public async Task<IActionResult> ObtenerTasaIva() =>
+        this.Responder(await ventasService.ObtenerTasaIvaVigenteAsync());
     /// <summary>Id de la cuenta autenticada (claim del token JWT).</summary>
     private int IdUsuarioAutenticado =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

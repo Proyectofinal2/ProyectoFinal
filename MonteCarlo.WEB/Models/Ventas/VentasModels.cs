@@ -8,6 +8,9 @@ namespace MonteCarlo.WEB.Models.Ventas;
 
 public class CuentaApiResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     public int IdReserva { get; set; }
     public int? IdVenta { get; set; }
     public string? Folio { get; set; }
@@ -97,6 +100,9 @@ public class LineaCuentaApiResponse
 
 public class CobroApiResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     public int? IdVenta { get; set; }
     public string? Folio { get; set; }
     public int? IdReserva { get; set; }
@@ -163,7 +169,7 @@ public class CuentaViewModel
         return resto == 0 ? $"{horas} h" : $"{horas} h {resto:00}";
     }
 
-    public static string Dinero(decimal monto) => Colones.Formato(monto);
+    public static string Dinero(decimal monto) => "₡" + monto.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("es-CR"));
 }
 
 /// <summary>
@@ -172,6 +178,7 @@ public class CuentaViewModel
 /// </summary>
 public class CajaViewModel
 {
+    public decimal? TasaEstimada { get; set; }
     public CuentaApiResponse Cuenta { get; set; } = new();
     public List<CategoriaVentaApiResponse> Categorias { get; set; } = [];
 
@@ -226,6 +233,9 @@ public class FiltroVentasViewModel
 
 public class VentaDetalleApiResponse
 {
+    public decimal? Subtotal { get; set; }
+    public decimal? TasaIvaAplicada { get; set; }
+    public decimal? ImporteIva { get; set; }
     public int IdVenta { get; set; }
     public string Folio { get; set; } = "";
     public DateTime FechaVenta { get; set; }

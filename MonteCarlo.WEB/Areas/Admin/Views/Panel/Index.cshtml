@@ -79,7 +79,7 @@
                 <article class="card mc-dashboard-scorecard h-100"><div class="card-body">
                     <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--danger"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
                     <p class="mc-dashboard-scorecard__label">Consumo en curso</p>
-                    <p class="mc-dashboard-scorecard__value">₡@Model.ResumenMesas.ConsumoEnCurso.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-CR"))</p>
+                    <p class="mc-dashboard-scorecard__value">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(Model.ResumenMesas.ConsumoEnCurso)</p>
                     <p class="mc-dashboard-scorecard__help">Total de las cuentas abiertas.</p>
                 </div></article>
             </div>
@@ -241,7 +241,7 @@
                 <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--success"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
                 <p class="mc-dashboard-scorecard__label">Ingresos cobrados</p>
                 <p class="mc-dashboard-scorecard__value">@MonteCarlo.WEB.Models.Catalogo.Colones.Formato(Model.ResumenVentas.IngresosCobrados)</p>
-                <p class="mc-dashboard-scorecard__help">Solo ventas efectivamente cobradas.</p>
+                <p class="mc-dashboard-scorecard__help">Importe bruto cobrado, con IVA cuando corresponda.</p>
             </div></article></div>
             <div class="col-sm-6 col-xl-3"><article class="card mc-dashboard-scorecard h-100"><div class="card-body">
                 <span class="mc-dashboard-scorecard__icon mc-dashboard-scorecard__icon--info"><i class="bi bi-receipt" aria-hidden="true"></i></span>

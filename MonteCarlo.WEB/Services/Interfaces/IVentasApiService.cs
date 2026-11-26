@@ -8,23 +8,24 @@ namespace MonteCarlo.WEB.Services.Interfaces;
 /// </summary>
 public interface IVentasApiService
 {
+    Task<(bool Success, string Message, decimal? Data)> ObtenerTasaIvaAsync();
     Task<(bool Success, string Message, CuentaApiResponse? Data)> ObtenerCuentaAsync(int idReserva);
 
-    Task<(bool Success, string Message, CuentaApiResponse? Data, CuentaApiResponse? Cuenta)> AgregarPedidoAsync(
-        int idReserva, Guid claveIdempotencia, List<(int IdProducto, int Cantidad)> lineas);
+    Task<(bool Success, string Message, CuentaApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> AgregarPedidoAsync(
+        int idReserva, Guid claveIdempotencia, List<(int IdProducto, int Cantidad)> lineas, decimal? totalEsperado);
 
-    Task<(bool Success, string Message, CuentaApiResponse? Data, CuentaApiResponse? Cuenta)> AnularLineaAsync(
+    Task<(bool Success, string Message, CuentaApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> AnularLineaAsync(
         int idDetalle, int? cantidad, string? motivo);
 
-    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> CobrarAsync(
+    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> CobrarAsync(
         int idReserva, int idMetodoPago, decimal totalEsperado, string? version);
 
-    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> LiberarSinConsumoAsync(int idReserva);
+    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> LiberarSinConsumoAsync(int idReserva);
 
-    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> RegistrarParaLlevarAsync(
+    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> RegistrarParaLlevarAsync(
         Guid claveIdempotencia, int idMetodoPago, decimal totalEsperado, IEnumerable<(int IdProducto, int Cantidad)> lineas);
 
-    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta)> CerrarSinCobroAsync(
+    Task<(bool Success, string Message, CobroApiResponse? Data, CuentaApiResponse? Cuenta, bool Conflicto)> CerrarSinCobroAsync(
         int idReserva, string? motivo, string? version);
 
     Task<(bool Success, string Message, List<MetodoPagoApiResponse>? Data)> ObtenerMetodosPagoAsync(bool incluirInactivos = false);

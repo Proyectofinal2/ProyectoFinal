@@ -639,6 +639,9 @@ CREATE TABLE dbo.Venta (
     Estado             NVARCHAR(10)   NOT NULL, -- 'Abierta' / 'Cobrada' / 'Anulada' / 'Abandonada'
     IdReserva          INT            NULL,
     IdMetodoPago       INT            NULL,
+    Subtotal           DECIMAL(10,2)  NULL,
+    TasaIvaAplicada    DECIMAL(5,2)   NULL,
+    ImporteIva         DECIMAL(10,2)  NULL,
     Total              DECIMAL(10,2)  NOT NULL DEFAULT 0,
     IdUsuarioRegistro  INT            NOT NULL, -- quien abrio la cuenta o registro la venta
     FechaVenta         DATETIME2      NOT NULL DEFAULT SYSDATETIME(), -- apertura
@@ -924,6 +927,7 @@ GO
      como antigua, es decir "Por cobrar" (ver alter_database-6.sql).
    ------------------------------------------------------------ */
 INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Etiqueta, Descripcion) VALUES
+    ('TasaIva', '13', N'IVA (%)', N'Porcentaje de IVA aplicado a las ventas nuevas. Entre 0 y 100, con hasta dos decimales.'),
     ('UmbralConfirmacionAutomatica', '4',
         'Umbral de confirmación automática',
         'Cantidad de personas a partir de la cual una reserva nueva queda Pendiente de revisión en vez de confirmarse sola.'),
